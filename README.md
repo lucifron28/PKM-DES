@@ -45,6 +45,8 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Student dashboard with student information, enrollment status, and quick actions
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
 - Online enrollment form that creates a `PENDING` enrollment record
+- Duplicate enrollment submissions are blocked for the same student, academic year, and semester when an existing record is `PENDING` or `APPROVED`
+- Successful enrollment submissions attach matching subjects into `enrollment_subjects`
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
 - Admin dashboard with pending/enrolled counts and enrollment overview
 - Admin approve/reject enrollment actions
@@ -197,6 +199,8 @@ Student:
 - Subject list displays separate tables by year level and semester.
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
+- Duplicate enrollment submission for the same academic year and semester is blocked.
+- Successful enrollment submission creates matching `enrollment_subjects` rows.
 - Enrollment status becomes PENDING.
 - Grades page shows empty state when no grades exist.
 - Schedule page shows empty state when no schedule exists.
