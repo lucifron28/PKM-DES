@@ -73,12 +73,14 @@ Apply these files in filename order:
 1. `supabase/migrations/20260502000000_initial_schema.sql`
 2. `supabase/migrations/20260502000100_security_helper_cleanup.sql`
 3. `supabase/migrations/20260502000200_revoke_trigger_function_api_execute.sql`
+4. `supabase/migrations/20260502000300_enrollment_submission_integrity.sql`
 
 Remote migrations recorded by Supabase MCP:
 
 - `initial_schema`
 - `security_helper_cleanup`
 - `revoke_trigger_function_api_execute`
+- `enrollment_submission_integrity`
 
 ## Initial Schema Migration
 
@@ -137,6 +139,22 @@ What changed:
 Current result:
 
 - Supabase security advisor returned no security lints after the cleanup migrations.
+
+## Enrollment Submission Integrity Migration
+
+File:
+
+```text
+supabase/migrations/20260502000300_enrollment_submission_integrity.sql
+```
+
+What it adds:
+
+- A partial unique index that prevents more than one active enrollment per student, academic year, and semester when status is `PENDING` or `APPROVED`.
+- A narrow RLS insert policy for `enrollment_subjects`.
+- The policy allows students to attach subjects only to their own `PENDING` enrollment and only when each subject matches the enrollment's program, year level, and semester.
+- A cleanup-only delete policy for student-owned pending enrollment rows that do not yet have attached subjects.
+- A delete trigger that recalculates `students.enrollment_status` if a newly created enrollment has to be cleaned up.
 
 ## Seed Data
 
@@ -270,9 +288,14 @@ Then log in at `/login` with the admin email and password.
 Student submission:
 
 1. Student submits Online Enrollment.
-2. App inserts into `public.enrollments` with status `PENDING`.
-3. Database trigger updates the student's `enrollment_status` to `PENDING`.
-4. Pending record appears in Admin Pending Enrollments.
+2. App checks for an existing `PENDING` or `APPROVED` enrollment for the same student, academic year, and semester.
+3. If a duplicate exists, the submission is blocked with a safe user-facing message.
+4. App inserts into `public.enrollments` with status `PENDING`.
+5. Database trigger updates the student's `enrollment_status` to `PENDING`.
+6. App queries matching subjects by program, year level, and semester.
+7. App inserts matching rows into `public.enrollment_subjects`.
+8. If subject attachment fails, the app deletes the newly created orphan enrollment where RLS allows cleanup.
+9. Pending record appears in Admin Pending Enrollments.
 
 Admin approval:
 
