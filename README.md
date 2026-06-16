@@ -57,6 +57,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Enrollment masterlist with year-level and semester filters
 - MVP draft printable registration form using existing enrollment and attached subject data
 - Admin view/print access for individual enrollment registration forms
+- Admin-managed official student/admitted-applicant records page for manual Registrar entry
 - Faster student tab navigation through a student portal context and lighter placeholder routes
 
 ## 6. Placeholder Features
@@ -148,6 +149,7 @@ npm run start
 - `subjects`
 - `enrollments`
 - `enrollment_subjects`
+- `official_student_records`
 - `grades`
 - `class_schedules`
 - `balances`
@@ -210,6 +212,8 @@ Student:
 Admin:
 - Admin can log in.
 - Admin can view dashboard.
+- Admin can add an official student/admitted-applicant record.
+- Admin can view recent official records.
 - Admin can view pending enrollments.
 - Admin can open and browser-print an individual enrollment registration form.
 - Admin can approve enrollment.
@@ -237,6 +241,7 @@ Security:
 - Subject List uses source-grounded local seed data for fast student navigation; the same data is also seeded in Supabase.
 - Client has confirmed First Semester AY 2026-2027 as the current term, but the app still needs a proper academic calendar configuration instead of hardcoded constants.
 - Registrar-managed official student/admitted-applicant matching is not implemented yet.
+- Official records can be manually encoded by admins, but CSV import is not implemented until PKM provides the official import format.
 - Generated-password email delivery is not implemented yet.
 
 ## 15. Future Enhancements

@@ -98,3 +98,30 @@ export type Balance = {
   amount: number;
   payment_status: string;
 };
+
+export type OfficialStudentRecord = {
+  id: string;
+  student_id_number: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  program_id: string;
+  year_level: YearLevel;
+  student_type: StudentType;
+  birthdate: string | null;
+  gender_sex: string | null;
+  address: string | null;
+  contact_number: string | null;
+  guardian: string | null;
+  emergency_contact_person: string | null;
+  nationality: string | null;
+  civil_status: string | null;
+  previous_school_information: string | null;
+  admission_status: string | null;
+  enrollment_status: EnrollmentStatus;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  programs?: Program | null;
+};
