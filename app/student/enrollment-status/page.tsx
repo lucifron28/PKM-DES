@@ -27,7 +27,7 @@ export default function EnrollmentStatusPage() {
         ) : status === "ENROLLED" ? (
           <div className="mt-4 space-y-2">
             <p className="text-base font-semibold text-slateui-text">Congratulations! You are now officially enrolled.</p>
-            <p className="text-sm text-slateui-secondary">Please download your Certificate of Registration (COR).</p>
+            <p className="text-sm text-slateui-secondary">Please print your draft registration form.</p>
           </div>
         ) : (
           <p className="mt-4 text-base font-semibold text-slateui-text">
@@ -36,7 +36,7 @@ export default function EnrollmentStatusPage() {
         )}
       </div>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <ButtonLink href="/student/cor" variant="secondary">Download COR</ButtonLink>
+        <ButtonLink href="/student/cor" variant="secondary">Print Registration Form</ButtonLink>
         <ButtonLink href="/student/grades" variant="outline">View Grades</ButtonLink>
         <ButtonLink href="/student/schedule" variant="outline">View Class Schedule</ButtonLink>
         <ButtonLink href="/student/balances" variant="outline">View Balances</ButtonLink>

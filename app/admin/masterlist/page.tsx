@@ -1,9 +1,10 @@
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectInput } from "@/components/ui/field";
 import { SimpleTable } from "@/components/tables/simple-table";
+import { PrintButton } from "@/components/print/print-button";
 import { PROGRAM, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { requireRole } from "@/lib/auth/session";
 import { formatName } from "@/lib/utils/format";
@@ -40,8 +41,12 @@ export default async function EnrollmentMasterlistPage({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader title="Enrollment Masterlist" description="Officially enrolled students and pending or incomplete enrollment records." />
-        <form className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+        <CardHeader
+          title="Enrollment Masterlist"
+          description="Officially enrolled students and pending or incomplete enrollment records."
+          action={<PrintButton label="Print Masterlist" />}
+        />
+        <form className="print-hidden grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
           <SelectInput label="Program" name="program" defaultValue={PROGRAM.code}>
             <option value={PROGRAM.code}>{PROGRAM.name}</option>
           </SelectInput>
@@ -69,9 +74,18 @@ export default async function EnrollmentMasterlistPage({
             enrollment.programs?.name ?? "Not available",
             enrollment.year_level,
             enrollment.semester,
-            <Badge key={enrollment.id} tone={enrollmentBadgeTone(enrollment.students?.enrollment_status)}>
-              {enrollment.students?.enrollment_status ?? enrollment.status}
-            </Badge>
+            <div key={enrollment.id} className="flex items-center gap-2">
+              <Badge tone={enrollmentBadgeTone(enrollment.students?.enrollment_status)}>
+                {enrollment.students?.enrollment_status ?? enrollment.status}
+              </Badge>
+              <ButtonLink
+                href={`/admin/enrollments/${enrollment.id}/registration`}
+                variant="outline"
+                className="print-hidden min-h-9 px-3 py-1.5"
+              >
+                View/Print
+              </ButtonLink>
+            </div>
           ])}
         />
       ) : (

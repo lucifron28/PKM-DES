@@ -1,5 +1,5 @@
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextArea } from "@/components/ui/field";
@@ -74,6 +74,13 @@ export default async function PendingEnrollmentsPage() {
                     </td>
                     <td className="min-w-[280px] px-4 py-3">
                       <div className="space-y-3">
+                        <ButtonLink
+                          href={`/admin/enrollments/${enrollment.id}/registration`}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          View/Print Form
+                        </ButtonLink>
                         <form action={approveEnrollmentAction}>
                           <input type="hidden" name="enrollment_id" value={enrollment.id} />
                           <Button type="submit" className="w-full">Approve</Button>

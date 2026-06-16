@@ -38,3 +38,32 @@ textarea {
   background: #f9d818;
   color: #0f172a;
 }
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  aside,
+  main > header,
+  .print-hidden {
+    display: none !important;
+  }
+
+  main,
+  .print-page {
+    width: 100% !important;
+  }
+
+  .print-page {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
