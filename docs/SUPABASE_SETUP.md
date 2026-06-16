@@ -74,6 +74,7 @@ Apply these files in filename order:
 2. `supabase/migrations/20260502000100_security_helper_cleanup.sql`
 3. `supabase/migrations/20260502000200_revoke_trigger_function_api_execute.sql`
 4. `supabase/migrations/20260502000300_enrollment_submission_integrity.sql`
+5. `supabase/migrations/20260502000400_official_student_records.sql`
 
 Remote migrations recorded by Supabase MCP:
 
@@ -102,6 +103,7 @@ Created:
 - `class_schedules`
 - `balances`
 - `audit_logs`
+- `official_student_records`
 
 Also created:
 
@@ -233,6 +235,13 @@ Audit logs:
 - Admins can select audit logs.
 - Admin actions can insert audit logs.
 
+Official student records:
+
+- Admins can select official student/admitted-applicant records.
+- Admins can insert official records.
+- Admins can update official records.
+- Students cannot read official record lists directly.
+
 ## Auth and Login Setup
 
 ### Student Login
@@ -332,6 +341,25 @@ Admin rejection:
 4. App keeps the student out of `ENROLLED` status.
 5. App inserts an audit log row.
 
+## Official Student Records
+
+The `official_student_records` table stores Registrar-managed student or admitted-applicant records for future account matching.
+
+Current MVP behavior:
+
+1. Admin opens `/admin/students`.
+2. Admin manually enters an official record.
+3. App validates required fields, email format, dropdown values, and selected program.
+4. App inserts the record through the authenticated Supabase server client under admin-only RLS.
+5. Recent official records are shown on the same page.
+
+Not implemented in this branch:
+
+- CSV import
+- Automatic account matching during Create Student Account
+- Generated password email delivery
+- Registrar-managed edits/deactivation beyond manual insert
+
 ## Verification Queries
 
 Seed verification:
@@ -361,7 +389,7 @@ order by tablename;
 ## Notes and Boundaries
 
 - The initial client-provided Registrar account is Shaira Mae E. Pajares, `pkmregistrarofficial@gmail.com`.
-- Official admitted-applicant matching is confirmed as required, but the import format and sample data are still needed before implementation.
+- Official admitted-applicant matching is confirmed as required. Manual official records are implemented, but import format, sample data, and account-matching behavior remain future work.
 - No official COR template was provided, so only an MVP draft browser-print registration form is implemented; official COR/PDF output remains future work.
 - No official grading, schedule, or balance format was provided, so those modules remain placeholders.
 - Subject List uses the same source-grounded AIS subject data locally for fast tab navigation and in Supabase for database-backed records.
