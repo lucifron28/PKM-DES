@@ -253,9 +253,22 @@ Account status behavior:
 
 Only `ACTIVE` accounts can log in.
 
+Updated client direction:
+
+- Incoming 1st Year Students and Transferees should be matched against official Registrar-provided data before account access.
+- Old Student verification may use Student ID Number alone.
+- The target workflow is system-generated passwords sent by email, with students allowed to change passwords later.
+- This matching/email workflow is not implemented yet and should be built before production use.
+
 ### Admin Login
 
 Admin accounts are internal and are not created through public registration.
+
+Initial client-provided Registrar account:
+
+- Name: Shaira Mae E. Pajares
+- Email: `pkmregistrarofficial@gmail.com`
+- Role: Registrar
 
 1. Go to Supabase Dashboard -> Authentication -> Users.
 2. Add an admin user with email and password.
@@ -296,6 +309,13 @@ Student submission:
 7. App inserts matching rows into `public.enrollment_subjects`.
 8. If subject attachment fails, the app deletes the newly created orphan enrollment where RLS allows cleanup.
 9. Pending record appears in Admin Pending Enrollments.
+
+Printable registration form:
+
+1. Student or admin opens a registration form page for an existing enrollment.
+2. App reads the enrollment, student profile, program, and attached `enrollment_subjects` rows under existing RLS policies.
+3. App renders an MVP draft browser-print form from existing enrollment data.
+4. The form intentionally remains a draft output until PKM provides the official COR / registration form template.
 
 Admin approval:
 
@@ -340,8 +360,8 @@ order by tablename;
 
 ## Notes and Boundaries
 
-- No official admin list was provided, so admin accounts must be created manually.
-- No official admitted-applicant verification rules were provided, so PENDING account activation remains future work.
-- No official COR template was provided, so COR/PDF output remains a placeholder.
+- The initial client-provided Registrar account is Shaira Mae E. Pajares, `pkmregistrarofficial@gmail.com`.
+- Official admitted-applicant matching is confirmed as required, but the import format and sample data are still needed before implementation.
+- No official COR template was provided, so only an MVP draft browser-print registration form is implemented; official COR/PDF output remains future work.
 - No official grading, schedule, or balance format was provided, so those modules remain placeholders.
 - Subject List uses the same source-grounded AIS subject data locally for fast tab navigation and in Supabase for database-backed records.

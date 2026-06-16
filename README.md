@@ -17,7 +17,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Supabase PostgreSQL
 - Supabase Row Level Security
 - Supabase Storage: not used in this MVP
-- PDF generation: placeholder only until an official COR / registration template is supplied
+- Browser printing for MVP draft registration forms; official PDF/COR generation remains pending until an official template is supplied
 
 ## 3. Source Documents Used
 
@@ -25,6 +25,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - `data-sources/Subjects.pdf`: initial Accounting Information System subject seed list
 - `data-sources/FRD1.pdf`: expected outputs, functional requirements, manual enrollment process, and study objectives
 - `data-sources/Joshua.pdf`: system overview, navigation structure, public pages, student module, admin module, login behavior, account behavior, enrollment behavior, empty states, and missing-information warnings
+- `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files/decisions
 
 ## 4. Current MVP Scope
 
@@ -54,11 +55,13 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Rejection updates enrollment status to `REJECTED`, stores optional remarks, and does not mark the student enrolled
 - Audit log insert for approve/reject actions
 - Enrollment masterlist with year-level and semester filters
+- MVP draft printable registration form using existing enrollment and attached subject data
+- Admin view/print access for individual enrollment registration forms
 - Faster student tab navigation through a student portal context and lighter placeholder routes
 
 ## 6. Placeholder Features
 
-- COR download / printable registration form
+- Official COR PDF generation using the official PKM registration template
 - Grades
 - Class Schedule
 - Balances
@@ -74,20 +77,16 @@ The Create Student Account page includes an MVP password setup block so local Su
 Missing Information / Future Inputs Needed:
 - Official PKM logo file
 - Official COR / registration form template
-- Official student data sample
-- Official admitted applicant verification rules
-- Official registrar approval rules
-- Official admin user list/emails
-- Official grading format
-- Official class schedule format
+- Official printable enrollment/masterlist report format
+- Official student/admitted-applicant import file format
+- Official student data sample, ideally anonymized
+- Exact Student ID validation rule
 - Official balances/payment format
-- Academic calendar
+- Official requirements/document checklist used for enrollment approval
 - Complete list of other programs, if multi-program support is required
 - Email service/template approval for generated passwords or account messages
-- Rules for digital clearance/signature process
 - Final confirmation of official Accounting Information System program title
-- Rules for Regular Student, Irregular Student, and Continuing Student classification
-- Official rules for enrollment rejection remarks/categories, if any
+- Official process for irregular/transferee adjusted subject loading
 
 ## 8. Supabase Setup Instructions
 
@@ -202,6 +201,8 @@ Student:
 - Duplicate enrollment submission for the same academic year and semester is blocked.
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
 - Enrollment status becomes PENDING.
+- Student can open and browser-print the MVP draft registration form after enrollment submission.
+- Draft registration form displays attached subjects and total units.
 - Grades page shows empty state when no grades exist.
 - Schedule page shows empty state when no schedule exists.
 - Balances page shows empty state when no balance exists.
@@ -210,6 +211,7 @@ Admin:
 - Admin can log in.
 - Admin can view dashboard.
 - Admin can view pending enrollments.
+- Admin can open and browser-print an individual enrollment registration form.
 - Admin can approve enrollment.
 - Approved student appears as ENROLLED.
 - Admin can reject enrollment.
@@ -228,17 +230,23 @@ Security:
 - Incoming 1st Year Student and Transferee accounts are created as PENDING and require a future official verification/activation workflow.
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.
-- COR generation is not implemented without an official template.
+- Browser-printable draft registration forms are implemented for MVP testing, but the official COR/PDF template is not implemented without PKM's official template.
 - Grades, schedule, balances, student records, and encode workflows are placeholders.
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
 - Subject List uses source-grounded local seed data for fast student navigation; the same data is also seeded in Supabase.
+- Client has confirmed First Semester AY 2026-2027 as the current term, but the app still needs a proper academic calendar configuration instead of hardcoded constants.
+- Registrar-managed official student/admitted-applicant matching is not implemented yet.
+- Generated-password email delivery is not implemented yet.
 
 ## 15. Future Enhancements
 
 - Official admitted-applicant and student verification workflow
 - Admin-managed activation for pending student accounts
-- Official COR PDF generation
+- Official COR PDF generation using the supplied PKM template
+- Official printable enrollment/masterlist report format
+- Registrar-managed official student/admitted-applicant import
+- Automatic account matching against official records
 - Digital clearance/signature routing
 - Grade encoding and release workflow
 - Class schedule assignment workflow
