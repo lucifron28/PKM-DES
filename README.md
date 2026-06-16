@@ -102,7 +102,7 @@ Short setup:
 3. Apply all SQL files in `supabase/migrations/` in filename order.
 4. Run `supabase/seed.sql`.
 5. Create an internal admin user in Supabase Auth.
-6. Insert the matching admin row into `public.profiles`.
+6. Insert the matching admin row into `public.profiles` using `supabase/registrar_admin_setup.example.sql`.
 
 Current connected Supabase project used during setup:
 
@@ -112,6 +112,13 @@ Current connected Supabase project used during setup:
 - Project URL: `https://sdivxyqdnvnyjqrsrzdq.supabase.co`
 
 The service-role key is not documented here and should never be pasted into chat or committed.
+
+Initial Registrar setup template:
+
+- File: `supabase/registrar_admin_setup.example.sql`
+- Confirmed Registrar: Shaira Mae E. Pajares
+- Email: `pkmregistrarofficial@gmail.com`
+- Create the Supabase Auth user first, then replace `<auth-user-uuid>` in the template.
 
 ## 9. Environment Variables
 
