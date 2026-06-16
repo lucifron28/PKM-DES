@@ -280,28 +280,13 @@ Initial client-provided Registrar account:
 - Role: Registrar
 
 1. Go to Supabase Dashboard -> Authentication -> Users.
-2. Add an admin user with email and password.
+2. Add an admin user with email and password. Do not commit or paste that password into project files or chat.
 3. Copy the new Auth user UUID.
-4. Run this SQL in Supabase SQL editor:
+4. Open `supabase/registrar_admin_setup.example.sql`.
+5. Replace `<auth-user-uuid>` with the copied UUID.
+6. Run the SQL in Supabase SQL editor.
 
-```sql
-insert into public.profiles (
-  id,
-  role,
-  first_name,
-  last_name,
-  email,
-  account_status
-)
-values (
-  '<auth-user-uuid>',
-  'admin',
-  '<admin-first-name>',
-  '<admin-last-name>',
-  '<admin-email>',
-  'ACTIVE'
-);
-```
+The MVP database role value is `admin` for the Registrar / authorized enrollment staff account.
 
 Then log in at `/login` with the admin email and password.
 
