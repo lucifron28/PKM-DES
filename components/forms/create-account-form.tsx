@@ -29,6 +29,13 @@ export function CreateAccountForm() {
           {state.message}
         </div>
       ) : null}
+      <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
+        <p className="font-semibold">Official record matching is required for new applicants.</p>
+        <p className="mt-1">
+          Incoming 1st Year Student and Transferee details must match a Registrar-managed record before an account is created.
+          Old Student accounts require a Student ID Number.
+        </p>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <TextInput id="first_name" name="first_name" label="First Name" required />
         <TextInput id="last_name" name="last_name" label="Last Name" required />

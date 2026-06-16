@@ -42,7 +42,9 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Role-based protection for student and admin areas
 - Student account creation through Supabase Auth when `SUPABASE_SERVICE_ROLE_KEY` is configured
 - Create-account dropdown values exactly as requested: Incoming 1st Year Student, Transferee, Old Student
-- Old Student accounts become `ACTIVE`; Incoming 1st Year Student and Transferee accounts become `PENDING`
+- Incoming 1st Year Student and Transferee account creation requires a matching official Registrar-managed record
+- Old Student accounts require a Student ID Number
+- Matched student accounts become `ACTIVE`
 - Student dashboard with student information, enrollment status, and quick actions
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
 - Online enrollment form that creates a `PENDING` enrollment record
@@ -191,9 +193,12 @@ Public:
 - About Us page displays PKM information.
 - Login page validates missing password.
 - Create account page shows required fields.
+- Create account page explains official record matching.
 
 Student:
 - Student can create an Old Student account when `SUPABASE_SERVICE_ROLE_KEY` is configured.
+- Incoming 1st Year Student and Transferee account creation is blocked when no matching official record exists.
+- Incoming 1st Year Student and Transferee account creation succeeds when submitted details match an official record.
 - Student can log in.
 - Student dashboard displays profile information.
 - Student can view subject list.
@@ -231,7 +236,7 @@ Security:
 
 ## 14. Known Limitations
 
-- Incoming 1st Year Student and Transferee accounts are created as PENDING and require a future official verification/activation workflow.
+- Incoming 1st Year Student and Transferee account creation now depends on official records, but bulk import is not implemented.
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.
 - Browser-printable draft registration forms are implemented for MVP testing, but the official COR/PDF template is not implemented without PKM's official template.
@@ -240,18 +245,17 @@ Security:
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
 - Subject List uses source-grounded local seed data for fast student navigation; the same data is also seeded in Supabase.
 - Client has confirmed First Semester AY 2026-2027 as the current term, but the app still needs a proper academic calendar configuration instead of hardcoded constants.
-- Registrar-managed official student/admitted-applicant matching is not implemented yet.
 - Official records can be manually encoded by admins, but CSV import is not implemented until PKM provides the official import format.
 - Generated-password email delivery is not implemented yet.
 
 ## 15. Future Enhancements
 
-- Official admitted-applicant and student verification workflow
-- Admin-managed activation for pending student accounts
+- Official admitted-applicant and student import workflow
+- Admin-managed account review if PKM later requires manual overrides
 - Official COR PDF generation using the supplied PKM template
 - Official printable enrollment/masterlist report format
 - Registrar-managed official student/admitted-applicant import
-- Automatic account matching against official records
+- Expanded account matching rules if PKM supplies stricter official requirements
 - Digital clearance/signature routing
 - Grade encoding and release workflow
 - Class schedule assignment workflow

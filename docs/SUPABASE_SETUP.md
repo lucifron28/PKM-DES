@@ -256,18 +256,18 @@ For the MVP Create Student Account page to work:
 
 Account status behavior:
 
-- `Old Student` -> `ACTIVE`
-- `Incoming 1st Year Student` -> `PENDING`
-- `Transferee` -> `PENDING`
+- `Old Student` -> `ACTIVE` when Student ID Number is provided
+- `Incoming 1st Year Student` -> `ACTIVE` only when submitted details match an official record
+- `Transferee` -> `ACTIVE` only when submitted details match an official record
 
 Only `ACTIVE` accounts can log in.
 
-Updated client direction:
+Current client direction:
 
-- Incoming 1st Year Students and Transferees should be matched against official Registrar-provided data before account access.
+- Incoming 1st Year Students and Transferees are matched against official Registrar-provided data before account access.
 - Old Student verification may use Student ID Number alone.
 - The target workflow is system-generated passwords sent by email, with students allowed to change passwords later.
-- This matching/email workflow is not implemented yet and should be built before production use.
+- The generated-password email workflow is not implemented yet and should be built before production use.
 
 ### Admin Login
 
@@ -356,9 +356,26 @@ Current MVP behavior:
 Not implemented in this branch:
 
 - CSV import
-- Automatic account matching during Create Student Account
 - Generated password email delivery
 - Registrar-managed edits/deactivation beyond manual insert
+
+## Account Matching
+
+Create Student Account now uses the server-only Supabase admin client to check official records before creating Supabase Auth users.
+
+Current behavior:
+
+1. Old Student account creation requires Student ID Number and creates an `ACTIVE` account.
+2. Incoming 1st Year Student and Transferee account creation looks for an official record by email.
+3. The submitted first name, last name, program, year level, student type, and optional Student ID Number must match the official record.
+4. If no matching official record exists, no Auth user or student profile is created.
+5. When a match exists, the app creates an `ACTIVE` Supabase Auth user, profile, and student record using the official record values.
+
+Remaining gaps:
+
+- Official CSV/import format is still needed.
+- Generated initial password and email delivery are still placeholders.
+- No additional admitted-applicant status rules are enforced because PKM has not supplied final status values.
 
 ## Verification Queries
 
@@ -389,7 +406,7 @@ order by tablename;
 ## Notes and Boundaries
 
 - The initial client-provided Registrar account is Shaira Mae E. Pajares, `pkmregistrarofficial@gmail.com`.
-- Official admitted-applicant matching is confirmed as required. Manual official records are implemented, but import format, sample data, and account-matching behavior remain future work.
+- Official admitted-applicant matching is implemented for manual official records, but import format, sample data, and generated password/email delivery remain future work.
 - No official COR template was provided, so only an MVP draft browser-print registration form is implemented; official COR/PDF output remains future work.
 - No official grading, schedule, or balance format was provided, so those modules remain placeholders.
 - Subject List uses the same source-grounded AIS subject data locally for fast tab navigation and in Supabase for database-backed records.
