@@ -3,7 +3,7 @@ import { publicNavigation, studentNavigation, adminNavigation } from "@/lib/cons
 import { SITE_NAME } from "@/lib/constants/pkm";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { ButtonLink } from "@/components/ui/button";
-import { PkmMark } from "./pkm-mark";
+import { BrandMarks } from "./pkm-mark";
 
 export async function PublicHeader() {
   const { profile } = await getCurrentProfile();
@@ -15,7 +15,7 @@ export async function PublicHeader() {
     <header className="border-b border-slateui-border bg-white">
       <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-3">
-          <PkmMark />
+          <BrandMarks />
           <span className="max-w-[620px] text-sm font-bold leading-5 text-slateui-text sm:text-base">
             {SITE_NAME}
           </span>
