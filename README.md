@@ -16,6 +16,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Supabase Auth
 - Supabase PostgreSQL
 - Supabase Row Level Security
+- SQLite local development database setup
 - Supabase Storage: not used in this MVP
 - Browser printing for MVP draft registration forms; official PDF/COR generation remains pending until an official template is supplied
 
@@ -95,6 +96,8 @@ Missing Information / Future Inputs Needed:
 
 Detailed Supabase documentation is in [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md).
 
+SQLite local development notes are in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md).
+
 Short setup:
 
 1. Create or open the Supabase project.
@@ -125,15 +128,19 @@ Initial Registrar setup template:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+DATABASE_PROVIDER=supabase
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only. It is used by the account creation action to create Supabase Auth users and must never be exposed in client code.
 
+Use `DATABASE_PROVIDER=sqlite` only for local development. Vercel deployment must use `DATABASE_PROVIDER=supabase`.
+
 ## 10. How to Run Locally
 
 ```bash
 npm install
+npm run db:sqlite:init
 npm run dev
 ```
 

@@ -13,6 +13,8 @@ This document records the Supabase work completed for PKM-DES and the remaining 
 
 The public URL and anon/publishable keys are safe for browser use. The service-role key is secret and must not be committed or pasted into chat.
 
+For Vercel deployment, keep `DATABASE_PROVIDER=supabase`. SQLite is local-development only and is documented separately in `docs/SQLITE_DEVELOPMENT.md`.
+
 ## What Was Done Through Supabase MCP
 
 1. Listed Supabase projects and found the new `PKM-DES` project.
