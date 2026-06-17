@@ -27,3 +27,5 @@ Thumbs.db
 .idea/
 data-sources/
 docs/frd-files/
+data/sqlite/*.sqlite
+data/sqlite/*.sqlite-*
