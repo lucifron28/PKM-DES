@@ -1,6 +1,6 @@
 import { ArrowRight, LogIn, UserPlus } from "lucide-react";
 import { PublicHeader } from "@/components/layout/public-header";
-import { PkmMark } from "@/components/layout/pkm-mark";
+import { BrandMarks } from "@/components/layout/pkm-mark";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SITE_NAME } from "@/lib/constants/pkm";
@@ -14,7 +14,7 @@ export default function HomePage() {
           <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-20">
             <div className="max-w-3xl">
               <div className="mb-6 flex items-center gap-3">
-                <PkmMark />
+                <BrandMarks />
                 <span className="text-sm font-semibold text-secondary-100">{SITE_NAME}</span>
               </div>
               <h1 className="text-4xl font-bold tracking-normal sm:text-5xl">

@@ -1,4 +1,5 @@
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
+import { BrandMarks } from "@/components/layout/pkm-mark";
 import { PrintButton } from "@/components/print/print-button";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { Enrollment, Profile, Student, Subject } from "@/types/database";
@@ -34,6 +35,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
     <section className="print-page rounded-lg border border-slateui-border bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 border-b border-slateui-border pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
+          <BrandMarks className="mb-4" />
           <p className="text-sm font-semibold uppercase text-primary-800">Pambayang Kolehiyo ng Mauban</p>
           <h2 className="mt-1 text-2xl font-bold text-slateui-text">MVP Draft Printable Registration Form</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slateui-secondary">

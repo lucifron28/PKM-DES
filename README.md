@@ -38,7 +38,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 ## 5. Features Implemented
 
 - Modern academic UI using the supplied PKM blue and yellow palette
-- PKM logo placeholder mark with initials `PKM`
+- PKM and Municipality of Mauban logo images applied to the public header, home page, app shell, and printable registration form
 - Supabase-backed login with active-account checks
 - Role-based protection for student and admin areas
 - Student account creation through Supabase Auth when `SUPABASE_SERVICE_ROLE_KEY` is configured
@@ -79,7 +79,6 @@ The Create Student Account page includes an MVP password setup block so local Su
 ## 7. Missing Information / Future Inputs Needed
 
 Missing Information / Future Inputs Needed:
-- Official PKM logo file
 - Official COR / registration form template
 - Official printable enrollment/masterlist report format
 - Official student/admitted-applicant import file format
@@ -97,6 +96,8 @@ Missing Information / Future Inputs Needed:
 Detailed Supabase documentation is in [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md).
 
 SQLite local development notes are in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md).
+
+Development sample accounts are in [docs/SAMPLE_ACCOUNTS.md](./docs/SAMPLE_ACCOUNTS.md).
 
 Short setup:
 
