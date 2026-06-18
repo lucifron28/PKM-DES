@@ -363,13 +363,14 @@ Current MVP behavior:
 2. Admin manually enters an official record.
 3. App validates required fields, email format, dropdown values, and selected program.
 4. App inserts the record through the authenticated Supabase server client under admin-only RLS.
-5. Recent official records are shown on the same page.
+5. Admin can search and filter official records by name/email/Student ID, program, year level, student type, and enrollment status.
+6. Admin can open an existing official record, edit the same validated fields, and update it through admin-only RLS.
 
 Not implemented in this branch:
 
 - CSV import
 - Generated password email delivery
-- Registrar-managed edits/deactivation beyond manual insert
+- Registrar-managed deactivation/archive workflow
 
 ## Account Matching
 
