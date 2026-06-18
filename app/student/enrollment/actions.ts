@@ -46,7 +46,6 @@ export async function submitEnrollmentAction(
     .eq("student_id", student.id)
     .eq("academic_year", academicYear)
     .eq("semester", semester)
-    .in("status", ["PENDING", "APPROVED"])
     .limit(1)
     .maybeSingle();
 

@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
+import type { Enrollment, EnrollmentStatus } from "@/types/database";
 
 type RoleContext = Awaited<ReturnType<typeof requireRole>>;
+type SupabaseClient = NonNullable<RoleContext["supabase"]>;
 
-async function getEnrollmentStudentId(supabase: NonNullable<RoleContext["supabase"]>, enrollmentId: string) {
+async function getEnrollmentStudentId(supabase: SupabaseClient, enrollmentId: string) {
   const { data } = await supabase
     .from("enrollments")
     .select("student_id")
@@ -13,6 +15,31 @@ async function getEnrollmentStudentId(supabase: NonNullable<RoleContext["supabas
     .maybeSingle();
 
   return data?.student_id as string | undefined;
+}
+
+async function refreshStudentEnrollmentStatus(supabase: SupabaseClient, studentId: string) {
+  const { data } = await supabase
+    .from("enrollments")
+    .select("status")
+    .eq("student_id", studentId)
+    .returns<Pick<Enrollment, "status">[]>();
+
+  const statuses = data?.map((enrollment) => enrollment.status) ?? [];
+  const nextStatus: EnrollmentStatus = statuses.includes("APPROVED")
+    ? "ENROLLED"
+    : statuses.includes("PENDING")
+      ? "PENDING"
+      : "NOT ENROLLED";
+
+  await supabase.from("students").update({ enrollment_status: nextStatus }).eq("id", studentId);
+}
+
+function revalidateEnrollmentViews() {
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/enrollments");
+  revalidatePath("/admin/masterlist");
+  revalidatePath("/student/dashboard");
+  revalidatePath("/student/enrollment-status");
 }
 
 export async function approveEnrollmentAction(formData: FormData) {
@@ -29,7 +56,7 @@ export async function approveEnrollmentAction(formData: FormData) {
     return;
   }
 
-  await supabase
+  const { data: reviewedEnrollment, error: reviewError } = await supabase
     .from("enrollments")
     .update({
       status: "APPROVED",
@@ -37,9 +64,16 @@ export async function approveEnrollmentAction(formData: FormData) {
       reviewed_by: profile.id,
       remarks: null
     })
-    .eq("id", enrollmentId);
+    .eq("id", enrollmentId)
+    .eq("status", "PENDING")
+    .select("id")
+    .maybeSingle();
 
-  await supabase.from("students").update({ enrollment_status: "ENROLLED" }).eq("id", studentId);
+  if (reviewError || !reviewedEnrollment) {
+    return;
+  }
+
+  await refreshStudentEnrollmentStatus(supabase, studentId);
 
   await supabase.from("audit_logs").insert({
     actor_profile_id: profile.id,
@@ -48,9 +82,7 @@ export async function approveEnrollmentAction(formData: FormData) {
     target_id: enrollmentId
   });
 
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/admin/enrollments");
-  revalidatePath("/admin/masterlist");
+  revalidateEnrollmentViews();
 }
 
 export async function rejectEnrollmentAction(formData: FormData) {
@@ -68,7 +100,7 @@ export async function rejectEnrollmentAction(formData: FormData) {
     return;
   }
 
-  await supabase
+  const { data: reviewedEnrollment, error: reviewError } = await supabase
     .from("enrollments")
     .update({
       status: "REJECTED",
@@ -76,9 +108,16 @@ export async function rejectEnrollmentAction(formData: FormData) {
       reviewed_by: profile.id,
       remarks
     })
-    .eq("id", enrollmentId);
+    .eq("id", enrollmentId)
+    .eq("status", "PENDING")
+    .select("id")
+    .maybeSingle();
 
-  await supabase.from("students").update({ enrollment_status: "NOT ENROLLED" }).eq("id", studentId);
+  if (reviewError || !reviewedEnrollment) {
+    return;
+  }
+
+  await refreshStudentEnrollmentStatus(supabase, studentId);
 
   await supabase.from("audit_logs").insert({
     actor_profile_id: profile.id,
@@ -87,7 +126,5 @@ export async function rejectEnrollmentAction(formData: FormData) {
     target_id: enrollmentId
   });
 
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/admin/enrollments");
-  revalidatePath("/admin/masterlist");
+  revalidateEnrollmentViews();
 }
