@@ -62,6 +62,7 @@ export default async function AdminDashboardPage() {
           </ButtonLink>
           <ButtonLink href="/admin/enrollments" variant="outline">Reject Enrollment</ButtonLink>
           <ButtonLink href="/admin/masterlist?status=APPROVED" variant="secondary">View Enrolled Students</ButtonLink>
+          <ButtonLink href="/admin/reports" variant="outline">Enrollment Reports</ButtonLink>
           <ButtonLink href="/admin/encode" variant="outline">Encode Grades/Schedule</ButtonLink>
         </div>
       </Card>
