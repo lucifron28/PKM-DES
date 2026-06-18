@@ -49,13 +49,13 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Student dashboard with student information, enrollment status, and quick actions
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
 - Online enrollment form that creates a `PENDING` enrollment record
-- Duplicate enrollment submissions are blocked for the same student, academic year, and semester when an existing record is `PENDING` or `APPROVED`
+- Duplicate enrollment submissions are blocked for the same student, academic year, and semester when any enrollment record already exists
 - Successful enrollment submissions attach matching subjects into `enrollment_subjects`
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
-- Admin dashboard with pending/enrolled counts and enrollment overview
+- Admin dashboard with pending, approved, rejected, and total enrollment record counts
 - Admin approve/reject enrollment actions
 - Approval updates enrollment status to `APPROVED` and student status to `ENROLLED`
-- Rejection updates enrollment status to `REJECTED`, stores optional remarks, and does not mark the student enrolled
+- Rejection updates enrollment status to `REJECTED`, stores optional remarks, and recalculates the student's derived enrollment status
 - Audit log insert for approve/reject actions
 - Enrollment masterlist with year-level and semester filters
 - MVP draft printable registration form using existing enrollment and attached subject data
@@ -221,6 +221,7 @@ Student:
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
 - Duplicate enrollment submission for the same academic year and semester is blocked.
+- Rejected enrollment records cannot be resubmitted for the same academic year and semester.
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
 - Enrollment status becomes PENDING.
 - Student can open and browser-print the MVP draft registration form after enrollment submission.
@@ -239,6 +240,7 @@ Admin:
 - Admin can approve enrollment.
 - Approved student appears as ENROLLED.
 - Admin can reject enrollment.
+- Admin dashboard counts match enrollment review statuses across Pending Enrollments and Masterlist.
 - Admin can view enrollment masterlist.
 - Masterlist filters work.
 

@@ -77,6 +77,7 @@ Apply these files in filename order:
 3. `supabase/migrations/20260502000200_revoke_trigger_function_api_execute.sql`
 4. `supabase/migrations/20260502000300_enrollment_submission_integrity.sql`
 5. `supabase/migrations/20260502000400_official_student_records.sql`
+6. `supabase/migrations/20260618000000_enrollment_term_uniqueness.sql`
 
 Remote migrations recorded by Supabase MCP:
 
@@ -84,6 +85,8 @@ Remote migrations recorded by Supabase MCP:
 - `security_helper_cleanup`
 - `revoke_trigger_function_api_execute`
 - `enrollment_submission_integrity`
+- `official_student_records`
+- `enrollment_term_uniqueness`
 
 ## Initial Schema Migration
 
@@ -154,11 +157,25 @@ supabase/migrations/20260502000300_enrollment_submission_integrity.sql
 
 What it adds:
 
-- A partial unique index that prevents more than one active enrollment per student, academic year, and semester when status is `PENDING` or `APPROVED`.
+- An initial partial unique index for active enrollment records, later replaced by the term uniqueness migration below.
 - A narrow RLS insert policy for `enrollment_subjects`.
 - The policy allows students to attach subjects only to their own `PENDING` enrollment and only when each subject matches the enrollment's program, year level, and semester.
 - A cleanup-only delete policy for student-owned pending enrollment rows that do not yet have attached subjects.
 - A delete trigger that recalculates `students.enrollment_status` if a newly created enrollment has to be cleaned up.
+
+## Enrollment Term Uniqueness Migration
+
+File:
+
+```text
+supabase/migrations/20260618000000_enrollment_term_uniqueness.sql
+```
+
+What it adds:
+
+- Drops the active-only unique index from the earlier enrollment integrity migration.
+- Adds a full unique index on `student_id`, `academic_year`, and `semester`.
+- Enforces the client-confirmed rule that a rejected enrollment cannot be resubmitted for the same academic year and semester.
 
 ## Seed Data
 
@@ -297,7 +314,7 @@ Then log in at `/login` with the admin email and password.
 Student submission:
 
 1. Student submits Online Enrollment.
-2. App checks for an existing `PENDING` or `APPROVED` enrollment for the same student, academic year, and semester.
+2. App checks for any existing enrollment for the same student, academic year, and semester.
 3. If a duplicate exists, the submission is blocked with a safe user-facing message.
 4. App inserts into `public.enrollments` with status `PENDING`.
 5. Database trigger updates the student's `enrollment_status` to `PENDING`.
@@ -325,7 +342,7 @@ Admin rejection:
 1. Admin rejects the pending enrollment.
 2. App updates enrollment status to `REJECTED`.
 3. App stores optional remarks.
-4. App keeps the student out of `ENROLLED` status.
+4. App recalculates the student's derived `enrollment_status` from all of that student's enrollment records.
 5. App inserts an audit log row.
 
 ## Official Student Records

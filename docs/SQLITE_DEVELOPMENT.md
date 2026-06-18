@@ -43,6 +43,7 @@ The SQLite init script:
 - Creates local development tables equivalent to the current MVP schema.
 - Seeds one program: Accounting Information System / AIS.
 - Reads the source-grounded AIS subjects from `lib/constants/subjects.ts`.
+- Enforces one enrollment record per student, academic year, and semester.
 - Verifies the expected local totals:
   - Programs: 1
   - Subjects: 56
