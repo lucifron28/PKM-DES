@@ -18,11 +18,15 @@ async function getEnrollmentStudentId(supabase: SupabaseClient, enrollmentId: st
 }
 
 async function refreshStudentEnrollmentStatus(supabase: SupabaseClient, studentId: string) {
-  const { data } = await supabase
+  const { data, error: statusReadError } = await supabase
     .from("enrollments")
     .select("status")
     .eq("student_id", studentId)
     .returns<Pick<Enrollment, "status">[]>();
+
+  if (statusReadError) {
+    return false;
+  }
 
   const statuses = data?.map((enrollment) => enrollment.status) ?? [];
   const nextStatus: EnrollmentStatus = statuses.includes("APPROVED")
@@ -31,15 +35,23 @@ async function refreshStudentEnrollmentStatus(supabase: SupabaseClient, studentI
       ? "PENDING"
       : "NOT ENROLLED";
 
-  await supabase.from("students").update({ enrollment_status: nextStatus }).eq("id", studentId);
+  const { error: statusUpdateError } = await supabase
+    .from("students")
+    .update({ enrollment_status: nextStatus })
+    .eq("id", studentId);
+
+  return !statusUpdateError;
 }
 
-function revalidateEnrollmentViews() {
+function revalidateEnrollmentViews(enrollmentId: string) {
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/enrollments");
   revalidatePath("/admin/masterlist");
+  revalidatePath(`/admin/enrollments/${enrollmentId}/registration`);
+  revalidatePath("/student", "layout");
   revalidatePath("/student/dashboard");
   revalidatePath("/student/enrollment-status");
+  revalidatePath("/student/cor");
 }
 
 export async function approveEnrollmentAction(formData: FormData) {
@@ -82,7 +94,7 @@ export async function approveEnrollmentAction(formData: FormData) {
     target_id: enrollmentId
   });
 
-  revalidateEnrollmentViews();
+  revalidateEnrollmentViews(enrollmentId);
 }
 
 export async function rejectEnrollmentAction(formData: FormData) {
@@ -126,5 +138,5 @@ export async function rejectEnrollmentAction(formData: FormData) {
     target_id: enrollmentId
   });
 
-  revalidateEnrollmentViews();
+  revalidateEnrollmentViews(enrollmentId);
 }
