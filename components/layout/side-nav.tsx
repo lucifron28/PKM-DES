@@ -25,6 +25,7 @@ const icons: Record<NavigationIcon, typeof BookOpen> = {
   grades: GraduationCap,
   masterlist: FileText,
   pending: ListChecks,
+  reports: FileText,
   schedule: CalendarDays,
   students: Users,
   subjects: BookOpen

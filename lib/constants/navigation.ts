@@ -6,6 +6,7 @@ export type NavigationIcon =
   | "grades"
   | "masterlist"
   | "pending"
+  | "reports"
   | "schedule"
   | "students"
   | "subjects";
@@ -33,6 +34,7 @@ export const studentNavigation: NavigationItem[] = [
 
 export const adminNavigation: NavigationItem[] = [
   { label: "Admin Dashboard", href: "/admin/dashboard", icon: "dashboard" },
+  { label: "Enrollment Reports", href: "/admin/reports", icon: "reports" },
   { label: "Enrollment Masterlist", href: "/admin/masterlist", icon: "masterlist" },
   { label: "Pending Enrollments", href: "/admin/enrollments", icon: "pending" },
   { label: "Student Records", href: "/admin/students", icon: "students" }

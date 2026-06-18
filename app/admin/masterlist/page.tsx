@@ -6,6 +6,7 @@ import { SelectInput } from "@/components/ui/field";
 import { SimpleTable } from "@/components/tables/simple-table";
 import { PrintButton } from "@/components/print/print-button";
 import { PROGRAM, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { ENROLLMENT_REVIEW_STATUSES } from "@/lib/constants/enrollment";
 import { requireRole } from "@/lib/auth/session";
 import { formatName } from "@/lib/utils/format";
 import type { Enrollment, EnrollmentReviewStatus, Profile, Program, Semester, Student, YearLevel } from "@/types/database";
@@ -15,8 +16,6 @@ type MasterlistRow = Enrollment & {
 };
 
 type ProgramOption = Pick<Program, "id" | "name" | "code">;
-
-const ENROLLMENT_REVIEW_STATUSES: EnrollmentReviewStatus[] = ["PENDING", "APPROVED", "REJECTED"];
 
 export default async function EnrollmentMasterlistPage({
   searchParams
