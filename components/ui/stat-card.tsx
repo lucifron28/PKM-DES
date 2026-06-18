@@ -13,12 +13,13 @@ export function StatCard({
   value: ReactNode;
   helper?: string;
   icon?: ReactNode;
-  tone?: "default" | "warning" | "success" | "info";
+  tone?: "default" | "warning" | "success" | "danger" | "info";
 }) {
   const toneClass = {
     default: "bg-primary-50 text-primary-800",
     warning: "bg-amber-100 text-amber-800",
     success: "bg-green-100 text-green-700",
+    danger: "bg-red-100 text-red-700",
     info: "bg-sky-100 text-sky-800"
   }[tone];
 

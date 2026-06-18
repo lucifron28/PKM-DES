@@ -8,16 +8,18 @@ import { PrintButton } from "@/components/print/print-button";
 import { PROGRAM, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { requireRole } from "@/lib/auth/session";
 import { formatName } from "@/lib/utils/format";
-import type { Enrollment, Profile, Semester, Student, YearLevel } from "@/types/database";
+import type { Enrollment, EnrollmentReviewStatus, Profile, Semester, Student, YearLevel } from "@/types/database";
 
 type MasterlistRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
 };
 
+const ENROLLMENT_REVIEW_STATUSES: EnrollmentReviewStatus[] = ["PENDING", "APPROVED", "REJECTED"];
+
 export default async function EnrollmentMasterlistPage({
   searchParams
 }: {
-  searchParams?: Promise<{ year_level?: YearLevel; semester?: Semester }>;
+  searchParams?: Promise<{ year_level?: YearLevel; semester?: Semester; status?: EnrollmentReviewStatus }>;
 }) {
   const { supabase } = await requireRole("admin");
   const params = (await searchParams) ?? {};
@@ -35,6 +37,10 @@ export default async function EnrollmentMasterlistPage({
     query = query.eq("semester", params.semester);
   }
 
+  if (params.status && ENROLLMENT_REVIEW_STATUSES.includes(params.status)) {
+    query = query.eq("status", params.status);
+  }
+
   const { data } = await query;
   const rows = (data as MasterlistRow[] | null) ?? [];
 
@@ -46,7 +52,7 @@ export default async function EnrollmentMasterlistPage({
           description="Officially enrolled students and pending or incomplete enrollment records."
           action={<PrintButton label="Print Masterlist" />}
         />
-        <form className="print-hidden grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+        <form className="print-hidden grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-end">
           <SelectInput label="Program" name="program" defaultValue={PROGRAM.code}>
             <option value={PROGRAM.code}>{PROGRAM.name}</option>
           </SelectInput>
@@ -62,30 +68,47 @@ export default async function EnrollmentMasterlistPage({
               <option key={semester} value={semester}>{semester}</option>
             ))}
           </SelectInput>
+          <SelectInput label="Review Status" name="status" defaultValue={params.status ?? ""}>
+            <option value="">All statuses</option>
+            {ENROLLMENT_REVIEW_STATUSES.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </SelectInput>
           <Button type="submit">Apply Filters</Button>
         </form>
       </Card>
       {rows.length ? (
         <SimpleTable
-          columns={["Student name", "Student ID", "Program", "Year Level", "Semester", "Enrollment status"]}
+          columns={[
+            "Student name",
+            "Student ID",
+            "Program",
+            "Year Level",
+            "Semester",
+            "Review Status",
+            "Student Status",
+            "Form"
+          ]}
           rows={rows.map((enrollment) => [
             formatName(enrollment.students?.profiles?.first_name, enrollment.students?.profiles?.last_name),
             enrollment.students?.student_id_number ?? "Not provided",
             enrollment.programs?.name ?? "Not available",
             enrollment.year_level,
             enrollment.semester,
-            <div key={enrollment.id} className="flex items-center gap-2">
-              <Badge tone={enrollmentBadgeTone(enrollment.students?.enrollment_status)}>
-                {enrollment.students?.enrollment_status ?? enrollment.status}
-              </Badge>
-              <ButtonLink
-                href={`/admin/enrollments/${enrollment.id}/registration`}
-                variant="outline"
-                className="print-hidden min-h-9 px-3 py-1.5"
-              >
-                View/Print
-              </ButtonLink>
-            </div>
+            <Badge key={`${enrollment.id}-review`} tone={enrollmentBadgeTone(enrollment.status)}>
+              {enrollment.status}
+            </Badge>,
+            <Badge key={`${enrollment.id}-student`} tone={enrollmentBadgeTone(enrollment.students?.enrollment_status)}>
+              {enrollment.students?.enrollment_status ?? "NOT AVAILABLE"}
+            </Badge>,
+            <ButtonLink
+              key={`${enrollment.id}-form`}
+              href={`/admin/enrollments/${enrollment.id}/registration`}
+              variant="outline"
+              className="print-hidden min-h-9 px-3 py-1.5"
+            >
+              View/Print
+            </ButtonLink>
           ])}
         />
       ) : (
