@@ -32,7 +32,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 
 - Public pages: Home, Login, Create Student Account, About Us
 - Student pages: Dashboard, Online Enrollment, Subject List, Enrollment Status Result, Grades placeholder, Class Schedule placeholder, Balances placeholder, Account, Logout
-- Admin pages: Dashboard, Pending Enrollments, Enrollment Masterlist, Student Records placeholder, Encode Grades/Schedule placeholder, Logout
+- Admin pages: Dashboard, Pending Enrollments, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
 - Admin reporting: Enrollment Reports with filters, status summaries, and browser-print output
 - Database: Supabase schema, RLS policies, audit log table, and seed data for one AIS program and the provided subject list
 
@@ -63,7 +63,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Enrollment masterlist with year-level and semester filters
 - MVP draft printable registration form using existing enrollment and attached subject data
 - Admin view/print access for individual enrollment registration forms
-- Admin-managed official student/admitted-applicant records page for manual Registrar entry
+- Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
 - Faster student tab navigation through a student portal context and lighter placeholder routes
 
 ## 6. Placeholder Features
@@ -72,7 +72,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Grades
 - Class Schedule
 - Balances
-- Student Records
+- Full student records module beyond Registrar-managed official account-matching records
 - Encode Grades/Schedule
 - Email-generated initial password workflow
 - Digital clearance/signature routing
@@ -240,7 +240,8 @@ Admin:
 - Admin can filter enrollment reports by program, academic year, year level, semester, and review status.
 - Admin can browser-print the enrollment report.
 - Admin can add an official student/admitted-applicant record.
-- Admin can view recent official records.
+- Admin can search and filter official student/admitted-applicant records.
+- Admin can edit an official student/admitted-applicant record.
 - Admin can view pending enrollments.
 - Admin can open and browser-print an individual enrollment registration form.
 - Admin can approve enrollment.
@@ -269,7 +270,7 @@ Security:
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
 - Subject List uses source-grounded local seed data for fast student navigation; the same data is also seeded in Supabase.
 - Client has confirmed First Semester AY 2026-2027 as the current term, but the app still needs a proper academic calendar configuration instead of hardcoded constants.
-- Official records can be manually encoded by admins, but CSV import is not implemented until PKM provides the official import format.
+- Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Generated-password email delivery is not implemented yet.
 
 ## 15. Future Enhancements
