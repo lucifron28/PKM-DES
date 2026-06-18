@@ -33,6 +33,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Public pages: Home, Login, Create Student Account, About Us
 - Student pages: Dashboard, Online Enrollment, Subject List, Enrollment Status Result, Grades placeholder, Class Schedule placeholder, Balances placeholder, Account, Logout
 - Admin pages: Dashboard, Pending Enrollments, Enrollment Masterlist, Student Records placeholder, Encode Grades/Schedule placeholder, Logout
+- Admin reporting: Enrollment Reports with filters, status summaries, and browser-print output
 - Database: Supabase schema, RLS policies, audit log table, and seed data for one AIS program and the provided subject list
 
 ## 5. Features Implemented
@@ -53,6 +54,8 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Successful enrollment submissions attach matching subjects into `enrollment_subjects`
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
 - Admin dashboard with pending, approved, rejected, and total enrollment record counts
+- Admin Enrollment Reports page with program, academic year, year level, semester, and review-status filters
+- Browser-printable enrollment report table for Registrar review
 - Admin approve/reject enrollment actions
 - Approval updates enrollment status to `APPROVED` and student status to `ENROLLED`
 - Rejection updates enrollment status to `REJECTED`, stores optional remarks, and recalculates the student's derived enrollment status
@@ -233,6 +236,9 @@ Student:
 Admin:
 - Admin can log in.
 - Admin can view dashboard.
+- Admin can view enrollment reports.
+- Admin can filter enrollment reports by program, academic year, year level, semester, and review status.
+- Admin can browser-print the enrollment report.
 - Admin can add an official student/admitted-applicant record.
 - Admin can view recent official records.
 - Admin can view pending enrollments.
@@ -257,6 +263,7 @@ Security:
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.
 - Browser-printable draft registration forms are implemented for MVP testing, but the official COR/PDF template is not implemented without PKM's official template.
+- Enrollment reports are browser-printable MVP outputs; official export, PDF, or printable report format must be supplied before final report generation.
 - Grades, schedule, balances, student records, and encode workflows are placeholders.
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
 - The academic-year dropdown uses MVP options and needs the official academic calendar.

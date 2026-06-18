@@ -330,6 +330,14 @@ Printable registration form:
 3. App renders an MVP draft browser-print form from existing enrollment data.
 4. The form intentionally remains a draft output until PKM provides the official COR / registration form template.
 
+Enrollment reports:
+
+1. Admin opens `/admin/reports`.
+2. App reads enrollment records, student profiles, and programs through existing admin RLS policies.
+3. Admin can filter by program, academic year, year level, semester, and review status.
+4. App renders status summary counts and a browser-printable enrollment report table.
+5. Official PDF/export generation remains pending until PKM supplies the required report format.
+
 Admin approval:
 
 1. Admin approves the pending enrollment.
