@@ -8,26 +8,49 @@ import { PrintButton } from "@/components/print/print-button";
 import { PROGRAM, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { requireRole } from "@/lib/auth/session";
 import { formatName } from "@/lib/utils/format";
-import type { Enrollment, EnrollmentReviewStatus, Profile, Semester, Student, YearLevel } from "@/types/database";
+import type { Enrollment, EnrollmentReviewStatus, Profile, Program, Semester, Student, YearLevel } from "@/types/database";
 
 type MasterlistRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
 };
+
+type ProgramOption = Pick<Program, "id" | "name" | "code">;
 
 const ENROLLMENT_REVIEW_STATUSES: EnrollmentReviewStatus[] = ["PENDING", "APPROVED", "REJECTED"];
 
 export default async function EnrollmentMasterlistPage({
   searchParams
 }: {
-  searchParams?: Promise<{ year_level?: YearLevel; semester?: Semester; status?: EnrollmentReviewStatus }>;
+  searchParams?: Promise<{
+    program?: string;
+    year_level?: YearLevel;
+    semester?: Semester;
+    status?: EnrollmentReviewStatus;
+  }>;
 }) {
   const { supabase } = await requireRole("admin");
   const params = (await searchParams) ?? {};
+  const { data: programsData } = await supabase
+    .from("programs")
+    .select("id, name, code")
+    .order("name")
+    .returns<ProgramOption[]>();
+
+  const programOptions: ProgramOption[] = programsData?.length
+    ? programsData
+    : [{ id: PROGRAM.code, name: PROGRAM.name, code: PROGRAM.code }];
+  const selectedProgram = params.program
+    ? programOptions.find((program) => program.id === params.program || program.code === params.program)
+    : null;
 
   let query = supabase
     .from("enrollments")
     .select("*, students(*, profiles(*)), programs(*)")
     .order("submitted_at", { ascending: false });
+
+  if (selectedProgram && selectedProgram.id !== PROGRAM.code) {
+    query = query.eq("program_id", selectedProgram.id);
+  }
 
   if (params.year_level && YEAR_LEVELS.includes(params.year_level)) {
     query = query.eq("year_level", params.year_level);
@@ -53,8 +76,13 @@ export default async function EnrollmentMasterlistPage({
           action={<PrintButton label="Print Masterlist" />}
         />
         <form className="print-hidden grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-end">
-          <SelectInput label="Program" name="program" defaultValue={PROGRAM.code}>
-            <option value={PROGRAM.code}>{PROGRAM.name}</option>
+          <SelectInput label="Program" name="program" defaultValue={params.program ?? ""}>
+            <option value="">All programs</option>
+            {programOptions.map((program) => (
+              <option key={program.id} value={program.code ?? program.id}>
+                {program.name}
+              </option>
+            ))}
           </SelectInput>
           <SelectInput label="Year Level" name="year_level" defaultValue={params.year_level ?? ""}>
             <option value="">All year levels</option>
