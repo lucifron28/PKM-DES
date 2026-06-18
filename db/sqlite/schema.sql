@@ -91,9 +91,10 @@ create table if not exists enrollments (
   remarks text
 );
 
-create unique index if not exists enrollments_student_active_term_unique
-on enrollments (student_id, academic_year, semester)
-where status in ('PENDING', 'APPROVED');
+drop index if exists enrollments_student_active_term_unique;
+
+create unique index if not exists enrollments_student_term_unique
+on enrollments (student_id, academic_year, semester);
 
 create table if not exists enrollment_subjects (
   id text primary key,
