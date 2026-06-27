@@ -24,6 +24,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 
 - `data-sources/About Us.pdf`: PKM identity, About content, vision, mission, goals, address, email, website, and social links
 - `data-sources/Subjects.pdf`: initial Accounting Information System subject seed list
+- `docs/frd-files/LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`: source for displayed BSAIS course offerings for SY 2025-2026, 2nd Semester
 - `data-sources/FRD1.pdf`: expected outputs, functional requirements, manual enrollment process, and study objectives
 - `data-sources/Joshua.pdf`: system overview, navigation structure, public pages, student module, admin module, login behavior, account behavior, enrollment behavior, empty states, and missing-information warnings
 - `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files/decisions
@@ -49,6 +50,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Matched student accounts become `ACTIVE`
 - Student dashboard with student information, enrollment status, and quick actions
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
+- Subject List includes source-labeled BSAIS course offerings for SY 2025-2026, 2nd Semester
 - Online enrollment form that creates a `PENDING` enrollment record
 - Duplicate enrollment submissions are blocked for the same student, academic year, and semester when any enrollment record already exists
 - Successful enrollment submissions attach matching subjects into `enrollment_subjects`
@@ -220,6 +222,7 @@ Student:
 - Student can log in.
 - Student dashboard displays profile information.
 - Student can view subject list.
+- Student can view BSAIS course offerings labeled with SY 2025-2026 and 2nd Semester.
 - Subject list displays separate tables by year level and semester.
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
@@ -269,6 +272,9 @@ Security:
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
 - Subject List uses source-grounded local seed data for fast student navigation; the same data is also seeded in Supabase.
+- BSAIS course offerings from `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx` are displayed as term offerings only; they do not replace the full curriculum seed.
+- The BSAIS course offering workbook has duplicate BSAIS blocks and a 4th Year total with no visible 4th Year course rows.
+- Enrollment submission still attaches subjects from the database subject seed until PKM supplies an official term-offering-to-enrollment rule.
 - Client has confirmed First Semester AY 2026-2027 as the current term, but the app still needs a proper academic calendar configuration instead of hardcoded constants.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Generated-password email delivery is not implemented yet.

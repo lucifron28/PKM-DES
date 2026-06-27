@@ -200,6 +200,27 @@ Verified totals:
 
 No other programs or subjects were invented.
 
+## Term Course Offerings From Workbook
+
+File:
+
+```text
+docs/frd-files/LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx
+```
+
+Current MVP behavior:
+
+- The app displays the BSAIS rows from the workbook as course offerings for `SY 2025-2026`, `2nd Semester`.
+- These rows are source-labeled on the Student Subject List page.
+- The workbook is treated as term offering data, not as a full curriculum replacement.
+- No Supabase schema or subject seed migration is added for these offerings yet.
+
+Source limitations:
+
+- The workbook contains two identical BSAIS blocks.
+- The workbook shows a 4th Year BSAIS total of 6 units but no visible 4th Year BSAIS course rows.
+- Enrollment submission still attaches subjects from the existing `subjects` table until PKM supplies an official term-offering-to-enrollment rule.
+
 ## RLS Policy Summary
 
 Profiles:
