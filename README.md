@@ -67,6 +67,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - MVP draft printable registration form using existing enrollment and attached subject data
 - Admin view/print access for individual enrollment registration forms
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
+- Official student records list displays derived student-account match status for Registrar review
 - Faster student tab navigation through a student portal context and lighter placeholder routes
 
 ## 6. Placeholder Features
@@ -248,6 +249,7 @@ Admin:
 - Admin can browser-print the enrollment report.
 - Admin can add an official student/admitted-applicant record.
 - Admin can search and filter official student/admitted-applicant records.
+- Admin can see whether displayed official records already match a student account.
 - Admin can edit an official student/admitted-applicant record.
 - Admin can view pending enrollments.
 - Admin can open and browser-print an individual enrollment registration form.
