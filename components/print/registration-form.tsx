@@ -24,6 +24,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 }
 
 export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollment }) {
+  const generatedAt = new Date().toISOString();
   const student = enrollment.students;
   const profile = student?.profiles;
   const subjects = (enrollment.enrollment_subjects ?? [])
@@ -46,6 +47,12 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <PrintButton label="Print Form" />
       </div>
 
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <DetailItem label="Form Type" value="MVP draft registration form" />
+        <DetailItem label="Generated Date" value={formatDate(generatedAt)} />
+        <DetailItem label="Source" value="PKM-DES enrollment record" />
+      </div>
+
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <DetailItem label="Student ID" value={student?.student_id_number ?? "Not provided"} />
         <DetailItem label="Student Name" value={formatName(profile?.first_name, profile?.last_name)} />
@@ -65,6 +72,11 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <DetailItem label="Reviewed Date" value={formatDate(enrollment.reviewed_at)} />
         <DetailItem label="Remarks" value={enrollment.remarks || "None"} />
       </dl>
+
+      <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+        This printout is a draft system output for Registrar review and student reference. It is not an official
+        Certificate of Registration until PKM supplies and approves the official registration form template.
+      </div>
 
       <div className="mt-8">
         <div className="mb-3 flex items-end justify-between gap-3">
@@ -114,6 +126,21 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
             No subjects are attached to this enrollment record.
           </div>
         )}
+      </div>
+
+      <div className="mt-8 grid gap-4 border-t border-slateui-border pt-6 sm:grid-cols-2">
+        <div className="rounded-md border border-slateui-border p-4">
+          <p className="text-xs font-semibold uppercase text-slateui-muted">Student Certification</p>
+          <p className="mt-2 text-sm leading-6 text-slateui-secondary">
+            The student certified the submitted online enrollment information during form submission.
+          </p>
+        </div>
+        <div className="rounded-md border border-slateui-border p-4">
+          <p className="text-xs font-semibold uppercase text-slateui-muted">Registrar Review</p>
+          <p className="mt-2 text-sm leading-6 text-slateui-secondary">
+            Approval status, review date, and remarks are displayed from the current enrollment record.
+          </p>
+        </div>
       </div>
     </section>
   );
