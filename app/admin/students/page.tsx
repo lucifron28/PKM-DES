@@ -3,13 +3,14 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectInput, TextInput } from "@/components/ui/field";
+import { StatCard } from "@/components/ui/stat-card";
 import { SimpleTable } from "@/components/tables/simple-table";
 import { OfficialStudentRecordForm } from "./official-record-form";
 import { addOfficialStudentRecordAction } from "./actions";
 import { requireRole } from "@/lib/auth/session";
 import { STUDENT_TYPE_TAGS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { formatDate, formatName } from "@/lib/utils/format";
-import type { EnrollmentStatus, OfficialStudentRecord, Program, StudentType, YearLevel } from "@/types/database";
+import type { AccountStatus, EnrollmentStatus, OfficialStudentRecord, Profile, Program, Student, StudentType, YearLevel } from "@/types/database";
 
 const ENROLLMENT_STATUSES: EnrollmentStatus[] = ["NOT ENROLLED", "PENDING", "ENROLLED"];
 
@@ -25,6 +26,40 @@ const errorMessages: Record<string, string> = {
 type OfficialStudentRecordRow = OfficialStudentRecord & {
   programs?: Program | null;
 };
+
+type StudentAccountRow = Student & {
+  profiles?: Pick<Profile, "id" | "email" | "account_status"> | null;
+};
+
+type ProfileAccountRow = Pick<Profile, "id" | "email" | "account_status">;
+
+type AccountMatch = {
+  status: AccountStatus | null;
+  matchedBy: "email" | "student_id" | null;
+};
+
+function normalizeLookup(value: string | null | undefined) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function getPreferredAccountStatus(matches: Array<{ account_status: AccountStatus | null }>) {
+  const activeMatch = matches.find((match) => match.account_status === "ACTIVE");
+  const match = activeMatch ?? matches[0];
+
+  return match?.account_status ?? null;
+}
+
+function accountBadgeTone(status: AccountStatus | null) {
+  if (status === "ACTIVE") {
+    return "success";
+  }
+
+  if (status === "PENDING") {
+    return "warning";
+  }
+
+  return "neutral";
+}
 
 export default async function StudentRecordsPage({
   searchParams
@@ -89,6 +124,64 @@ export default async function StudentRecordsPage({
           .includes(searchTerm)
       )
     : allRecords;
+  const recordEmails = [...new Set(records.map((record) => normalizeLookup(record.email)).filter(Boolean))];
+  const recordStudentIds = [
+    ...new Set(records.map((record) => normalizeLookup(record.student_id_number)).filter(Boolean))
+  ];
+  const [{ data: accountMatchesByEmailData }, { data: accountMatchesByStudentIdData }] = await Promise.all([
+    recordEmails.length
+      ? supabase
+          .from("profiles")
+          .select("id, email, account_status")
+          .eq("role", "student")
+          .in("email", recordEmails)
+      : Promise.resolve({ data: [] }),
+    recordStudentIds.length
+      ? supabase
+          .from("students")
+          .select("id, student_id_number, profiles(id, email, account_status)")
+          .in("student_id_number", recordStudentIds)
+      : Promise.resolve({ data: [] })
+  ]);
+  const accountMatchesByEmail = ((accountMatchesByEmailData as ProfileAccountRow[] | null) ?? []).filter(
+    (match) => match.email
+  );
+  const accountMatchesByStudentId = ((accountMatchesByStudentIdData as StudentAccountRow[] | null) ?? []).filter(
+    (match) => match.student_id_number
+  );
+  const accountMatchByRecordId = new Map<string, AccountMatch>();
+
+  records.forEach((record) => {
+    const emailMatches = accountMatchesByEmail.filter(
+      (match) => normalizeLookup(match.email) === normalizeLookup(record.email)
+    );
+
+    if (emailMatches.length) {
+      accountMatchByRecordId.set(record.id, {
+        status: getPreferredAccountStatus(emailMatches),
+        matchedBy: "email"
+      });
+      return;
+    }
+
+    const studentIdMatches = accountMatchesByStudentId.filter(
+      (match) => normalizeLookup(match.student_id_number) === normalizeLookup(record.student_id_number)
+    );
+
+    if (studentIdMatches.length) {
+      accountMatchByRecordId.set(record.id, {
+        status: getPreferredAccountStatus(
+          studentIdMatches.map((match) => ({ account_status: match.profiles?.account_status ?? null }))
+        ),
+        matchedBy: "student_id"
+      });
+    }
+  });
+  const matchedAccountCount = records.filter((record) => accountMatchByRecordId.has(record.id)).length;
+  const activeAccountCount = records.filter(
+    (record) => accountMatchByRecordId.get(record.id)?.status === "ACTIVE"
+  ).length;
+  const unmatchedRecordCount = records.length - matchedAccountCount;
 
   return (
     <div className="space-y-6">
@@ -120,6 +213,11 @@ export default async function StudentRecordsPage({
           title="Official Records"
           description="Search, filter, and edit Registrar-managed records used for account matching."
         />
+        <div className="mb-5 grid gap-4 md:grid-cols-3">
+          <StatCard label="Displayed records" value={records.length} helper="After current filters" />
+          <StatCard label="Matched accounts" value={matchedAccountCount} helper={`${activeAccountCount} active`} tone="success" />
+          <StatCard label="Needs account" value={unmatchedRecordCount} helper="No matching student account found" tone="warning" />
+        </div>
         <form className="mb-5 grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_auto_auto] lg:items-end">
           <TextInput label="Search" name="q" placeholder="Name, email, or Student ID" defaultValue={params.q ?? ""} />
           <SelectInput label="Program" name="program_id" defaultValue={selectedProgramId}>
@@ -151,27 +249,45 @@ export default async function StudentRecordsPage({
         </form>
         {records.length ? (
           <SimpleTable
-            columns={["Student name", "Student ID", "Email", "Program", "Year Level", "Type", "Enrollment", "Updated", "Action"]}
-            rows={records.map((record) => [
-              formatName(record.first_name, record.last_name),
-              record.student_id_number ?? "Not provided",
-              record.email,
-              record.programs?.name ?? "Not available",
-              record.year_level,
-              record.student_type,
-              <Badge key={record.id} tone={enrollmentBadgeTone(record.enrollment_status)}>
-                {record.enrollment_status}
-              </Badge>,
-              formatDate(record.updated_at),
-              <ButtonLink
-                key={`${record.id}-edit`}
-                href={`/admin/students/${record.id}/edit`}
-                variant="outline"
-                className="min-h-9 px-3 py-1.5"
-              >
-                Edit
-              </ButtonLink>
-            ])}
+            columns={["Student name", "Student ID", "Email", "Program", "Year Level", "Type", "Enrollment", "Account", "Updated", "Action"]}
+            rows={records.map((record) => {
+              const accountMatch = accountMatchByRecordId.get(record.id) ?? {
+                status: null,
+                matchedBy: null
+              };
+              const accountLabel = accountMatch.status
+                ? `${accountMatch.status} account`
+                : "No account";
+              const accountMatchLabel =
+                accountMatch.matchedBy === "student_id" ? "Student ID" : "Email";
+
+              return [
+                formatName(record.first_name, record.last_name),
+                record.student_id_number ?? "Not provided",
+                record.email,
+                record.programs?.name ?? "Not available",
+                record.year_level,
+                record.student_type,
+                <Badge key={`${record.id}-enrollment`} tone={enrollmentBadgeTone(record.enrollment_status)}>
+                  {record.enrollment_status}
+                </Badge>,
+                <span key={`${record.id}-account`} className="inline-flex flex-col gap-1">
+                  <Badge tone={accountBadgeTone(accountMatch.status)}>{accountLabel}</Badge>
+                  {accountMatch.matchedBy ? (
+                    <span className="text-xs text-slateui-muted">Matched by {accountMatchLabel}</span>
+                  ) : null}
+                </span>,
+                formatDate(record.updated_at),
+                <ButtonLink
+                  key={`${record.id}-edit`}
+                  href={`/admin/students/${record.id}/edit`}
+                  variant="outline"
+                  className="min-h-9 px-3 py-1.5"
+                >
+                  Edit
+                </ButtonLink>
+              ];
+            })}
           />
         ) : (
           <EmptyState
