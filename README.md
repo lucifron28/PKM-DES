@@ -51,6 +51,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Create-account flow blocks duplicate student accounts by email address or Student ID Number before Auth user creation
 - Matched student accounts become `ACTIVE`
 - Student dashboard with student information, enrollment status, and quick actions
+- Student Account page displays core account data and matching Registrar-managed official profile details when available
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
 - Subject List includes source-labeled BSAIS course offerings for SY 2025-2026, 2nd Semester
 - Online enrollment form that creates a `PENDING` enrollment record
@@ -228,6 +229,7 @@ Student:
 - Duplicate account creation for an existing email address or Student ID Number is blocked.
 - Student can log in.
 - Student dashboard displays profile information.
+- Student account page displays confirmed official profile fields when a matching official record exists.
 - Student can view subject list.
 - Student can view BSAIS course offerings labeled with SY 2025-2026 and 2nd Semester.
 - Subject list displays separate tables by year level and semester.
@@ -287,6 +289,7 @@ Security:
 - Enrollment submission still attaches subjects from the database subject seed until PKM supplies an official term-offering-to-enrollment rule.
 - Client has confirmed First Semester AY 2026-2027 as the current term, but the app still needs a proper academic calendar configuration instead of hardcoded constants.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
+- Student Account official-detail display depends on an exact matching Registrar-managed official record and server-only Supabase service-role configuration.
 - Generated-password email delivery is not implemented yet.
 
 ## 15. Future Enhancements
