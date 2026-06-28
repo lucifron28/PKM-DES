@@ -56,6 +56,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Online enrollment form that creates a `PENDING` enrollment record
 - Duplicate enrollment submissions are blocked for the same student, academic year, and semester when any enrollment record already exists
 - Successful enrollment submissions attach matching subjects into `enrollment_subjects`
+- Transferee and Irregular Student subject loads are blocked from auto-loading and marked for Registrar-managed subject assignment
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
 - Admin dashboard with pending, approved, rejected, and total enrollment record counts
 - Admin Enrollment Reports page with program, academic year, year level, semester, and review-status filters
@@ -236,6 +237,7 @@ Student:
 - Duplicate enrollment submission for the same academic year and semester is blocked.
 - Rejected enrollment records cannot be resubmitted for the same academic year and semester.
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
+- Transferee and Irregular Student self-submission shows the Registrar-managed subject loading notice.
 - Enrollment status becomes PENDING.
 - Student can open and browser-print the MVP draft registration form after enrollment submission.
 - Draft registration form displays attached subjects and total units.
@@ -273,7 +275,8 @@ Security:
 ## 14. Known Limitations
 
 - Incoming 1st Year Student and Transferee account creation now depends on official records, but bulk import is not implemented.
-- Official regular/irregular/continuing classification rules are not implemented.
+- Official regular/irregular/continuing classification rules are not implemented beyond Registrar-assigned tags.
+- Registrar-managed subject loading for Transferee and Irregular Student records is not implemented yet, so those classifications cannot use the auto-loaded online enrollment submission path.
 - Official rejection categories are not invented; rejection remarks are free text only.
 - Browser-printable draft registration forms are implemented for MVP testing, but the official COR/PDF template is not implemented without PKM's official template.
 - Enrollment reports are browser-printable MVP outputs; official export, PDF, or printable report format must be supplied before final report generation.

@@ -345,14 +345,21 @@ Then log in at `/login` with the admin email and password.
 Student submission:
 
 1. Student submits Online Enrollment.
-2. App checks for any existing enrollment for the same student, academic year, and semester.
-3. If a duplicate exists, the submission is blocked with a safe user-facing message.
-4. App inserts into `public.enrollments` with status `PENDING`.
-5. Database trigger updates the student's `enrollment_status` to `PENDING`.
-6. App queries matching subjects by program, year level, and semester.
-7. App inserts matching rows into `public.enrollment_subjects`.
-8. If subject attachment fails, the app deletes the newly created orphan enrollment where RLS allows cleanup.
-9. Pending record appears in Admin Pending Enrollments.
+2. App blocks Transferee and Irregular Student records from the auto-loaded submission path until Registrar-managed subject loading is implemented.
+3. App checks for any existing enrollment for the same student, academic year, and semester.
+4. If a duplicate exists, the submission is blocked with a safe user-facing message.
+5. App inserts into `public.enrollments` with status `PENDING`.
+6. Database trigger updates the student's `enrollment_status` to `PENDING`.
+7. App queries matching subjects by program, year level, and semester.
+8. App inserts matching rows into `public.enrollment_subjects`.
+9. If subject attachment fails, the app deletes the newly created orphan enrollment where RLS allows cleanup.
+10. Pending record appears in Admin Pending Enrollments.
+
+Subject-load boundary:
+
+- Regular auto-loading remains limited to the existing source-grounded subject seed by program, year level, and semester.
+- Transferee and Irregular Student subject loads require Registrar assignment because credited subjects and adjusted loads need official rules.
+- The Registrar-managed subject loading screen is not implemented yet.
 
 Printable registration form:
 
