@@ -359,7 +359,8 @@ Printable registration form:
 1. Student or admin opens a registration form page for an existing enrollment.
 2. App reads the enrollment, student profile, program, and attached `enrollment_subjects` rows under existing RLS policies.
 3. App renders an MVP draft browser-print form from existing enrollment data.
-4. The form intentionally remains a draft output until PKM provides the official COR / registration form template.
+4. The form includes a generated date, source note, attached subjects, total units, student certification context, and Registrar review context.
+5. The form intentionally remains a draft output until PKM provides the official COR / registration form template.
 
 Enrollment reports:
 

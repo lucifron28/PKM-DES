@@ -65,7 +65,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Rejection updates enrollment status to `REJECTED`, stores optional remarks, and recalculates the student's derived enrollment status
 - Audit log insert for approve/reject actions
 - Enrollment masterlist with year-level and semester filters
-- MVP draft printable registration form using existing enrollment and attached subject data
+- MVP draft printable registration form using existing enrollment, attached subject data, generated date, and draft-output notices
 - Admin view/print access for individual enrollment registration forms
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
 - Official student records list displays derived student-account match status for Registrar review
@@ -238,7 +238,7 @@ Student:
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
 - Enrollment status becomes PENDING.
 - Student can open and browser-print the MVP draft registration form after enrollment submission.
-- Draft registration form displays attached subjects and total units.
+- Draft registration form displays attached subjects, total units, generated date, student certification context, and Registrar review context.
 - Grades page shows empty state when no grades exist.
 - Schedule page shows empty state when no schedule exists.
 - Balances page shows empty state when no balance exists.
