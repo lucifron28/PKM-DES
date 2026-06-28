@@ -49,6 +49,30 @@ function officialRecordMatchesForm({
   );
 }
 
+async function findExistingStudentAccount({
+  admin,
+  email,
+  studentIdNumber
+}: {
+  admin: ReturnType<typeof createSupabaseAdminClient>;
+  email: string;
+  studentIdNumber: string | null;
+}) {
+  const [existingProfileResult, existingStudentResult] = await Promise.all([
+    admin.from("profiles").select("id").eq("email", email).limit(1).maybeSingle(),
+    studentIdNumber
+      ? admin
+          .from("students")
+          .select("id")
+          .eq("student_id_number", studentIdNumber)
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null })
+  ]);
+
+  return Boolean(existingProfileResult.data || existingStudentResult.data);
+}
+
 export async function createStudentAccountAction(
   _previousState: CreateAccountState,
   formData: FormData
@@ -157,14 +181,27 @@ export async function createStudentAccountAction(
     accountStudentType = typedOfficialRecord.student_type;
   }
 
+  const accountExists = await findExistingStudentAccount({
+    admin,
+    email,
+    studentIdNumber: accountStudentIdNumber
+  });
+
+  if (accountExists) {
+    return { message: "An account already exists for this email address or Student ID Number." };
+  }
+
   const { data: createdUser, error: authError } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
+    app_metadata: {
+      role: "student",
+      account_status: "ACTIVE"
+    },
     user_metadata: {
-      first_name: firstName,
-      last_name: lastName,
-      role: "student"
+      first_name: accountFirstName,
+      last_name: accountLastName
     }
   });
 
