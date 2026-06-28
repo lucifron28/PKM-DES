@@ -308,6 +308,7 @@ Account status behavior:
 - `Old Student` -> `ACTIVE` when Student ID Number is provided
 - `Incoming 1st Year Student` -> `ACTIVE` only when submitted details match an official record
 - `Transferee` -> `ACTIVE` only when submitted details match an official record
+- Duplicate account creation is blocked when the submitted email address or resolved Student ID Number already exists in student account records
 
 Only `ACTIVE` accounts can log in.
 
@@ -419,7 +420,9 @@ Current behavior:
 2. Incoming 1st Year Student and Transferee account creation looks for an official record by email.
 3. The submitted first name, last name, program, year level, student type, and optional Student ID Number must match the official record.
 4. If no matching official record exists, no Auth user or student profile is created.
-5. When a match exists, the app creates an `ACTIVE` Supabase Auth user, profile, and student record using the official record values.
+5. Before creating an Auth user, the app blocks duplicates by existing profile email or existing student Student ID Number.
+6. When a match exists and no duplicate is found, the app creates an `ACTIVE` Supabase Auth user, profile, and student record using the official record values.
+7. The Auth user stores role/account hints in app metadata only; route protection and RLS still rely on `public.profiles`, not user-editable metadata.
 
 Remaining gaps:
 
