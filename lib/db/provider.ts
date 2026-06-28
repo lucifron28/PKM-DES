@@ -1,5 +1,9 @@
 export type DatabaseProvider = "supabase" | "sqlite";
 
+export function isProductionLikeRuntime() {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+}
+
 export function getDatabaseProvider(): DatabaseProvider {
   const provider = process.env.DATABASE_PROVIDER ?? "supabase";
 
@@ -7,11 +11,15 @@ export function getDatabaseProvider(): DatabaseProvider {
     return "sqlite";
   }
 
-  return "supabase";
+  if (provider === "supabase") {
+    return "supabase";
+  }
+
+  throw new Error("Invalid DATABASE_PROVIDER. Use 'supabase' or 'sqlite'.");
 }
 
 export function assertDatabaseProviderIsDeployable() {
-  if (process.env.VERCEL && getDatabaseProvider() === "sqlite") {
-    throw new Error("SQLite is for local development only. Use DATABASE_PROVIDER=supabase on Vercel.");
+  if (isProductionLikeRuntime() && getDatabaseProvider() === "sqlite") {
+    throw new Error("SQLite is for local development only. Use DATABASE_PROVIDER=supabase for production.");
   }
 }
