@@ -342,6 +342,12 @@ Then log in at `/login` with the admin email and password.
 
 ## Enrollment Flow in Supabase
 
+Current MVP term:
+
+- Online enrollment is limited to the client-confirmed term `AY 2026-2027`, `1st Semester`.
+- The form preselects that term, and the server action rejects other academic year or semester values.
+- Additional selectable terms require PKM's official academic calendar before being opened.
+
 Student submission:
 
 1. Student submits Online Enrollment.
