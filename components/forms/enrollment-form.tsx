@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { submitEnrollmentAction, type EnrollmentState } from "@/app/student/enrollment/actions";
-import { ACADEMIC_YEAR_OPTIONS, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { CURRENT_ENROLLMENT_TERM, YEAR_LEVELS } from "@/lib/constants/pkm";
 import type { Student } from "@/types/database";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { SelectInput } from "@/components/ui/field";
@@ -34,27 +34,26 @@ export function EnrollmentForm({ student }: { student: Student }) {
         </SelectInput>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <SelectInput label="Academic Year" name="academic_year" defaultValue="" required>
-          <option value="" disabled>
-            Select academic year
-          </option>
-          {ACADEMIC_YEAR_OPTIONS.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
+        <SelectInput
+          label="Academic Year"
+          name="academic_year"
+          defaultValue={CURRENT_ENROLLMENT_TERM.academicYear}
+          required
+        >
+          <option value={CURRENT_ENROLLMENT_TERM.academicYear}>{CURRENT_ENROLLMENT_TERM.academicYear}</option>
         </SelectInput>
-        <SelectInput label="Semester" name="semester" defaultValue="" required>
-          <option value="" disabled>
-            Select semester
-          </option>
-          {SEMESTERS.map((semester) => (
-            <option key={semester} value={semester}>
-              {semester}
-            </option>
-          ))}
+        <SelectInput
+          label="Semester"
+          name="semester"
+          defaultValue={CURRENT_ENROLLMENT_TERM.semester}
+          required
+        >
+          <option value={CURRENT_ENROLLMENT_TERM.semester}>{CURRENT_ENROLLMENT_TERM.semester}</option>
         </SelectInput>
       </div>
+      <p className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-900">
+        Current enrollment term: {CURRENT_ENROLLMENT_TERM.label}. Additional terms require the official academic calendar.
+      </p>
       <label className="flex gap-3 rounded-md border border-slateui-border bg-white p-4 text-sm font-medium text-slateui-secondary">
         <input name="certified" type="checkbox" className="mt-1 h-4 w-4 rounded border-slateui-border text-primary-800" />
         <span>I certify that the information provided is correct.</span>

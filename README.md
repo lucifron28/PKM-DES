@@ -55,6 +55,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
 - Subject List includes source-labeled BSAIS course offerings for SY 2025-2026, 2nd Semester
 - Online enrollment form that creates a `PENDING` enrollment record
+- Online enrollment is currently limited to the client-confirmed MVP term: AY 2026-2027, 1st Semester
 - Duplicate enrollment submissions are blocked for the same student, academic year, and semester when any enrollment record already exists
 - Successful enrollment submissions attach matching subjects into `enrollment_subjects`
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
@@ -235,6 +236,7 @@ Student:
 - Subject list displays separate tables by year level and semester.
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
+- Enrollment form defaults to AY 2026-2027, 1st Semester.
 - Duplicate enrollment submission for the same academic year and semester is blocked.
 - Rejected enrollment records cannot be resubmitted for the same academic year and semester.
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
@@ -287,7 +289,7 @@ Security:
 - BSAIS course offerings from `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx` are displayed as term offerings only; they do not replace the full curriculum seed.
 - The BSAIS course offering workbook has duplicate BSAIS blocks and a 4th Year total with no visible 4th Year course rows.
 - Enrollment submission still attaches subjects from the database subject seed until PKM supplies an official term-offering-to-enrollment rule.
-- Client has confirmed First Semester AY 2026-2027 as the current term, but the app still needs a proper academic calendar configuration instead of hardcoded constants.
+- Client has confirmed First Semester AY 2026-2027 as the current MVP enrollment term, but the app still needs a full academic calendar configuration before additional terms are opened.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Student Account official-detail display depends on an exact matching Registrar-managed official record and server-only Supabase service-role configuration.
 - Generated-password email delivery is not implemented yet.

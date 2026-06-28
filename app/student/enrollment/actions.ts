@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ACADEMIC_YEAR_OPTIONS, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { CURRENT_ENROLLMENT_TERM, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { requireRole, getStudentForProfile } from "@/lib/auth/session";
 import type { Enrollment, Semester, Subject, YearLevel } from "@/types/database";
 
@@ -34,8 +34,8 @@ export async function submitEnrollmentAction(
   if (
     programId !== student.program_id ||
     !YEAR_LEVELS.includes(yearLevel) ||
-    !ACADEMIC_YEAR_OPTIONS.includes(academicYear) ||
-    !SEMESTERS.includes(semester)
+    academicYear !== CURRENT_ENROLLMENT_TERM.academicYear ||
+    semester !== CURRENT_ENROLLMENT_TERM.semester
   ) {
     return { message: "Please review the academic information before submitting." };
   }
