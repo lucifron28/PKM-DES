@@ -367,8 +367,9 @@ Enrollment reports:
 1. Admin opens `/admin/reports`.
 2. App reads enrollment records, student profiles, and programs through existing admin RLS policies.
 3. Admin can filter by program, academic year, year level, semester, and review status.
-4. App renders status summary counts and a browser-printable enrollment report table.
-5. Official PDF/export generation remains pending until PKM supplies the required report format.
+4. Admin can reset filters back to the full report.
+5. App renders status summary counts, a report criteria summary, and a browser-printable enrollment report table.
+6. Official PDF/export generation remains pending until PKM supplies the required report format.
 
 Admin approval:
 
