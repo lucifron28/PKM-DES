@@ -48,6 +48,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Create-account dropdown values exactly as requested: Incoming 1st Year Student, Transferee, Old Student
 - Incoming 1st Year Student and Transferee account creation requires a matching official Registrar-managed record
 - Old Student accounts require a Student ID Number
+- Create-account flow blocks duplicate student accounts by email address or Student ID Number before Auth user creation
 - Matched student accounts become `ACTIVE`
 - Student dashboard with student information, enrollment status, and quick actions
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
@@ -224,6 +225,7 @@ Student:
 - Student can create an Old Student account when `SUPABASE_SERVICE_ROLE_KEY` is configured.
 - Incoming 1st Year Student and Transferee account creation is blocked when no matching official record exists.
 - Incoming 1st Year Student and Transferee account creation succeeds when submitted details match an official record.
+- Duplicate account creation for an existing email address or Student ID Number is blocked.
 - Student can log in.
 - Student dashboard displays profile information.
 - Student can view subject list.
