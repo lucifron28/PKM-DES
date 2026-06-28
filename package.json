@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "check:production-env": "node scripts/check-production-env.mjs",
     "db:sqlite:init": "node scripts/sqlite/init-dev-db.mjs"
   },
   "dependencies": {

@@ -20,6 +20,12 @@ DATABASE_PROVIDER=sqlite
 
 The app has a deployment guard that throws a clear error if `DATABASE_PROVIDER=sqlite` is used on Vercel.
 
+Production/Vercel readiness can be checked with:
+
+```bash
+npm run check:production-env
+```
+
 ## Initialize Local SQLite
 
 Run:
