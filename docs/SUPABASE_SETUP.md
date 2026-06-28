@@ -394,7 +394,14 @@ Current MVP behavior:
 3. App validates required fields, email format, dropdown values, and selected program.
 4. App inserts the record through the authenticated Supabase server client under admin-only RLS.
 5. Admin can search and filter official records by name/email/Student ID, program, year level, student type, and enrollment status.
-6. Admin can open an existing official record, edit the same validated fields, and update it through admin-only RLS.
+6. Admin can see derived account-match status for displayed official records.
+7. Admin can open an existing official record, edit the same validated fields, and update it through admin-only RLS.
+
+Account-match display:
+
+- Email match checks student profiles with the same email address.
+- Student ID match checks student records with the same Student ID Number when the official record has one.
+- The display is informational only and does not activate accounts, change records, or create new verification rules.
 
 Not implemented in this branch:
 
