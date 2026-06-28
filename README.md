@@ -43,6 +43,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - PKM and Municipality of Mauban logo images applied to the public header, home page, app shell, and printable registration form
 - Supabase-backed login with active-account checks
 - Role-based protection for student and admin areas
+- Production environment check for Supabase/Vercel configuration
 - Student account creation through Supabase Auth when `SUPABASE_SERVICE_ROLE_KEY` is configured
 - Create-account dropdown values exactly as requested: Incoming 1st Year Student, Transferee, Old Student
 - Incoming 1st Year Student and Transferee account creation requires a matching official Registrar-managed record
@@ -159,9 +160,12 @@ http://localhost:3000
 Production-style local run:
 
 ```bash
+npm run check:production-env
 npm run build
 npm run start
 ```
+
+For Vercel, set `DATABASE_PROVIDER=supabase`. `DATABASE_PROVIDER=sqlite` is local-development only and the app includes a production guard against it.
 
 ## 11. Database Tables
 
@@ -259,6 +263,7 @@ Security:
 - Admin routes require admin role.
 - Logged-out users cannot access protected pages.
 - Students cannot view other students' private enrollment data.
+- `npm run check:production-env` passes with the Vercel/Supabase environment variables configured.
 - Supabase security advisor reports no current security lints after the cleanup migrations.
 
 ## 14. Known Limitations

@@ -15,6 +15,14 @@ The public URL and anon/publishable keys are safe for browser use. The service-r
 
 For Vercel deployment, keep `DATABASE_PROVIDER=supabase`. SQLite is local-development only and is documented separately in `docs/SQLITE_DEVELOPMENT.md`.
 
+Before a production or Vercel deployment, run:
+
+```bash
+npm run check:production-env
+```
+
+This verifies that the deployment is not using SQLite and that the required Supabase environment variables are present.
+
 ## What Was Done Through Supabase MCP
 
 1. Listed Supabase projects and found the new `PKM-DES` project.
@@ -60,6 +68,7 @@ Important:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` is used by browser and server clients operating under RLS.
 - `SUPABASE_SERVICE_ROLE_KEY` is used only by server actions that need privileged Auth operations.
 - The service-role key is required for the MVP Create Student Account flow because the app creates Supabase Auth users server-side.
+- Vercel deployments must set `DATABASE_PROVIDER=supabase`.
 - `.env.local` is ignored by git and should stay local.
 
 After changing `.env.local`, restart the dev server:
@@ -435,6 +444,23 @@ select tablename
 from pg_tables
 where schemaname = 'public'
 order by tablename;
+```
+
+Data API exposure check:
+
+Supabase changed new-table exposure behavior in 2026. If authenticated app queries unexpectedly return table-access errors after a fresh project setup, confirm the public tables are exposed to the Data API and that RLS is enabled. Do not disable RLS to fix access.
+
+Use this SQL to inspect exposed public-table grants:
+
+```sql
+select
+  table_name,
+  grantee,
+  privilege_type
+from information_schema.role_table_grants
+where table_schema = 'public'
+  and grantee in ('anon', 'authenticated')
+order by table_name, grantee, privilege_type;
 ```
 
 ## Notes and Boundaries
