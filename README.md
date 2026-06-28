@@ -58,7 +58,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Successful enrollment submissions attach matching subjects into `enrollment_subjects`
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
 - Admin dashboard with pending, approved, rejected, and total enrollment record counts
-- Admin Enrollment Reports page with program, academic year, year level, semester, and review-status filters
+- Admin Enrollment Reports page with program, academic year, year level, semester, review-status filters, reset control, and printed criteria summary
 - Browser-printable enrollment report table for Registrar review
 - Admin approve/reject enrollment actions
 - Approval updates enrollment status to `APPROVED` and student status to `ENROLLED`
@@ -248,6 +248,7 @@ Admin:
 - Admin can view dashboard.
 - Admin can view enrollment reports.
 - Admin can filter enrollment reports by program, academic year, year level, semester, and review status.
+- Admin can reset report filters and see the report criteria summary on the browser-print output.
 - Admin can browser-print the enrollment report.
 - Admin can add an official student/admitted-applicant record.
 - Admin can search and filter official student/admitted-applicant records.
