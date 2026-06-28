@@ -46,6 +46,13 @@ export const YEAR_LEVELS: YearLevel[] = [
 
 export const SEMESTERS: Semester[] = ["1st Semester", "2nd Semester"];
 
+export const CURRENT_ENROLLMENT_TERM = {
+  academicYear: "2026-2027",
+  semester: "1st Semester" as Semester,
+  label: "AY 2026-2027, 1st Semester",
+  sourceNote: "Client-confirmed MVP enrollment term."
+};
+
 export const CREATE_ACCOUNT_STUDENT_TYPES: StudentType[] = [
   "Incoming 1st Year Student",
   "Transferee",
@@ -62,7 +69,5 @@ export const STUDENT_TYPE_TAGS: StudentType[] = [
 ];
 
 export const ACADEMIC_YEAR_OPTIONS = [
-  "2026-2027",
-  "2027-2028",
-  "2028-2029"
+  CURRENT_ENROLLMENT_TERM.academicYear
 ];
