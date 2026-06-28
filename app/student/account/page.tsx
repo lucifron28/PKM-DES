@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ChangePasswordForm } from "@/components/forms/change-password-form";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { OfficialStudentRecord } from "@/types/database";
@@ -114,14 +115,19 @@ export default async function StudentAccountPage() {
       <Card>
         <CardHeader title="Account" description="Displayed student profile details." />
         <DetailList rows={accountRows} />
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-6">
           <Button type="button" variant="outline" disabled>
             Edit Profile
           </Button>
-          <Button type="button" variant="outline" disabled>
-            Change Password
-          </Button>
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Account Security"
+          description="Change your password while signed in."
+        />
+        <ChangePasswordForm />
       </Card>
 
       <Card>
