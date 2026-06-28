@@ -319,6 +319,12 @@ Current client direction:
 - The target workflow is system-generated passwords sent by email, with students allowed to change passwords later.
 - The generated-password email workflow is not implemented yet and should be built before production use.
 
+Student password changes:
+
+- Signed-in students can change their password from `/student/account`.
+- The form verifies the current password using Supabase Auth before calling `auth.updateUser`.
+- This uses the authenticated student session and does not require service-role access.
+
 ### Admin Login
 
 Admin accounts are internal and are not created through public registration.

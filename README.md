@@ -52,6 +52,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Matched student accounts become `ACTIVE`
 - Student dashboard with student information, enrollment status, and quick actions
 - Student Account page displays core account data and matching Registrar-managed official profile details when available
+- Signed-in students can change their password from the Account page
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
 - Subject List includes source-labeled BSAIS course offerings for SY 2025-2026, 2nd Semester
 - Online enrollment form that creates a `PENDING` enrollment record
@@ -231,6 +232,7 @@ Student:
 - Student can log in.
 - Student dashboard displays profile information.
 - Student account page displays confirmed official profile fields when a matching official record exists.
+- Student can change password from the Account page after entering the current password.
 - Student can view subject list.
 - Student can view BSAIS course offerings labeled with SY 2025-2026 and 2nd Semester.
 - Subject list displays separate tables by year level and semester.
