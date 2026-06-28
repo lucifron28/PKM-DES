@@ -406,6 +406,14 @@ Account-match display:
 - Student ID match checks student records with the same Student ID Number when the official record has one.
 - The display is informational only and does not activate accounts, change records, or create new verification rules.
 
+Student account profile display:
+
+- The student Account page always shows account profile and student record fields available through normal student access.
+- When server-side service-role configuration is available, the page also performs an exact matching lookup against `official_student_records`.
+- The lookup matches by student profile email first, then by Student ID Number when available.
+- Only the matching official record is displayed to the signed-in student; students still do not browse official record lists.
+- If no matching official record is found, the page shows a clear empty state and keeps the core account details visible.
+
 Not implemented in this branch:
 
 - CSV import
