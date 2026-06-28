@@ -1,6 +1,6 @@
 import { CheckCircle2, FileText, ListChecks, XCircle } from "lucide-react";
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectInput } from "@/components/ui/field";
@@ -36,6 +36,10 @@ type ReportSearchParams = {
 
 function countByStatus(rows: ReportRow[], status: EnrollmentReviewStatus) {
   return rows.filter((row) => row.status === status).length;
+}
+
+function formatCriterion(value: string | null | undefined) {
+  return value?.trim() || "All";
 }
 
 export default async function EnrollmentReportsPage({
@@ -89,6 +93,13 @@ export default async function EnrollmentReportsPage({
   const approvedCount = countByStatus(rows, "APPROVED");
   const rejectedCount = countByStatus(rows, "REJECTED");
   const generatedAt = formatDate(new Date().toISOString());
+  const reportCriteria = [
+    ["Program", selectedProgram?.name ?? "All programs"],
+    ["Academic Year", formatCriterion(params.academic_year)],
+    ["Year Level", formatCriterion(params.year_level)],
+    ["Semester", formatCriterion(params.semester)],
+    ["Review Status", formatCriterion(params.status)]
+  ];
 
   return (
     <section className="print-page space-y-6">
@@ -98,7 +109,7 @@ export default async function EnrollmentReportsPage({
           description="MVP browser-print report for Registrar review."
           action={<PrintButton label="Print Report" />}
         />
-        <form className="print-hidden grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
+        <form className="print-hidden grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto_auto] lg:items-end">
           <SelectInput label="Program" name="program" defaultValue={params.program ?? ""}>
             <option value="">All programs</option>
             {programOptions.map((program) => (
@@ -132,6 +143,7 @@ export default async function EnrollmentReportsPage({
             ))}
           </SelectInput>
           <Button type="submit">Apply</Button>
+          <ButtonLink href="/admin/reports" variant="outline">Reset</ButtonLink>
         </form>
       </Card>
 
@@ -171,6 +183,14 @@ export default async function EnrollmentReportsPage({
           title="Enrollment Report Output"
           description={`Generated ${generatedAt}`}
         />
+        <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {reportCriteria.map(([label, value]) => (
+            <div key={label} className="rounded-md border border-slateui-border bg-slateui-surfaceAlt p-3">
+              <p className="text-xs font-semibold uppercase text-slateui-muted">{label}</p>
+              <p className="mt-1 text-sm font-semibold text-slateui-text">{value}</p>
+            </div>
+          ))}
+        </div>
         {rows.length ? (
           <div className="overflow-hidden rounded-lg border border-slateui-border">
             <div className="overflow-x-auto">
