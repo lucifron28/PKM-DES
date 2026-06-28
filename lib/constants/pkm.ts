@@ -61,6 +61,11 @@ export const STUDENT_TYPE_TAGS: StudentType[] = [
   "Irregular Student"
 ];
 
+export const REGISTRAR_MANAGED_SUBJECT_LOAD_TYPES: StudentType[] = [
+  "Transferee",
+  "Irregular Student"
+];
+
 export const ACADEMIC_YEAR_OPTIONS = [
   "2026-2027",
   "2027-2028",

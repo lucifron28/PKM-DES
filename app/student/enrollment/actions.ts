@@ -2,7 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { ACADEMIC_YEAR_OPTIONS, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import {
+  ACADEMIC_YEAR_OPTIONS,
+  REGISTRAR_MANAGED_SUBJECT_LOAD_TYPES,
+  SEMESTERS,
+  YEAR_LEVELS
+} from "@/lib/constants/pkm";
 import { requireRole, getStudentForProfile } from "@/lib/auth/session";
 import type { Enrollment, Semester, Subject, YearLevel } from "@/types/database";
 
@@ -19,6 +24,13 @@ export async function submitEnrollmentAction(
 
   if (!student) {
     return { message: "Student record not found." };
+  }
+
+  if (REGISTRAR_MANAGED_SUBJECT_LOAD_TYPES.includes(student.student_type)) {
+    return {
+      message:
+        "Your subject load requires Registrar review before online enrollment submission. Please contact the Registrar."
+    };
   }
 
   const programId = String(formData.get("program_id") ?? "");

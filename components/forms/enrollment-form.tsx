@@ -3,7 +3,12 @@
 import { useActionState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { submitEnrollmentAction, type EnrollmentState } from "@/app/student/enrollment/actions";
-import { ACADEMIC_YEAR_OPTIONS, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import {
+  ACADEMIC_YEAR_OPTIONS,
+  REGISTRAR_MANAGED_SUBJECT_LOAD_TYPES,
+  SEMESTERS,
+  YEAR_LEVELS
+} from "@/lib/constants/pkm";
 import type { Student } from "@/types/database";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { SelectInput } from "@/components/ui/field";
@@ -12,12 +17,19 @@ const initialState: EnrollmentState = {};
 
 export function EnrollmentForm({ student }: { student: Student }) {
   const [state, formAction, pending] = useActionState(submitEnrollmentAction, initialState);
+  const requiresRegistrarSubjectLoad = REGISTRAR_MANAGED_SUBJECT_LOAD_TYPES.includes(student.student_type);
 
   return (
     <form action={formAction} className="space-y-5">
       {state.message ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {state.message}
+        </div>
+      ) : null}
+      {requiresRegistrarSubjectLoad ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+          Your student classification requires Registrar-managed subject loading. Online self-submission will be
+          available after the Registrar assigns your approved subjects.
         </div>
       ) : null}
       <input type="hidden" name="program_id" value={student.program_id} />
@@ -63,7 +75,7 @@ export function EnrollmentForm({ student }: { student: Student }) {
         Submission of this form does not guarantee official enrollment and is subject to administrative approval.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || requiresRegistrarSubjectLoad}>
           <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
           {pending ? "Submitting..." : "Submit Enrollment"}
         </Button>
