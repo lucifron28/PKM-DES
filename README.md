@@ -69,6 +69,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Rejection updates enrollment status to `REJECTED`, stores optional remarks, and recalculates the student's derived enrollment status
 - Audit log insert for approve/reject actions
 - Enrollment masterlist with year-level and semester filters
+- Admin Account page with internal account details and password change
 - MVP draft printable registration form using existing enrollment, attached subject data, generated date, and draft-output notices
 - Admin view/print access for individual enrollment registration forms
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing

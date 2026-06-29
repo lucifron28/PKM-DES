@@ -4,16 +4,16 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
 import { changeSignedInUserPassword } from "@/lib/auth/password";
 
-export type ChangePasswordState = {
+export type AdminChangePasswordState = {
   message?: string;
   success?: boolean;
 };
 
-export async function changePasswordAction(
-  _previousState: ChangePasswordState,
+export async function changeAdminPasswordAction(
+  _previousState: AdminChangePasswordState,
   formData: FormData
-): Promise<ChangePasswordState> {
-  const { supabase, profile } = await requireRole("student");
+): Promise<AdminChangePasswordState> {
+  const { supabase, profile } = await requireRole("admin");
   const currentPassword = String(formData.get("current_password") ?? "");
   const newPassword = String(formData.get("new_password") ?? "");
   const confirmPassword = String(formData.get("confirm_password") ?? "");
@@ -26,7 +26,7 @@ export async function changePasswordAction(
   });
 
   if (result.success) {
-    revalidatePath("/student/account");
+    revalidatePath("/admin/account");
   }
 
   return result;
