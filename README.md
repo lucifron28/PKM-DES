@@ -61,6 +61,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Successful enrollment submissions attach matching subjects into `enrollment_subjects`
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
 - Admin dashboard with pending, approved, rejected, and total enrollment record counts
+- Admin dashboard enrollment counts are loaded with a single lightweight status query
 - Admin Enrollment Reports page with program, academic year, year level, semester, review-status filters, reset control, and printed criteria summary
 - Browser-printable enrollment report table for Registrar review
 - Admin approve/reject enrollment actions
@@ -74,6 +75,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
 - Official student records list displays derived student-account match status for Registrar review
 - Faster student tab navigation through a student portal context and lighter placeholder routes
+- Sidebar links prefetch on hover/focus, with student/admin loading shells for slower server-rendered routes
 
 ## 6. Placeholder Features
 
@@ -253,7 +255,7 @@ Student:
 Admin:
 - Admin can log in.
 - Admin can view dashboard.
-- Admin can view account details and change password from the Admin Account page.
+- Admin dashboard count cards load from the optimized status tally.
 - Admin can view enrollment reports.
 - Admin can filter enrollment reports by program, academic year, year level, semester, and review status.
 - Admin can reset report filters and see the report criteria summary on the browser-print output.
