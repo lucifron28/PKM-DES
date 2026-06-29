@@ -19,9 +19,9 @@ Use `/create-account` and choose `Old Student`.
 | Field | Sample Value |
 | --- | --- |
 | Student ID Number | `23-00340` |
-| First Name | `Dev Old` |
-| Last Name | `Student` |
-| Email | `dev.old.student@pkm-des.local` |
+| First Name | `Juan` |
+| Last Name | `Dela Cruz` |
+| Email | `juan.delacruz@pkm-des.local` |
 | Program | `Accounting Information System` |
 | Year Level | `1st Year` |
 | Student Type | `Old Student` |
@@ -36,9 +36,9 @@ Before account creation, add this official record in `/admin/students`.
 | Field | Sample Value |
 | --- | --- |
 | Student ID Number | Leave blank or use `26-00001` |
-| First Name | `Dev Incoming` |
-| Last Name | `Student` |
-| Email | `dev.incoming.student@pkm-des.local` |
+| First Name | `Maria` |
+| Last Name | `Santos` |
+| Email | `maria.santos@pkm-des.local` |
 | Program | `Accounting Information System` |
 | Year Level | `1st Year` |
 | Student Type / Classification | `Incoming 1st Year Student` |
@@ -48,9 +48,9 @@ Then use `/create-account` with the same details.
 
 | Field | Sample Value |
 | --- | --- |
-| First Name | `Dev Incoming` |
-| Last Name | `Student` |
-| Email | `dev.incoming.student@pkm-des.local` |
+| First Name | `Maria` |
+| Last Name | `Santos` |
+| Email | `maria.santos@pkm-des.local` |
 | Program | `Accounting Information System` |
 | Year Level | `1st Year` |
 | Student Type | `Incoming 1st Year Student` |
@@ -65,22 +65,22 @@ Before account creation, add this official record in `/admin/students`.
 | Field | Sample Value |
 | --- | --- |
 | Student ID Number | Leave blank or use `26-00002` |
-| First Name | `Dev Transfer` |
-| Last Name | `Student` |
-| Email | `dev.transfer.student@pkm-des.local` |
+| First Name | `Carlos` |
+| Last Name | `Reyes` |
+| Email | `carlos.reyes@pkm-des.local` |
 | Program | `Accounting Information System` |
 | Year Level | `2nd Year` |
 | Student Type / Classification | `Transferee` |
 | Enrollment Status | `NOT ENROLLED` |
-| Previous School Information | `Development sample only` |
+| Previous School Information | `Sample previous college` |
 
 Then use `/create-account` with the same details.
 
 | Field | Sample Value |
 | --- | --- |
-| First Name | `Dev Transfer` |
-| Last Name | `Student` |
-| Email | `dev.transfer.student@pkm-des.local` |
+| First Name | `Carlos` |
+| Last Name | `Reyes` |
+| Email | `carlos.reyes@pkm-des.local` |
 | Program | `Accounting Information System` |
 | Year Level | `2nd Year` |
 | Student Type | `Transferee` |
