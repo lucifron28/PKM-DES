@@ -37,5 +37,6 @@ export const adminNavigation: NavigationItem[] = [
   { label: "Enrollment Reports", href: "/admin/reports", icon: "reports" },
   { label: "Enrollment Masterlist", href: "/admin/masterlist", icon: "masterlist" },
   { label: "Pending Enrollments", href: "/admin/enrollments", icon: "pending" },
-  { label: "Student Records", href: "/admin/students", icon: "students" }
+  { label: "Student Records", href: "/admin/students", icon: "students" },
+  { label: "Account", href: "/admin/account", icon: "account" }
 ];

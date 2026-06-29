@@ -325,6 +325,12 @@ Student password changes:
 - The form verifies the current password using Supabase Auth before calling `auth.updateUser`.
 - This uses the authenticated student session and does not require service-role access.
 
+Admin password changes:
+
+- Signed-in admins can view internal account details and change their password from `/admin/account`.
+- The form uses the same authenticated Supabase Auth password-change flow as student accounts.
+- Admin accounts remain internal; public admin registration is not exposed.
+
 ### Admin Login
 
 Admin accounts are internal and are not created through public registration.

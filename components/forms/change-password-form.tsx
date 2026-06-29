@@ -2,17 +2,23 @@
 
 import { useActionState } from "react";
 import { LockKeyhole } from "lucide-react";
-import {
-  changePasswordAction,
-  type ChangePasswordState
-} from "@/app/student/account/actions";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
 
+export type ChangePasswordState = {
+  message?: string;
+  success?: boolean;
+};
+
+type ChangePasswordAction = (
+  previousState: ChangePasswordState,
+  formData: FormData
+) => Promise<ChangePasswordState>;
+
 const initialState: ChangePasswordState = {};
 
-export function ChangePasswordForm() {
-  const [state, formAction, pending] = useActionState(changePasswordAction, initialState);
+export function ChangePasswordForm({ action }: { action: ChangePasswordAction }) {
+  const [state, formAction, pending] = useActionState(action, initialState);
 
   return (
     <form action={formAction} className="space-y-4">

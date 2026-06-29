@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChangePasswordForm } from "@/components/forms/change-password-form";
+import { changePasswordAction } from "./actions";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { OfficialStudentRecord } from "@/types/database";
@@ -127,7 +128,7 @@ export default async function StudentAccountPage() {
           title="Account Security"
           description="Change your password while signed in."
         />
-        <ChangePasswordForm />
+        <ChangePasswordForm action={changePasswordAction} />
       </Card>
 
       <Card>
