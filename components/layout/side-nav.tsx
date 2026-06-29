@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
@@ -33,6 +33,7 @@ const icons: Record<NavigationIcon, typeof BookOpen> = {
 
 export function SideNav({ items }: { items: NavigationItem[] }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <nav className="space-y-1">
@@ -44,6 +45,9 @@ export function SideNav({ items }: { items: NavigationItem[] }) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch
+            onFocus={() => router.prefetch(item.href)}
+            onMouseEnter={() => router.prefetch(item.href)}
             className={cn(
               "flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition",
               active
