@@ -191,13 +191,19 @@ export default async function StudentRecordsPage({
           description="Registrar-managed records used as the future source for account matching."
         />
         {params.created ? (
-          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
-            Official student record saved.
+          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+            <p className="font-semibold">Official student record saved.</p>
+            <p className="mt-1">
+              Next step: the student must claim this record, log in, and submit Online Enrollment before they appear in Pending Enrollments, Masterlist, or dashboard counts.
+            </p>
           </div>
         ) : null}
         {params.updated ? (
-          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
-            Official student record updated.
+          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+            <p className="font-semibold">Official student record updated.</p>
+            <p className="mt-1">
+              Updates here do not create enrollment records. The student still needs to submit Online Enrollment for Registrar review.
+            </p>
           </div>
         ) : null}
         {params.error ? (
@@ -292,7 +298,7 @@ export default async function StudentRecordsPage({
         ) : (
           <EmptyState
             title="No official student records found."
-            description="Add the first Registrar-managed record above. CSV import will be added after PKM provides the official file format."
+            description="Official Student Records are Registrar source records for account claiming. They become Pending Enrollments only after the student claims an account and submits Online Enrollment."
           />
         )}
       </Card>
