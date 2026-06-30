@@ -1,6 +1,12 @@
 import { Button, ButtonLink } from "@/components/ui/button";
 import { SelectInput, TextArea, TextInput } from "@/components/ui/field";
-import { STUDENT_TYPE_TAGS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import {
+  ADMISSION_STATUS_OPTIONS,
+  CIVIL_STATUS_OPTIONS,
+  GENDER_SEX_OPTIONS,
+  STUDENT_TYPE_TAGS,
+  YEAR_LEVELS
+} from "@/lib/constants/pkm";
 import type { EnrollmentStatus, OfficialStudentRecord, Program } from "@/types/database";
 
 const ENROLLMENT_STATUSES: EnrollmentStatus[] = ["NOT ENROLLED", "PENDING", "ENROLLED"];
@@ -44,13 +50,28 @@ export function OfficialStudentRecordForm({
         ))}
       </SelectInput>
       <TextInput label="Birthdate" name="birthdate" type="date" defaultValue={record?.birthdate ?? ""} />
-      <TextInput label="Gender/Sex" name="gender_sex" defaultValue={record?.gender_sex ?? ""} />
+      <SelectInput label="Gender/Sex" name="gender_sex" defaultValue={record?.gender_sex ?? ""}>
+        <option value="">Select gender/sex</option>
+        {GENDER_SEX_OPTIONS.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </SelectInput>
       <TextInput label="Contact Number" name="contact_number" defaultValue={record?.contact_number ?? ""} />
       <TextInput label="Guardian" name="guardian" defaultValue={record?.guardian ?? ""} />
       <TextInput label="Emergency Contact Person" name="emergency_contact_person" defaultValue={record?.emergency_contact_person ?? ""} />
       <TextInput label="Nationality" name="nationality" defaultValue={record?.nationality ?? ""} />
-      <TextInput label="Civil Status" name="civil_status" defaultValue={record?.civil_status ?? ""} />
-      <TextInput label="Admission Status" name="admission_status" defaultValue={record?.admission_status ?? ""} />
+      <SelectInput label="Civil Status" name="civil_status" defaultValue={record?.civil_status ?? ""}>
+        <option value="">Select civil status</option>
+        {CIVIL_STATUS_OPTIONS.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </SelectInput>
+      <SelectInput label="Admission Status" name="admission_status" defaultValue={record?.admission_status ?? ""}>
+        <option value="">Select admission status</option>
+        {ADMISSION_STATUS_OPTIONS.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </SelectInput>
       <SelectInput label="Enrollment Status" name="enrollment_status" required defaultValue={record?.enrollment_status ?? "NOT ENROLLED"}>
         {ENROLLMENT_STATUSES.map((status) => (
           <option key={status} value={status}>{status}</option>

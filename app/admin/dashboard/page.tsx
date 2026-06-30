@@ -77,6 +77,11 @@ export default async function AdminDashboardPage() {
       </Card>
       <Card>
         <CardHeader title="Enrollment Status Overview" />
+        {statusCounts.total === 0 ? (
+          <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            Dashboard counts include submitted enrollment records only. Official Student Records appear here after a student claims an account and submits Online Enrollment.
+          </div>
+        ) : null}
         <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-md bg-amber-50 p-4 text-amber-900">
             <p className="font-semibold">Pending</p>

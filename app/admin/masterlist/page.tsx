@@ -139,7 +139,10 @@ export default async function EnrollmentMasterlistPage({
           ])}
         />
       ) : (
-        <EmptyState title="No enrollment records found." />
+        <EmptyState
+          title="No enrollment records found."
+          description="The masterlist is based on submitted enrollment records, not saved Official Student Records. Students must claim an account and submit Online Enrollment first."
+        />
       )}
     </div>
   );

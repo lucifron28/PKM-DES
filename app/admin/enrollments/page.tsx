@@ -99,7 +99,10 @@ export default async function PendingEnrollmentsPage() {
           </table>
         </div>
       ) : (
-        <EmptyState title="No pending enrollments found." />
+        <EmptyState
+          title="No pending enrollments found."
+          description="Official Student Records do not appear here automatically. A student must claim their account and submit Online Enrollment before a pending enrollment request is created."
+        />
       )}
     </Card>
   );

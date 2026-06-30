@@ -3,7 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
-import { STUDENT_TYPE_TAGS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import {
+  ADMISSION_STATUS_OPTIONS,
+  CIVIL_STATUS_OPTIONS,
+  GENDER_SEX_OPTIONS,
+  STUDENT_TYPE_TAGS,
+  YEAR_LEVELS
+} from "@/lib/constants/pkm";
 import type { EnrollmentStatus, StudentType, YearLevel } from "@/types/database";
 
 const ENROLLMENT_STATUSES: EnrollmentStatus[] = ["NOT ENROLLED", "PENDING", "ENROLLED"];
@@ -15,6 +21,11 @@ function isValidEmail(email: string) {
 function optionalValue(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   return text || null;
+}
+
+function optionalGuidedValue(value: FormDataEntryValue | null, options: string[]) {
+  const text = optionalValue(value);
+  return text && options.includes(text) ? text : null;
 }
 
 function redirectWithError(code: string, path = "/admin/students"): never {
@@ -78,15 +89,15 @@ function buildOfficialRecordPayload(
     year_level: input.yearLevel,
     student_type: input.studentType,
     birthdate: optionalValue(formData.get("birthdate")),
-    gender_sex: optionalValue(formData.get("gender_sex")),
+    gender_sex: optionalGuidedValue(formData.get("gender_sex"), GENDER_SEX_OPTIONS),
     address: optionalValue(formData.get("address")),
     contact_number: optionalValue(formData.get("contact_number")),
     guardian: optionalValue(formData.get("guardian")),
     emergency_contact_person: optionalValue(formData.get("emergency_contact_person")),
     nationality: optionalValue(formData.get("nationality")),
-    civil_status: optionalValue(formData.get("civil_status")),
+    civil_status: optionalGuidedValue(formData.get("civil_status"), CIVIL_STATUS_OPTIONS),
     previous_school_information: optionalValue(formData.get("previous_school_information")),
-    admission_status: optionalValue(formData.get("admission_status")),
+    admission_status: optionalGuidedValue(formData.get("admission_status"), ADMISSION_STATUS_OPTIONS),
     enrollment_status: input.enrollmentStatus,
     updated_by: profileId
   };
