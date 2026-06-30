@@ -71,3 +71,13 @@ export const STUDENT_TYPE_TAGS: StudentType[] = [
 export const ACADEMIC_YEAR_OPTIONS = [
   CURRENT_ENROLLMENT_TERM.academicYear
 ];
+
+export const GENDER_SEX_OPTIONS = ["Female", "Male", "Prefer not to say"];
+
+export const CIVIL_STATUS_OPTIONS = ["Single", "Married", "Widowed", "Separated"];
+
+export const ADMISSION_STATUS_OPTIONS = [
+  "Admitted",
+  "For Verification",
+  "Pending Requirements"
+];
