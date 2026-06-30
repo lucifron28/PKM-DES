@@ -306,8 +306,8 @@ For the MVP Create Student Account page to work:
 Account status behavior:
 
 - `Old Student` -> `ACTIVE` when Student ID Number is provided
-- `Incoming 1st Year Student` -> `ACTIVE` only when submitted details match an official record
-- `Transferee` -> `ACTIVE` only when submitted details match an official record
+- `Incoming 1st Year Student` -> `ACTIVE` only after claiming a matching official record by email or Student ID Number
+- `Transferee` -> `ACTIVE` only after claiming a matching official record by email or Student ID Number
 - Duplicate account creation is blocked when the submitted email address or resolved Student ID Number already exists in student account records
 
 Only `ACTIVE` accounts can log in.
@@ -417,6 +417,8 @@ Current MVP behavior:
 5. Admin can search and filter official records by name/email/Student ID, program, year level, student type, and enrollment status.
 6. Admin can see derived account-match status for displayed official records.
 7. Admin can open an existing official record, edit the same validated fields, and update it through admin-only RLS.
+8. Common fields use guided MVP controls: Gender/Sex, Civil Status, Admission Status, Student Type, Year Level, and Enrollment Status.
+9. Saving or updating an official record does not create an enrollment record. The student must claim the account, log in, and submit Online Enrollment before the record appears in Pending Enrollments, Masterlist, or dashboard counts.
 
 Account-match display:
 
@@ -444,18 +446,20 @@ Create Student Account now uses the server-only Supabase admin client to check o
 
 Current behavior:
 
-1. Old Student account creation requires Student ID Number and creates an `ACTIVE` account.
-2. Incoming 1st Year Student and Transferee account creation looks for an official record by email.
-3. The submitted first name, last name, program, year level, student type, and optional Student ID Number must match the official record.
-4. If no matching official record exists, no Auth user or student profile is created.
-5. Before creating an Auth user, the app blocks duplicates by existing profile email or existing student Student ID Number.
-6. When a match exists and no duplicate is found, the app creates an `ACTIVE` Supabase Auth user, profile, and student record using the official record values.
-7. The Auth user stores role/account hints in app metadata only; route protection and RLS still rely on `public.profiles`, not user-editable metadata.
+1. Student first chooses a student type and enters either active email address or Student ID Number.
+2. Incoming 1st Year Student and Transferee claims look for an official record by case-insensitive email or exact Student ID Number.
+3. If a found record has a different student type, the app shows a clear mismatch message instead of a generic no-match error.
+4. When a matching official record exists, the app shows a read-only summary and asks only for password and confirmation.
+5. Final account creation re-fetches the official record by ID before creating Supabase Auth, profile, and student records.
+6. Old Student claims use official record details when found; if no official record exists, Old Student self-registration can continue with Student ID Number and basic account details.
+7. Before creating an Auth user, the app blocks duplicates by existing profile email or existing student Student ID Number.
+8. The Auth user stores role/account hints in app metadata only; route protection and RLS still rely on `public.profiles`, not user-editable metadata.
 
 Remaining gaps:
 
 - Official CSV/import format is still needed.
 - Generated initial password and email delivery are still placeholders.
+- Guided official-record field options are provisional MVP values until PKM supplies official value lists.
 - No additional admitted-applicant status rules are enforced because PKM has not supplied final status values.
 
 ## Verification Queries

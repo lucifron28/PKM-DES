@@ -46,9 +46,11 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Production environment check for Supabase/Vercel configuration
 - Student account creation through Supabase Auth when `SUPABASE_SERVICE_ROLE_KEY` is configured
 - Create-account dropdown values exactly as requested: Incoming 1st Year Student, Transferee, Old Student
-- Incoming 1st Year Student and Transferee account creation requires a matching official Registrar-managed record
+- Incoming 1st Year Student and Transferee account creation uses a claim flow against a matching official Registrar-managed record
 - Old Student accounts require a Student ID Number
+- Old Student accounts use official record details when found, or minimal self-registration when no official record exists
 - Create-account flow blocks duplicate student accounts by email address or Student ID Number before Auth user creation
+- Admin Student Records uses guided MVP controls for common status/classification fields
 - Matched student accounts become `ACTIVE`
 - Student dashboard with student information, enrollment status, and quick actions
 - Student Account page displays core account data and matching Registrar-managed official profile details when available
@@ -225,12 +227,13 @@ Public:
 - About Us page displays PKM information.
 - Login page validates missing password.
 - Create account page shows required fields.
-- Create account page explains official record matching.
+- Create account page lets students find a record by email or Student ID before setting a password.
 
 Student:
 - Student can create an Old Student account when `SUPABASE_SERVICE_ROLE_KEY` is configured.
 - Incoming 1st Year Student and Transferee account creation is blocked when no matching official record exists.
-- Incoming 1st Year Student and Transferee account creation succeeds when submitted details match an official record.
+- Incoming 1st Year Student and Transferee account creation succeeds after claiming a matching official record.
+- Student sees a clear message when a found official record has a different student type.
 - Duplicate account creation for an existing email address or Student ID Number is blocked.
 - Student can log in.
 - Student dashboard displays profile information.
@@ -284,6 +287,7 @@ Security:
 ## 14. Known Limitations
 
 - Incoming 1st Year Student and Transferee account creation now depends on official records, but bulk import is not implemented.
+- Guided admin field options are provisional MVP values until PKM supplies official value lists.
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.
 - Browser-printable draft registration forms are implemented for MVP testing, but the official COR/PDF template is not implemented without PKM's official template.
