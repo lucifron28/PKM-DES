@@ -15,7 +15,7 @@ export default function CreateAccountPage() {
         <Card>
           <CardHeader
             title="Create Student Account"
-            description="Incoming 1st Year Students and Transferees must match a Registrar official record. Old Students must provide their Student ID Number."
+            description="Find your Registrar-managed record by email or Student ID, then set your password to claim the account."
           />
           <CreateAccountForm />
         </Card>
