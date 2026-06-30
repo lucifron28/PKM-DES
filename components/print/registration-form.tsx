@@ -16,7 +16,7 @@ export type PrintableEnrollment = Enrollment & {
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-slateui-border p-3">
+    <div className="registration-print-detail rounded-md border border-slateui-border p-3">
       <dt className="text-xs font-semibold uppercase text-slateui-muted">{label}</dt>
       <dd className="mt-1 text-sm font-semibold text-slateui-text">{value}</dd>
     </div>
@@ -33,10 +33,10 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
   const totalUnits = subjects.reduce((sum, subject) => sum + subject.units, 0);
 
   return (
-    <section className="print-page rounded-lg border border-slateui-border bg-white p-6 shadow-sm">
-      <div className="mb-6 flex flex-col gap-4 border-b border-slateui-border pb-5 sm:flex-row sm:items-start sm:justify-between">
+    <section className="registration-print print-page rounded-lg border border-slateui-border bg-white p-6 shadow-sm">
+      <div className="registration-print-header mb-6 flex flex-col gap-4 border-b border-slateui-border pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <BrandMarks className="mb-4" />
+          <BrandMarks className="registration-print-marks mb-4" />
           <p className="text-sm font-semibold uppercase text-primary-800">Pambayang Kolehiyo ng Mauban</p>
           <h2 className="mt-1 text-2xl font-bold text-slateui-text">MVP Draft Printable Registration Form</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slateui-secondary">
@@ -47,13 +47,13 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <PrintButton label="Print Form" />
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="registration-print-summary mb-6 grid gap-3 sm:grid-cols-3">
         <DetailItem label="Form Type" value="MVP draft registration form" />
         <DetailItem label="Generated Date" value={formatDate(generatedAt)} />
         <DetailItem label="Source" value="PKM-DES enrollment record" />
       </div>
 
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <dl className="registration-print-details grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <DetailItem label="Student ID" value={student?.student_id_number ?? "Not provided"} />
         <DetailItem label="Student Name" value={formatName(profile?.first_name, profile?.last_name)} />
         <DetailItem label="Email Address" value={profile?.email ?? "Not available"} />
@@ -62,7 +62,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <DetailItem label="Student Type" value={student?.student_type ?? "Not available"} />
         <DetailItem label="Academic Year" value={enrollment.academic_year} />
         <DetailItem label="Semester" value={enrollment.semester} />
-        <div className="rounded-md border border-slateui-border p-3">
+        <div className="registration-print-detail rounded-md border border-slateui-border p-3">
           <dt className="text-xs font-semibold uppercase text-slateui-muted">Enrollment Status</dt>
           <dd className="mt-2">
             <Badge tone={enrollmentBadgeTone(enrollment.status)}>{enrollment.status}</Badge>
@@ -73,13 +73,13 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <DetailItem label="Remarks" value={enrollment.remarks || "None"} />
       </dl>
 
-      <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+      <div className="registration-print-notice mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
         This printout is a draft system output for Registrar review and student reference. It is not an official
         Certificate of Registration until PKM supplies and approves the official registration form template.
       </div>
 
-      <div className="mt-8">
-        <div className="mb-3 flex items-end justify-between gap-3">
+      <div className="registration-print-subjects mt-8">
+        <div className="registration-print-subject-heading mb-3 flex items-end justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slateui-text">Attached Subjects</h3>
             <p className="text-sm text-slateui-muted">Subjects are attached from the enrolled year level and semester.</p>
@@ -88,8 +88,8 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         </div>
 
         {subjects.length ? (
-          <div className="overflow-hidden rounded-lg border border-slateui-border">
-            <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
+          <div className="registration-print-table-wrap overflow-hidden rounded-lg border border-slateui-border">
+            <table className="registration-print-table min-w-full divide-y divide-slateui-border text-left text-sm">
               <thead className="bg-primary-800 text-white">
                 <tr>
                   {["Subject Code", "Subject Name", "Units", "Year Level", "Semester"].map((column) => (
@@ -128,14 +128,14 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         )}
       </div>
 
-      <div className="mt-8 grid gap-4 border-t border-slateui-border pt-6 sm:grid-cols-2">
-        <div className="rounded-md border border-slateui-border p-4">
+      <div className="registration-print-signoff mt-8 grid gap-4 border-t border-slateui-border pt-6 sm:grid-cols-2">
+        <div className="registration-print-signoff-card rounded-md border border-slateui-border p-4">
           <p className="text-xs font-semibold uppercase text-slateui-muted">Student Certification</p>
           <p className="mt-2 text-sm leading-6 text-slateui-secondary">
             The student certified the submitted online enrollment information during form submission.
           </p>
         </div>
-        <div className="rounded-md border border-slateui-border p-4">
+        <div className="registration-print-signoff-card rounded-md border border-slateui-border p-4">
           <p className="text-xs font-semibold uppercase text-slateui-muted">Registrar Review</p>
           <p className="mt-2 text-sm leading-6 text-slateui-secondary">
             Approval status, review date, and remarks are displayed from the current enrollment record.
