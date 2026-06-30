@@ -29,3 +29,6 @@ data-sources/
 docs/frd-files/
 data/sqlite/*.sqlite
 data/sqlite/*.sqlite-*
+.vercel
+.agents/
+graphify-out/
