@@ -6,22 +6,13 @@ import { SelectInput, TextInput } from "@/components/ui/field";
 import { StatCard } from "@/components/ui/stat-card";
 import { SimpleTable } from "@/components/tables/simple-table";
 import { OfficialStudentRecordForm } from "./official-record-form";
-import { addOfficialStudentRecordAction } from "./actions";
+import { addOfficialStudentRecordAction, OFFICIAL_RECORD_ERROR_MESSAGES } from "./actions";
 import { requireRole } from "@/lib/auth/session";
 import { STUDENT_TYPE_TAGS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { AccountStatus, EnrollmentStatus, OfficialStudentRecord, Profile, Program, Student, StudentType, YearLevel } from "@/types/database";
 
 const ENROLLMENT_STATUSES: EnrollmentStatus[] = ["NOT ENROLLED", "PENDING", "ENROLLED"];
-
-const errorMessages: Record<string, string> = {
-  missing: "Please complete all required official record fields.",
-  email: "Please enter a valid active email address.",
-  invalid: "Please choose valid dropdown values.",
-  program: "Selected program was not found.",
-  not_found: "Official student record was not found.",
-  save: "Official student record could not be saved. Please check for duplicate email or Student ID Number."
-};
 
 type OfficialStudentRecordRow = OfficialStudentRecord & {
   programs?: Program | null;
@@ -208,7 +199,7 @@ export default async function StudentRecordsPage({
         ) : null}
         {params.error ? (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            {errorMessages[params.error] ?? "Official student record could not be saved."}
+            {OFFICIAL_RECORD_ERROR_MESSAGES[params.error] ?? "Official student record could not be saved."}
           </div>
         ) : null}
         <OfficialStudentRecordForm action={addOfficialStudentRecordAction} programs={programs} submitLabel="Save Official Record" />

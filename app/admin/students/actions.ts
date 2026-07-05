@@ -14,6 +14,15 @@ import type { EnrollmentStatus, StudentType, YearLevel } from "@/types/database"
 
 const ENROLLMENT_STATUSES: EnrollmentStatus[] = ["NOT ENROLLED", "PENDING", "ENROLLED"];
 
+export const OFFICIAL_RECORD_ERROR_MESSAGES: Record<string, string> = {
+  missing: "Please complete all required official record fields.",
+  email: "Please enter a valid active email address.",
+  invalid: "Please choose valid dropdown values.",
+  program: "Selected program was not found.",
+  not_found: "Official student record was not found.",
+  save: "Official student record could not be saved. Please check for duplicate email or Student ID Number."
+};
+
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

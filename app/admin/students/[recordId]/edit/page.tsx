@@ -2,17 +2,9 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OfficialStudentRecordForm } from "../../official-record-form";
-import { updateOfficialStudentRecordAction } from "../../actions";
+import { updateOfficialStudentRecordAction, OFFICIAL_RECORD_ERROR_MESSAGES } from "../../actions";
 import { requireRole } from "@/lib/auth/session";
 import type { OfficialStudentRecord, Program } from "@/types/database";
-
-const errorMessages: Record<string, string> = {
-  missing: "Please complete all required official record fields.",
-  email: "Please enter a valid active email address.",
-  invalid: "Please choose valid dropdown values.",
-  program: "Selected program was not found.",
-  save: "Official student record could not be updated. Please check for duplicate email or Student ID Number."
-};
 
 type EditPageParams = {
   recordId: string;
@@ -64,7 +56,7 @@ export default async function EditOfficialStudentRecordPage({
       ) : null}
       {query.error ? (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-          {errorMessages[query.error] ?? "Official student record could not be updated."}
+          {OFFICIAL_RECORD_ERROR_MESSAGES[query.error] ?? "Official student record could not be updated."}
         </div>
       ) : null}
       <OfficialStudentRecordForm
