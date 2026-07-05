@@ -22,13 +22,19 @@ export const publicNavigation = [
   { label: "About Us", href: "/about" }
 ];
 
+const showStubPages = process.env.NEXT_PUBLIC_ENABLE_STUB_PAGES === "true";
+
 export const studentNavigation: NavigationItem[] = [
   { label: "Student Dashboard", href: "/student/dashboard", icon: "dashboard" },
   { label: "Online Enrollment", href: "/student/enrollment", icon: "enrollment" },
   { label: "Subject List", href: "/student/subjects", icon: "subjects" },
-  { label: "Grades", href: "/student/grades", icon: "grades" },
-  { label: "Class Schedule", href: "/student/schedule", icon: "schedule" },
-  { label: "Balances", href: "/student/balances", icon: "balances" },
+  ...(showStubPages
+    ? [
+        { label: "Grades", href: "/student/grades", icon: "grades" } as NavigationItem,
+        { label: "Class Schedule", href: "/student/schedule", icon: "schedule" } as NavigationItem,
+        { label: "Balances", href: "/student/balances", icon: "balances" } as NavigationItem
+      ]
+    : []),
   { label: "Account", href: "/student/account", icon: "account" }
 ];
 
