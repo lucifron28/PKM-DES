@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
 import type { Enrollment, EnrollmentStatus } from "@/types/database";
@@ -59,13 +60,13 @@ export async function approveEnrollmentAction(formData: FormData) {
   const { supabase, profile } = await requireRole("admin");
 
   if (!enrollmentId) {
-    return;
+    redirect("/admin/enrollments?error=missing_id");
   }
 
   const studentId = await getEnrollmentStudentId(supabase, enrollmentId);
 
   if (!studentId) {
-    return;
+    redirect("/admin/enrollments?error=student_not_found");
   }
 
   const { data: reviewedEnrollment, error: reviewError } = await supabase
@@ -82,10 +83,13 @@ export async function approveEnrollmentAction(formData: FormData) {
     .maybeSingle();
 
   if (reviewError || !reviewedEnrollment) {
-    return;
+    redirect("/admin/enrollments?error=approve_failed");
   }
 
-  await refreshStudentEnrollmentStatus(supabase, studentId);
+  const statusRefreshed = await refreshStudentEnrollmentStatus(supabase, studentId);
+  if (!statusRefreshed) {
+    redirect("/admin/enrollments?error=status_update_failed");
+  }
 
   await supabase.from("audit_logs").insert({
     actor_profile_id: profile.id,
@@ -95,6 +99,7 @@ export async function approveEnrollmentAction(formData: FormData) {
   });
 
   revalidateEnrollmentViews(enrollmentId);
+  redirect("/admin/enrollments?success=approved");
 }
 
 export async function rejectEnrollmentAction(formData: FormData) {
@@ -103,13 +108,13 @@ export async function rejectEnrollmentAction(formData: FormData) {
   const { supabase, profile } = await requireRole("admin");
 
   if (!enrollmentId) {
-    return;
+    redirect("/admin/enrollments?error=missing_id");
   }
 
   const studentId = await getEnrollmentStudentId(supabase, enrollmentId);
 
   if (!studentId) {
-    return;
+    redirect("/admin/enrollments?error=student_not_found");
   }
 
   const { data: reviewedEnrollment, error: reviewError } = await supabase
@@ -126,10 +131,13 @@ export async function rejectEnrollmentAction(formData: FormData) {
     .maybeSingle();
 
   if (reviewError || !reviewedEnrollment) {
-    return;
+    redirect("/admin/enrollments?error=reject_failed");
   }
 
-  await refreshStudentEnrollmentStatus(supabase, studentId);
+  const statusRefreshed = await refreshStudentEnrollmentStatus(supabase, studentId);
+  if (!statusRefreshed) {
+    redirect("/admin/enrollments?error=status_update_failed");
+  }
 
   await supabase.from("audit_logs").insert({
     actor_profile_id: profile.id,
@@ -139,4 +147,5 @@ export async function rejectEnrollmentAction(formData: FormData) {
   });
 
   revalidateEnrollmentViews(enrollmentId);
+  redirect("/admin/enrollments?success=rejected");
 }

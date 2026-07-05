@@ -12,8 +12,13 @@ type EnrollmentRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
 };
 
-export default async function PendingEnrollmentsPage() {
+export default async function PendingEnrollmentsPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ error?: string; success?: string }>;
+}) {
   const { supabase } = await requireRole("admin");
+  const params = (await searchParams) ?? {};
   const { data } = await supabase
     .from("enrollments")
     .select("*, students(*, profiles(*)), programs(*)")
@@ -22,9 +27,32 @@ export default async function PendingEnrollmentsPage() {
 
   const enrollments = (data as EnrollmentRow[] | null) ?? [];
 
+  const errorMessages: Record<string, string> = {
+    missing_id: "Enrollment ID is missing.",
+    student_not_found: "Student record was not found.",
+    approve_failed: "Enrollment could not be approved.",
+    reject_failed: "Enrollment could not be rejected.",
+    status_update_failed: "Student enrollment status could not be updated."
+  };
+
+  const successMessages: Record<string, string> = {
+    approved: "Enrollment request approved successfully.",
+    rejected: "Enrollment request rejected successfully."
+  };
+
   return (
     <Card>
       <CardHeader title="Pending Enrollments" description="Approve or reject submitted enrollment requests." />
+      {params.success ? (
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+          {successMessages[params.success] ?? "Action completed successfully."}
+        </div>
+      ) : null}
+      {params.error ? (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {errorMessages[params.error] ?? "An error occurred."}
+        </div>
+      ) : null}
       {enrollments.length ? (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
