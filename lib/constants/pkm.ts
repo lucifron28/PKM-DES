@@ -46,11 +46,17 @@ export const YEAR_LEVELS: YearLevel[] = [
 
 export const SEMESTERS: Semester[] = ["1st Semester", "2nd Semester"];
 
+const envAcademicYear = process.env.NEXT_PUBLIC_CURRENT_ACADEMIC_YEAR;
+const envSemester = process.env.NEXT_PUBLIC_CURRENT_SEMESTER;
+
+const academicYear = envAcademicYear || "2026-2027";
+const semester = (envSemester === "1st Semester" || envSemester === "2nd Semester" ? envSemester : "1st Semester") as Semester;
+
 export const CURRENT_ENROLLMENT_TERM = {
-  academicYear: "2026-2027",
-  semester: "1st Semester" as Semester,
-  label: "AY 2026-2027, 1st Semester",
-  sourceNote: "Client-confirmed MVP enrollment term."
+  academicYear,
+  semester,
+  label: `AY ${academicYear}, ${semester}`,
+  sourceNote: envAcademicYear && envSemester ? "Configured via environment variables." : "Fallback default enrollment term."
 };
 
 export const CREATE_ACCOUNT_STUDENT_TYPES: StudentType[] = [
@@ -68,9 +74,13 @@ export const STUDENT_TYPE_TAGS: StudentType[] = [
   "Irregular Student"
 ];
 
-export const ACADEMIC_YEAR_OPTIONS = [
-  CURRENT_ENROLLMENT_TERM.academicYear
-];
+export const ACADEMIC_YEAR_OPTIONS = Array.from(new Set([
+  CURRENT_ENROLLMENT_TERM.academicYear,
+  "2024-2025",
+  "2025-2026",
+  "2026-2027",
+  "2027-2028"
+])).sort();
 
 export const GENDER_SEX_OPTIONS = ["Female", "Male", "Prefer not to say"];
 
