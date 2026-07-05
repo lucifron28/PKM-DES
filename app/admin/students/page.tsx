@@ -1,5 +1,5 @@
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink, buttonClassName } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectInput, TextInput } from "@/components/ui/field";
@@ -8,6 +8,7 @@ import { SimpleTable } from "@/components/tables/simple-table";
 import { OfficialStudentRecordForm } from "./official-record-form";
 import { addOfficialStudentRecordAction } from "./actions";
 import { requireRole } from "@/lib/auth/session";
+import { cn } from "@/lib/utils/cn";
 import { STUDENT_TYPE_TAGS, YEAR_LEVELS, OFFICIAL_RECORD_ERROR_MESSAGES } from "@/lib/constants/pkm";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { AccountStatus, EnrollmentStatus, OfficialStudentRecord, Profile, Program, Student, StudentType, YearLevel } from "@/types/database";
@@ -64,6 +65,7 @@ export default async function StudentRecordsPage({
     year_level?: string;
     student_type?: string;
     enrollment_status?: string;
+    page?: string;
   }>;
 }) {
   const { supabase } = await requireRole("admin");
@@ -77,11 +79,17 @@ export default async function StudentRecordsPage({
     ? params.enrollment_status
     : "";
 
+  const searchTerm = String(params.q ?? "").trim().toLowerCase();
+  const page = Math.max(1, Number(params.page ?? 1));
+  const pageSize = 25;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   let recordsQuery = supabase
     .from("official_student_records")
-    .select("*, programs(*)")
+    .select("*, programs(*)", { count: "exact" })
     .order("updated_at", { ascending: false })
-    .limit(100);
+    .range(from, to);
 
   if (selectedProgramId) {
     recordsQuery = recordsQuery.eq("program_id", selectedProgramId);
@@ -99,22 +107,15 @@ export default async function StudentRecordsPage({
     recordsQuery = recordsQuery.eq("enrollment_status", selectedEnrollmentStatus);
   }
 
-  const { data: recordsData } = await recordsQuery;
-  const searchTerm = String(params.q ?? "").trim().toLowerCase();
-  const allRecords = (recordsData as OfficialStudentRecordRow[] | null) ?? [];
-  const records = searchTerm
-    ? allRecords.filter((record) =>
-        [
-          record.first_name,
-          record.last_name,
-          record.email,
-          record.student_id_number ?? ""
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(searchTerm)
-      )
-    : allRecords;
+  if (searchTerm) {
+    recordsQuery = recordsQuery.or(
+      `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,student_id_number.ilike.%${searchTerm}%`
+    );
+  }
+
+  const { data: recordsData, count } = await recordsQuery;
+  const totalCount = count ?? 0;
+  const records = (recordsData as OfficialStudentRecordRow[] | null) ?? [];
   const recordEmails = [...new Set(records.map((record) => normalizeLookup(record.email)).filter(Boolean))];
   const recordStudentIds = [
     ...new Set(records.map((record) => normalizeLookup(record.student_id_number)).filter(Boolean))
@@ -245,47 +246,94 @@ export default async function StudentRecordsPage({
           <ButtonLink href="/admin/students" variant="outline">Reset</ButtonLink>
         </form>
         {records.length ? (
-          <SimpleTable
-            columns={["Student name", "Student ID", "Email", "Program", "Year Level", "Type", "Enrollment", "Account", "Updated", "Action"]}
-            rows={records.map((record) => {
-              const accountMatch = accountMatchByRecordId.get(record.id) ?? {
-                status: null,
-                matchedBy: null
-              };
-              const accountLabel = accountMatch.status
-                ? `${accountMatch.status} account`
-                : "No account";
-              const accountMatchLabel =
-                accountMatch.matchedBy === "student_id" ? "Student ID" : "Email";
+          <>
+            <SimpleTable
+              columns={["Student name", "Student ID", "Email", "Program", "Year Level", "Type", "Enrollment", "Account", "Updated", "Action"]}
+              rows={records.map((record) => {
+                const accountMatch = accountMatchByRecordId.get(record.id) ?? {
+                  status: null,
+                  matchedBy: null
+                };
+                const accountLabel = accountMatch.status
+                  ? `${accountMatch.status} account`
+                  : "No account";
+                const accountMatchLabel =
+                  accountMatch.matchedBy === "student_id" ? "Student ID" : "Email";
 
-              return [
-                formatName(record.first_name, record.last_name),
-                record.student_id_number ?? "Not provided",
-                record.email,
-                record.programs?.name ?? "Not available",
-                record.year_level,
-                record.student_type,
-                <Badge key={`${record.id}-enrollment`} tone={enrollmentBadgeTone(record.enrollment_status)}>
-                  {record.enrollment_status}
-                </Badge>,
-                <span key={`${record.id}-account`} className="inline-flex flex-col gap-1">
-                  <Badge tone={accountBadgeTone(accountMatch.status)}>{accountLabel}</Badge>
-                  {accountMatch.matchedBy ? (
-                    <span className="text-xs text-slateui-muted">Matched by {accountMatchLabel}</span>
-                  ) : null}
-                </span>,
-                formatDate(record.updated_at),
-                <ButtonLink
-                  key={`${record.id}-edit`}
-                  href={`/admin/students/${record.id}/edit`}
-                  variant="outline"
-                  className="min-h-9 px-3 py-1.5"
-                >
-                  Edit
-                </ButtonLink>
-              ];
-            })}
-          />
+                return [
+                  formatName(record.first_name, record.last_name),
+                  record.student_id_number ?? "Not provided",
+                  record.email,
+                  record.programs?.name ?? "Not available",
+                  record.year_level,
+                  record.student_type,
+                  <Badge key={`${record.id}-enrollment`} tone={enrollmentBadgeTone(record.enrollment_status)}>
+                    {record.enrollment_status}
+                  </Badge>,
+                  <span key={`${record.id}-account`} className="inline-flex flex-col gap-1">
+                    <Badge tone={accountBadgeTone(accountMatch.status)}>{accountLabel}</Badge>
+                    {accountMatch.matchedBy ? (
+                      <span className="text-xs text-slateui-muted">Matched by {accountMatchLabel}</span>
+                    ) : null}
+                  </span>,
+                  formatDate(record.updated_at),
+                  <ButtonLink
+                    key={`${record.id}-edit`}
+                    href={`/admin/students/${record.id}/edit`}
+                    variant="outline"
+                    className="min-h-9 px-3 py-1.5"
+                  >
+                    Edit
+                  </ButtonLink>
+                ];
+              })}
+            />
+            {(() => {
+              const totalPages = Math.ceil(totalCount / pageSize);
+              if (totalPages <= 1) return null;
+
+              const buildPageUrl = (targetPage: number) => {
+                const queryParams = new URLSearchParams();
+                if (params.q) queryParams.set("q", params.q);
+                if (params.program_id) queryParams.set("program_id", params.program_id);
+                if (params.year_level) queryParams.set("year_level", params.year_level);
+                if (params.student_type) queryParams.set("student_type", params.student_type);
+                if (params.enrollment_status) queryParams.set("enrollment_status", params.enrollment_status);
+                queryParams.set("page", String(targetPage));
+                return `/admin/students?${queryParams.toString()}`;
+              };
+
+              return (
+                <div className="mt-5 flex items-center justify-between border-t border-slateui-border pt-4">
+                  <div className="text-sm text-slateui-muted">
+                    Showing <span className="font-semibold">{from + 1}</span> to{" "}
+                    <span className="font-semibold">{Math.min(to + 1, totalCount)}</span> of{" "}
+                    <span className="font-semibold">{totalCount}</span> records
+                  </div>
+                  <div className="flex gap-2">
+                    {page <= 1 ? (
+                      <span className={cn(buttonClassName("outline"), "cursor-not-allowed opacity-60 min-h-9 px-3 py-1.5 text-sm")}>
+                        Previous
+                      </span>
+                    ) : (
+                      <ButtonLink href={buildPageUrl(page - 1)} variant="outline" className="min-h-9 px-3 py-1.5 text-sm">
+                        Previous
+                      </ButtonLink>
+                    )}
+                    {page >= totalPages ? (
+                      <span className={cn(buttonClassName("outline"), "cursor-not-allowed opacity-60 min-h-9 px-3 py-1.5 text-sm")}>
+                        Next
+                      </span>
+                    ) : (
+                      <ButtonLink href={buildPageUrl(page + 1)} variant="outline" className="min-h-9 px-3 py-1.5 text-sm">
+                        Next
+                      </ButtonLink>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </>
         ) : (
           <EmptyState
             title="No official student records found."
