@@ -54,24 +54,26 @@ function readOfficialRecordInput(formData: FormData) {
   };
 }
 
-function validateOfficialRecordInput(input: ReturnType<typeof readOfficialRecordInput>, errorPath = "/admin/students") {
+function validateOfficialRecordInput(input: ReturnType<typeof readOfficialRecordInput>): string | null {
   const { firstName, lastName, email, programId, yearLevel, studentType, enrollmentStatus } = input;
 
   if (!firstName || !lastName || !email || !programId || !yearLevel || !studentType || !enrollmentStatus) {
-    redirectWithError("missing", errorPath);
+    return "missing";
   }
 
   if (!isValidEmail(email)) {
-    redirectWithError("email", errorPath);
+    return "email";
   }
 
   if (!YEAR_LEVELS.includes(yearLevel) || !STUDENT_TYPE_TAGS.includes(studentType)) {
-    redirectWithError("invalid", errorPath);
+    return "invalid";
   }
 
   if (!ENROLLMENT_STATUSES.includes(enrollmentStatus)) {
-    redirectWithError("invalid", errorPath);
+    return "invalid";
   }
+
+  return null;
 }
 
 function buildOfficialRecordPayload(
@@ -107,7 +109,10 @@ export async function addOfficialStudentRecordAction(formData: FormData) {
   const { supabase, profile } = await requireRole("admin");
   const input = readOfficialRecordInput(formData);
 
-  validateOfficialRecordInput(input);
+  const validationError = validateOfficialRecordInput(input);
+  if (validationError) {
+    redirectWithError(validationError);
+  }
 
   const { data: program } = await supabase
     .from("programs")
@@ -142,7 +147,10 @@ export async function updateOfficialStudentRecordAction(formData: FormData) {
     redirectWithError("missing");
   }
 
-  validateOfficialRecordInput(input, errorPath);
+  const validationError = validateOfficialRecordInput(input);
+  if (validationError) {
+    redirectWithError(validationError, errorPath);
+  }
 
   const [{ data: program }, { data: existingRecord }] = await Promise.all([
     supabase.from("programs").select("id").eq("id", input.programId).maybeSingle(),
