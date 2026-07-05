@@ -34,7 +34,7 @@ export const PKM_GOALS = [
 
 export const PROGRAM = {
   name: "Accounting Information System",
-  code: "AIS"
+  code: "BSAIS"
 };
 
 export const YEAR_LEVELS: YearLevel[] = [
