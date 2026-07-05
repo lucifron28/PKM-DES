@@ -2,8 +2,9 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OfficialStudentRecordForm } from "../../official-record-form";
-import { updateOfficialStudentRecordAction, OFFICIAL_RECORD_ERROR_MESSAGES } from "../../actions";
+import { updateOfficialStudentRecordAction } from "../../actions";
 import { requireRole } from "@/lib/auth/session";
+import { OFFICIAL_RECORD_ERROR_MESSAGES } from "@/lib/constants/pkm";
 import type { OfficialStudentRecord, Program } from "@/types/database";
 
 type EditPageParams = {
