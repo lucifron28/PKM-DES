@@ -14,12 +14,29 @@ const db = new DatabaseSync(databasePath);
 db.exec("pragma foreign_keys = on");
 db.exec(readFileSync(schemaPath, "utf8"));
 
-const programId = "program-ais";
-db.prepare(
+const programId = "program-bsais";
+const programs = [
+  { id: "program-bsais", name: "Accounting Information System", code: "BSAIS" },
+  { id: "program-bsma", name: "Management Accounting", code: "BSMA" },
+  { id: "program-beed", name: "Bachelor of Elementary Education", code: "BEED" },
+  { id: "program-english", name: "Bachelor of Arts in English", code: "ENGLISH" },
+  { id: "program-filipino", name: "Bachelor of Arts in Filipino", code: "FILIPINO" },
+  { id: "program-math", name: "Bachelor of Science in Mathematics", code: "MATH" },
+  { id: "program-ss", name: "Bachelor of Arts in Social Studies", code: "SS" },
+  { id: "program-crim", name: "Bachelor of Science in Criminology", code: "CRIM" },
+  { id: "program-acp", name: "Agriculture Crop Production", code: "ACP" },
+  { id: "program-fsm", name: "Food Service Management", code: "FSM" }
+];
+
+const insertProgram = db.prepare(
   `insert into programs (id, name, code)
    values (?, ?, ?)
    on conflict(code) do update set name = excluded.name`
-).run(programId, "Accounting Information System", "AIS");
+);
+
+for (const p of programs) {
+  insertProgram.run(p.id, p.name, p.code);
+}
 
 const subjectSource = readFileSync(subjectsPath, "utf8");
 const subjectPattern =

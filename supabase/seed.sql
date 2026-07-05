@@ -1,9 +1,22 @@
+-- Migrate existing AIS to BSAIS
+update public.programs set code = 'BSAIS' where code = 'AIS';
+
 insert into public.programs (name, code)
-values ('Accounting Information System', 'AIS')
+values
+  ('Accounting Information System', 'BSAIS'),
+  ('Management Accounting', 'BSMA'),
+  ('Bachelor of Elementary Education', 'BEED'),
+  ('Bachelor of Arts in English', 'ENGLISH'),
+  ('Bachelor of Arts in Filipino', 'FILIPINO'),
+  ('Bachelor of Science in Mathematics', 'MATH'),
+  ('Bachelor of Arts in Social Studies', 'SS'),
+  ('Bachelor of Science in Criminology', 'CRIM'),
+  ('Agriculture Crop Production', 'ACP'),
+  ('Food Service Management', 'FSM')
 on conflict (code) do update set name = excluded.name;
 
 with program as (
-  select id from public.programs where code = 'AIS'
+  select id from public.programs where code = 'BSAIS'
 )
 insert into public.subjects (
   program_id,
