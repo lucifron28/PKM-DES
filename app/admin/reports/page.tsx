@@ -1,66 +1,42 @@
 import { CheckCircle2, FileText, ListChecks, XCircle } from "lucide-react";
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SelectInput } from "@/components/ui/field";
 import { StatCard } from "@/components/ui/stat-card";
 import { PrintButton } from "@/components/print/print-button";
-import { ENROLLMENT_REVIEW_STATUSES } from "@/lib/constants/enrollment";
-import { ACADEMIC_YEAR_OPTIONS, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate, formatName } from "@/lib/utils/format";
-import type {
-  Enrollment,
-  EnrollmentReviewStatus,
-  Profile,
-  Semester,
-  Student,
-  YearLevel
-} from "@/types/database";
+import type { Enrollment, Profile, Student } from "@/types/database";
 
 import { fetchEnrollmentFilterData } from "@/lib/enrollment/query";
+import { EnrollmentFilterGrid } from "@/components/forms/enrollment-filter-grid";
 
 type ReportRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
 };
 
-type ReportSearchParams = {
-  program?: string;
-  academic_year?: string;
-  year_level?: YearLevel;
-  semester?: Semester;
-  status?: EnrollmentReviewStatus;
-};
-
-function countByStatus(rows: ReportRow[], status: EnrollmentReviewStatus) {
-  return rows.filter((row) => row.status === status).length;
-}
-
-function formatCriterion(value: string | null | undefined) {
-  return value?.trim() || "All";
-}
-
 export default async function EnrollmentReportsPage({
   searchParams
 }: {
-  searchParams?: Promise<ReportSearchParams>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { supabase } = await requireRole("admin");
-  const params = (await searchParams) ?? {};
+  const params = await searchParams;
 
-  const { programOptions, selectedProgram, enrollments } = await fetchEnrollmentFilterData(supabase, params);
+  const { programOptions, enrollments } = await fetchEnrollmentFilterData(supabase, params);
   const rows = enrollments as ReportRow[];
-  const pendingCount = countByStatus(rows, "PENDING");
-  const approvedCount = countByStatus(rows, "APPROVED");
-  const rejectedCount = countByStatus(rows, "REJECTED");
+
+  const pendingCount = rows.filter((r) => r.status === "PENDING").length;
+  const approvedCount = rows.filter((r) => r.status === "APPROVED").length;
+  const rejectedCount = rows.filter((r) => r.status === "REJECTED").length;
   const generatedAt = formatDate(new Date().toISOString());
-  const reportCriteria = [
-    ["Program", selectedProgram?.name ?? "All programs"],
-    ["Academic Year", formatCriterion(params.academic_year)],
-    ["Year Level", formatCriterion(params.year_level)],
-    ["Semester", formatCriterion(params.semester)],
-    ["Review Status", formatCriterion(params.status)]
+
+  const reportCriteria: [string, string][] = [
+    ["Program", params.program || "All"],
+    ["Academic Year", params.academic_year || "All"],
+    ["Year Level", params.year_level || "All"],
+    ["Semester", params.semester || "All"],
+    ["Review Status", params.status || "All"]
   ];
 
   return (
@@ -71,42 +47,12 @@ export default async function EnrollmentReportsPage({
           description="MVP browser-print report for Registrar review."
           action={<PrintButton label="Print Report" />}
         />
-        <form className="print-hidden grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto_auto] lg:items-end">
-          <SelectInput label="Program" name="program" defaultValue={params.program ?? ""}>
-            <option value="">All programs</option>
-            {programOptions.map((program) => (
-              <option key={program.id} value={program.code ?? program.id}>
-                {program.name}
-              </option>
-            ))}
-          </SelectInput>
-          <SelectInput label="Academic Year" name="academic_year" defaultValue={params.academic_year ?? ""}>
-            <option value="">All academic years</option>
-            {ACADEMIC_YEAR_OPTIONS.map((academicYear) => (
-              <option key={academicYear} value={academicYear}>{academicYear}</option>
-            ))}
-          </SelectInput>
-          <SelectInput label="Year Level" name="year_level" defaultValue={params.year_level ?? ""}>
-            <option value="">All year levels</option>
-            {YEAR_LEVELS.map((year) => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </SelectInput>
-          <SelectInput label="Semester" name="semester" defaultValue={params.semester ?? ""}>
-            <option value="">All semesters</option>
-            {SEMESTERS.map((semester) => (
-              <option key={semester} value={semester}>{semester}</option>
-            ))}
-          </SelectInput>
-          <SelectInput label="Review Status" name="status" defaultValue={params.status ?? ""}>
-            <option value="">All statuses</option>
-            {ENROLLMENT_REVIEW_STATUSES.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </SelectInput>
-          <Button type="submit">Apply</Button>
-          <ButtonLink href="/admin/reports" variant="outline">Reset</ButtonLink>
-        </form>
+        <EnrollmentFilterGrid
+          params={params}
+          programOptions={programOptions}
+          showAcademicYear
+          showReset
+        />
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-4">

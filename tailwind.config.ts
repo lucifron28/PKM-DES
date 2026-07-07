@@ -43,6 +43,12 @@ const config: Config = {
       },
       boxShadow: {
         soft: "0 18px 50px rgba(15, 23, 42, 0.08)"
+      },
+      gridTemplateColumns: {
+        "admin-filters": "1fr 1fr 1fr 1fr auto",
+        "report-filters": "1fr 1fr 1fr 1fr 1fr auto auto",
+        "subject-table": "1fr 1fr auto auto",
+        "detail-list": "220px 1fr"
       }
     }
   },

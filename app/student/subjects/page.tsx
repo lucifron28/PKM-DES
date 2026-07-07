@@ -100,7 +100,7 @@ export default function SubjectListPage() {
           description="View-only source-grounded curriculum subjects and available term course offerings."
         />
         <form
-          className="grid gap-4 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end"
+          className="grid gap-4 sm:grid-cols-subject-table sm:items-end"
           onSubmit={(event) => {
             event.preventDefault();
             setSelectedYear(draftYear);

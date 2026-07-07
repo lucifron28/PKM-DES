@@ -152,6 +152,26 @@ async function getAdminClient() {
   }
 }
 
+function validateClaimInputs(
+  studentType: StudentType | null,
+  email: string,
+  studentIdNumber: string
+): string | null {
+  if (!studentType) {
+    return "Please select a valid student type.";
+  }
+  if (!email && !studentIdNumber) {
+    return "Enter either your active email address or Student ID Number.";
+  }
+  if (email && !isValidEmail(email)) {
+    return "Please use a valid active email address.";
+  }
+  if (studentType === "Old Student" && !studentIdNumber) {
+    return "Student ID Number is required for Old Student accounts.";
+  }
+  return null;
+}
+
 export async function claimOfficialRecordAction(
   _previousState: ClaimAccountState,
   formData: FormData
@@ -160,32 +180,11 @@ export async function claimOfficialRecordAction(
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const studentIdNumber = String(formData.get("student_id_number") ?? "").trim();
 
-  if (!studentType) {
-    return { message: "Please select a valid student type.", email, studentIdNumber };
-  }
-
-  if (!email && !studentIdNumber) {
+  const validationError = validateClaimInputs(studentType, email, studentIdNumber);
+  if (validationError) {
     return {
-      message: "Enter either your active email address or Student ID Number.",
-      selectedStudentType: studentType,
-      email,
-      studentIdNumber
-    };
-  }
-
-  if (email && !isValidEmail(email)) {
-    return {
-      message: "Please use a valid active email address.",
-      selectedStudentType: studentType,
-      email,
-      studentIdNumber
-    };
-  }
-
-  if (studentType === "Old Student" && !studentIdNumber) {
-    return {
-      message: "Student ID Number is required for Old Student accounts.",
-      selectedStudentType: studentType,
+      message: validationError,
+      selectedStudentType: studentType ?? undefined,
       email,
       studentIdNumber
     };
@@ -197,7 +196,7 @@ export async function claimOfficialRecordAction(
     return {
       message:
         "Account creation is a configured placeholder until Supabase service-role setup and the official email password workflow are supplied.",
-      selectedStudentType: studentType,
+      selectedStudentType: studentType!,
       email,
       studentIdNumber
     };
@@ -214,7 +213,7 @@ export async function claimOfficialRecordAction(
     if (matchingTypeRecord) {
       return {
         matchedRecord: summarizeOfficialRecord(matchingTypeRecord),
-        selectedStudentType: studentType,
+        selectedStudentType: studentType!,
         email,
         studentIdNumber
       };
@@ -222,7 +221,7 @@ export async function claimOfficialRecordAction(
 
     return {
       message: `A record was found, but it is registered as ${records[0].student_type}. Please check the selected student type or contact the Registrar.`,
-      selectedStudentType: studentType,
+      selectedStudentType: studentType!,
       email,
       studentIdNumber
     };
@@ -242,7 +241,7 @@ export async function claimOfficialRecordAction(
 
   return {
     message: "No official record was found for that email or Student ID Number. Please contact the Registrar.",
-    selectedStudentType: studentType,
+    selectedStudentType: studentType!,
     email,
     studentIdNumber
   };
@@ -258,100 +257,111 @@ type AccountDetails = {
   studentType: StudentType;
 };
 
+async function resolveOfficialClaimDetails(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  formData: FormData
+): Promise<{ error?: string; details?: AccountDetails }> {
+  const officialRecordId = String(formData.get("official_record_id") ?? "").trim();
+  const claimedStudentType = readStudentType(formData.get("claimed_student_type"));
+
+  if (!officialRecordId || !claimedStudentType) {
+    return { error: "Please claim an official record before creating an account." };
+  }
+
+  const { data: officialRecord } = await admin
+    .from("official_student_records")
+    .select("*")
+    .eq("id", officialRecordId)
+    .maybeSingle();
+  const typedOfficialRecord = officialRecord as OfficialStudentRecord | null;
+
+  if (!typedOfficialRecord) {
+    return { error: "Official record was not found. Please contact the Registrar." };
+  }
+
+  const typeIsAllowed =
+    claimedStudentType === "Old Student"
+      ? OLD_STUDENT_COMPATIBLE_TYPES.includes(typedOfficialRecord.student_type)
+      : typedOfficialRecord.student_type === claimedStudentType;
+
+  if (!typeIsAllowed) {
+    return {
+      error: `A record was found, but it is registered as ${typedOfficialRecord.student_type}. Please check the selected student type or contact the Registrar.`
+    };
+  }
+
+  return {
+    details: {
+      studentIdNumber: typedOfficialRecord.student_id_number,
+      firstName: typedOfficialRecord.first_name,
+      lastName: typedOfficialRecord.last_name,
+      email: typedOfficialRecord.email.toLowerCase(),
+      programId: typedOfficialRecord.program_id,
+      yearLevel: typedOfficialRecord.year_level,
+      studentType: typedOfficialRecord.student_type
+    }
+  };
+}
+
+async function resolveOldManualDetails(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  formData: FormData
+): Promise<{ error?: string; details?: AccountDetails }> {
+  const firstName = String(formData.get("first_name") || "").trim();
+  const lastName = String(formData.get("last_name") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const studentIdNumber = String(formData.get("student_id_number") || "").trim();
+  const programCode = String(formData.get("program_code") ?? "").trim();
+  const yearLevel = String(formData.get("year_level") ?? "").trim() as YearLevel;
+
+  if (!firstName || !lastName || !email || !studentIdNumber || !programCode || !yearLevel) {
+    return { error: "Please complete all required Old Student account fields." };
+  }
+
+  if (!isValidEmail(email)) {
+    return { error: "Please use a valid active email address." };
+  }
+
+  if (!YEAR_LEVELS.includes(yearLevel)) {
+    return { error: "Please select a valid year level." };
+  }
+
+  const { data: program } = await admin
+    .from("programs")
+    .select("id")
+    .eq("code", programCode || PROGRAM.code)
+    .maybeSingle();
+
+  if (!program) {
+    return { error: "Program seed data is not configured yet." };
+  }
+
+  return {
+    details: {
+      studentIdNumber,
+      firstName,
+      lastName,
+      email,
+      programId: program.id,
+      yearLevel,
+      studentType: "Old Student"
+    }
+  };
+}
+
 async function resolveAccountDetails(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   mode: string,
   formData: FormData
 ): Promise<{ error?: string; details?: AccountDetails }> {
   if (mode === "official_claim") {
-    const officialRecordId = String(formData.get("official_record_id") ?? "").trim();
-    const claimedStudentType = readStudentType(formData.get("claimed_student_type"));
-
-    if (!officialRecordId || !claimedStudentType) {
-      return { error: "Please claim an official record before creating an account." };
-    }
-
-    const { data: officialRecord } = await admin
-      .from("official_student_records")
-      .select("*")
-      .eq("id", officialRecordId)
-      .maybeSingle();
-    const typedOfficialRecord = officialRecord as OfficialStudentRecord | null;
-
-    if (!typedOfficialRecord) {
-      return { error: "Official record was not found. Please contact the Registrar." };
-    }
-
-    const typeIsAllowed =
-      claimedStudentType === "Old Student"
-        ? OLD_STUDENT_COMPATIBLE_TYPES.includes(typedOfficialRecord.student_type)
-        : typedOfficialRecord.student_type === claimedStudentType;
-
-    if (!typeIsAllowed) {
-      return {
-        error: `A record was found, but it is registered as ${typedOfficialRecord.student_type}. Please check the selected student type or contact the Registrar.`
-      };
-    }
-
-    return {
-      details: {
-        studentIdNumber: typedOfficialRecord.student_id_number,
-        firstName: typedOfficialRecord.first_name,
-        lastName: typedOfficialRecord.last_name,
-        email: typedOfficialRecord.email.toLowerCase(),
-        programId: typedOfficialRecord.program_id,
-        yearLevel: typedOfficialRecord.year_level,
-        studentType: typedOfficialRecord.student_type
-      }
-    };
+    return resolveOfficialClaimDetails(admin, formData);
   }
-
   if (mode === "old_manual") {
-    const firstName = String(formData.get("first_name") ?? "").trim();
-    const lastName = String(formData.get("last_name") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim().toLowerCase();
-    const studentIdNumber = String(formData.get("student_id_number") ?? "").trim();
-    const programCode = String(formData.get("program_code") ?? "").trim();
-    const yearLevel = String(formData.get("year_level") ?? "").trim() as YearLevel;
-
-    if (!firstName || !lastName || !email || !studentIdNumber || !programCode || !yearLevel) {
-      return { error: "Please complete all required Old Student account fields." };
-    }
-
-    if (!isValidEmail(email)) {
-      return { error: "Please use a valid active email address." };
-    }
-
-    if (!YEAR_LEVELS.includes(yearLevel)) {
-      return { error: "Please select a valid year level." };
-    }
-
-    const { data: program } = await admin
-      .from("programs")
-      .select("id")
-      .eq("code", programCode || PROGRAM.code)
-      .maybeSingle();
-
-    if (!program) {
-      return { error: "Program seed data is not configured yet." };
-    }
-
-    return {
-      details: {
-        studentIdNumber,
-        firstName,
-        lastName,
-        email,
-        programId: program.id,
-        yearLevel,
-        studentType: "Old Student"
-      }
-    };
+    return resolveOldManualDetails(admin, formData);
   }
-
-  return { error: "Please start by finding your student record." };
+  return { error: "Invalid registration mode." };
 }
-
 async function performStudentRegistration(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   details: AccountDetails,

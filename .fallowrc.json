@@ -1,0 +1,6 @@
+{
+  "ignoreDependencies": [
+    "eslint-config-next",
+    "tailwindcss"
+  ]
+}
