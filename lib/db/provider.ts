@@ -1,10 +1,10 @@
-export type DatabaseProvider = "supabase" | "sqlite";
+type DatabaseProvider = "supabase" | "sqlite";
 
-export function isProductionLikeRuntime() {
+function isProductionLikeRuntime() {
   return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
 }
 
-export function getDatabaseProvider(): DatabaseProvider {
+function getDatabaseProvider(): DatabaseProvider {
   const provider = process.env.DATABASE_PROVIDER ?? "supabase";
 
   if (provider === "sqlite") {

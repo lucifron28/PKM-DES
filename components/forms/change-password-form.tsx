@@ -4,11 +4,7 @@ import { useActionState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
-
-export type ChangePasswordState = {
-  message?: string;
-  success?: boolean;
-};
+import type { ChangePasswordState } from "@/lib/auth/password";
 
 type ChangePasswordAction = (
   previousState: ChangePasswordState,

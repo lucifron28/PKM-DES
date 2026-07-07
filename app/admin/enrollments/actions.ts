@@ -55,7 +55,13 @@ function revalidateEnrollmentViews(enrollmentId: string) {
   revalidatePath("/student/cor");
 }
 
-export async function approveEnrollmentAction(formData: FormData) {
+async function processEnrollmentReview(
+  formData: FormData,
+  status: "APPROVED" | "REJECTED",
+  remarks: string | null,
+  auditAction: string,
+  errorPrefix: string
+) {
   const enrollmentId = String(formData.get("enrollment_id") ?? "");
   const { supabase, profile } = await requireRole("admin");
 
@@ -72,55 +78,7 @@ export async function approveEnrollmentAction(formData: FormData) {
   const { data: reviewedEnrollment, error: reviewError } = await supabase
     .from("enrollments")
     .update({
-      status: "APPROVED",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: profile.id,
-      remarks: null
-    })
-    .eq("id", enrollmentId)
-    .eq("status", "PENDING")
-    .select("id")
-    .maybeSingle();
-
-  if (reviewError || !reviewedEnrollment) {
-    redirect("/admin/enrollments?error=approve_failed");
-  }
-
-  const statusRefreshed = await refreshStudentEnrollmentStatus(supabase, studentId);
-  if (!statusRefreshed) {
-    redirect("/admin/enrollments?error=status_update_failed");
-  }
-
-  await supabase.from("audit_logs").insert({
-    actor_profile_id: profile.id,
-    action: "APPROVE_ENROLLMENT",
-    target_table: "enrollments",
-    target_id: enrollmentId
-  });
-
-  revalidateEnrollmentViews(enrollmentId);
-  redirect("/admin/enrollments?success=approved");
-}
-
-export async function rejectEnrollmentAction(formData: FormData) {
-  const enrollmentId = String(formData.get("enrollment_id") ?? "");
-  const remarks = String(formData.get("remarks") ?? "").trim() || null;
-  const { supabase, profile } = await requireRole("admin");
-
-  if (!enrollmentId) {
-    redirect("/admin/enrollments?error=missing_id");
-  }
-
-  const studentId = await getEnrollmentStudentId(supabase, enrollmentId);
-
-  if (!studentId) {
-    redirect("/admin/enrollments?error=student_not_found");
-  }
-
-  const { data: reviewedEnrollment, error: reviewError } = await supabase
-    .from("enrollments")
-    .update({
-      status: "REJECTED",
+      status,
       reviewed_at: new Date().toISOString(),
       reviewed_by: profile.id,
       remarks
@@ -131,7 +89,7 @@ export async function rejectEnrollmentAction(formData: FormData) {
     .maybeSingle();
 
   if (reviewError || !reviewedEnrollment) {
-    redirect("/admin/enrollments?error=reject_failed");
+    redirect(`/admin/enrollments?error=${errorPrefix}_failed`);
   }
 
   const statusRefreshed = await refreshStudentEnrollmentStatus(supabase, studentId);
@@ -141,11 +99,33 @@ export async function rejectEnrollmentAction(formData: FormData) {
 
   await supabase.from("audit_logs").insert({
     actor_profile_id: profile.id,
-    action: "REJECT_ENROLLMENT",
+    action: auditAction,
     target_table: "enrollments",
     target_id: enrollmentId
   });
 
   revalidateEnrollmentViews(enrollmentId);
+}
+
+export async function approveEnrollmentAction(formData: FormData) {
+  await processEnrollmentReview(
+    formData,
+    "APPROVED",
+    null,
+    "APPROVE_ENROLLMENT",
+    "approve"
+  );
+  redirect("/admin/enrollments?success=approved");
+}
+
+export async function rejectEnrollmentAction(formData: FormData) {
+  const remarks = String(formData.get("remarks") ?? "").trim() || null;
+  await processEnrollmentReview(
+    formData,
+    "REJECTED",
+    remarks,
+    "REJECT_ENROLLMENT",
+    "reject"
+  );
   redirect("/admin/enrollments?success=rejected");
 }

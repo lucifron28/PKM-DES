@@ -248,6 +248,167 @@ export async function claimOfficialRecordAction(
   };
 }
 
+type AccountDetails = {
+  studentIdNumber: string | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  programId: string;
+  yearLevel: YearLevel;
+  studentType: StudentType;
+};
+
+async function resolveAccountDetails(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  mode: string,
+  formData: FormData
+): Promise<{ error?: string; details?: AccountDetails }> {
+  if (mode === "official_claim") {
+    const officialRecordId = String(formData.get("official_record_id") ?? "").trim();
+    const claimedStudentType = readStudentType(formData.get("claimed_student_type"));
+
+    if (!officialRecordId || !claimedStudentType) {
+      return { error: "Please claim an official record before creating an account." };
+    }
+
+    const { data: officialRecord } = await admin
+      .from("official_student_records")
+      .select("*")
+      .eq("id", officialRecordId)
+      .maybeSingle();
+    const typedOfficialRecord = officialRecord as OfficialStudentRecord | null;
+
+    if (!typedOfficialRecord) {
+      return { error: "Official record was not found. Please contact the Registrar." };
+    }
+
+    const typeIsAllowed =
+      claimedStudentType === "Old Student"
+        ? OLD_STUDENT_COMPATIBLE_TYPES.includes(typedOfficialRecord.student_type)
+        : typedOfficialRecord.student_type === claimedStudentType;
+
+    if (!typeIsAllowed) {
+      return {
+        error: `A record was found, but it is registered as ${typedOfficialRecord.student_type}. Please check the selected student type or contact the Registrar.`
+      };
+    }
+
+    return {
+      details: {
+        studentIdNumber: typedOfficialRecord.student_id_number,
+        firstName: typedOfficialRecord.first_name,
+        lastName: typedOfficialRecord.last_name,
+        email: typedOfficialRecord.email.toLowerCase(),
+        programId: typedOfficialRecord.program_id,
+        yearLevel: typedOfficialRecord.year_level,
+        studentType: typedOfficialRecord.student_type
+      }
+    };
+  }
+
+  if (mode === "old_manual") {
+    const firstName = String(formData.get("first_name") ?? "").trim();
+    const lastName = String(formData.get("last_name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    const studentIdNumber = String(formData.get("student_id_number") ?? "").trim();
+    const programCode = String(formData.get("program_code") ?? "").trim();
+    const yearLevel = String(formData.get("year_level") ?? "").trim() as YearLevel;
+
+    if (!firstName || !lastName || !email || !studentIdNumber || !programCode || !yearLevel) {
+      return { error: "Please complete all required Old Student account fields." };
+    }
+
+    if (!isValidEmail(email)) {
+      return { error: "Please use a valid active email address." };
+    }
+
+    if (!YEAR_LEVELS.includes(yearLevel)) {
+      return { error: "Please select a valid year level." };
+    }
+
+    const { data: program } = await admin
+      .from("programs")
+      .select("id")
+      .eq("code", programCode || PROGRAM.code)
+      .maybeSingle();
+
+    if (!program) {
+      return { error: "Program seed data is not configured yet." };
+    }
+
+    return {
+      details: {
+        studentIdNumber,
+        firstName,
+        lastName,
+        email,
+        programId: program.id,
+        yearLevel,
+        studentType: "Old Student"
+      }
+    };
+  }
+
+  return { error: "Please start by finding your student record." };
+}
+
+async function performStudentRegistration(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  details: AccountDetails,
+  password: string
+): Promise<{ error?: string; success?: boolean }> {
+  const { data: createdUser, error: authError } = await admin.auth.admin.createUser({
+    email: details.email,
+    password,
+    email_confirm: true,
+    app_metadata: {
+      role: "student",
+      account_status: "ACTIVE"
+    },
+    user_metadata: {
+      first_name: details.firstName,
+      last_name: details.lastName
+    }
+  });
+
+  if (authError || !createdUser.user) {
+    return { error: "Account could not be created. Please verify the email address or contact an administrator." };
+  }
+
+  const profileId = createdUser.user.id;
+
+  const { error: profileError } = await admin.from("profiles").insert({
+    id: profileId,
+    role: "student",
+    first_name: details.firstName,
+    last_name: details.lastName,
+    email: details.email,
+    account_status: "ACTIVE"
+  });
+
+  if (profileError) {
+    await admin.auth.admin.deleteUser(profileId);
+    return { error: "Account could not be created. Please contact an administrator." };
+  }
+
+  const { error: studentError } = await admin.from("students").insert({
+    profile_id: profileId,
+    student_id_number: normalizeText(details.studentIdNumber) ? details.studentIdNumber : null,
+    program_id: details.programId,
+    year_level: details.yearLevel,
+    student_type: details.studentType,
+    enrollment_status: "NOT ENROLLED"
+  });
+
+  if (studentError) {
+    await admin.from("profiles").delete().eq("id", profileId);
+    await admin.auth.admin.deleteUser(profileId);
+    return { error: "Student record could not be created. Please contact an administrator." };
+  }
+
+  return { success: true };
+}
+
 export async function createStudentAccountAction(
   _previousState: CreateAccountState,
   formData: FormData
@@ -270,153 +431,30 @@ export async function createStudentAccountAction(
     };
   }
 
-  let accountStudentIdNumber: string | null = null;
-  let accountFirstName = "";
-  let accountLastName = "";
-  let accountEmail = "";
-  let accountProgramId = "";
-  let accountYearLevel: YearLevel = "1st Year";
-  let accountStudentType: StudentType = "Old Student";
-
-  if (mode === "official_claim") {
-    const officialRecordId = String(formData.get("official_record_id") ?? "").trim();
-    const claimedStudentType = readStudentType(formData.get("claimed_student_type"));
-
-    if (!officialRecordId || !claimedStudentType) {
-      return { message: "Please claim an official record before creating an account." };
-    }
-
-    const { data: officialRecord } = await admin
-      .from("official_student_records")
-      .select("*")
-      .eq("id", officialRecordId)
-      .maybeSingle();
-    const typedOfficialRecord = officialRecord as OfficialStudentRecord | null;
-
-    if (!typedOfficialRecord) {
-      return { message: "Official record was not found. Please contact the Registrar." };
-    }
-
-    const typeIsAllowed =
-      claimedStudentType === "Old Student"
-        ? OLD_STUDENT_COMPATIBLE_TYPES.includes(typedOfficialRecord.student_type)
-        : typedOfficialRecord.student_type === claimedStudentType;
-
-    if (!typeIsAllowed) {
-      return {
-        message: `A record was found, but it is registered as ${typedOfficialRecord.student_type}. Please check the selected student type or contact the Registrar.`
-      };
-    }
-
-    accountStudentIdNumber = typedOfficialRecord.student_id_number;
-    accountFirstName = typedOfficialRecord.first_name;
-    accountLastName = typedOfficialRecord.last_name;
-    accountEmail = typedOfficialRecord.email.toLowerCase();
-    accountProgramId = typedOfficialRecord.program_id;
-    accountYearLevel = typedOfficialRecord.year_level;
-    accountStudentType = typedOfficialRecord.student_type;
-  } else if (mode === "old_manual") {
-    const firstName = String(formData.get("first_name") ?? "").trim();
-    const lastName = String(formData.get("last_name") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim().toLowerCase();
-    const studentIdNumber = String(formData.get("student_id_number") ?? "").trim();
-    const programCode = String(formData.get("program_code") ?? "").trim();
-    const yearLevel = String(formData.get("year_level") ?? "").trim() as YearLevel;
-
-    if (!firstName || !lastName || !email || !studentIdNumber || !programCode || !yearLevel) {
-      return { message: "Please complete all required Old Student account fields." };
-    }
-
-    if (!isValidEmail(email)) {
-      return { message: "Please use a valid active email address." };
-    }
-
-    if (!YEAR_LEVELS.includes(yearLevel)) {
-      return { message: "Please select a valid year level." };
-    }
-
-    const { data: program } = await admin
-      .from("programs")
-      .select("id")
-      .eq("code", programCode || PROGRAM.code)
-      .maybeSingle();
-
-    if (!program) {
-      return { message: "Program seed data is not configured yet." };
-    }
-
-    accountStudentIdNumber = studentIdNumber;
-    accountFirstName = firstName;
-    accountLastName = lastName;
-    accountEmail = email;
-    accountProgramId = program.id;
-    accountYearLevel = yearLevel;
-    accountStudentType = "Old Student";
-  } else {
-    return { message: "Please start by finding your student record." };
+  const resolution = await resolveAccountDetails(admin, mode, formData);
+  if (resolution.error || !resolution.details) {
+    return { message: resolution.error || "Failed to resolve account details." };
   }
 
-  if (!accountEmail || !isValidEmail(accountEmail)) {
+  const details = resolution.details;
+
+  if (!details.email || !isValidEmail(details.email)) {
     return { message: "Official record email is missing or invalid. Please contact the Registrar." };
   }
 
   const accountExists = await findExistingStudentAccount({
     admin,
-    email: accountEmail,
-    studentIdNumber: accountStudentIdNumber
+    email: details.email,
+    studentIdNumber: details.studentIdNumber
   });
 
   if (accountExists) {
     return { message: "An account already exists for this email address or Student ID Number." };
   }
 
-  const { data: createdUser, error: authError } = await admin.auth.admin.createUser({
-    email: accountEmail,
-    password,
-    email_confirm: true,
-    app_metadata: {
-      role: "student",
-      account_status: "ACTIVE"
-    },
-    user_metadata: {
-      first_name: accountFirstName,
-      last_name: accountLastName
-    }
-  });
-
-  if (authError || !createdUser.user) {
-    return { message: "Account could not be created. Please verify the email address or contact an administrator." };
-  }
-
-  const profileId = createdUser.user.id;
-
-  const { error: profileError } = await admin.from("profiles").insert({
-    id: profileId,
-    role: "student",
-    first_name: accountFirstName,
-    last_name: accountLastName,
-    email: accountEmail,
-    account_status: "ACTIVE"
-  });
-
-  if (profileError) {
-    await admin.auth.admin.deleteUser(profileId);
-    return { message: "Account could not be created. Please contact an administrator." };
-  }
-
-  const { error: studentError } = await admin.from("students").insert({
-    profile_id: profileId,
-    student_id_number: normalizeText(accountStudentIdNumber) ? accountStudentIdNumber : null,
-    program_id: accountProgramId,
-    year_level: accountYearLevel,
-    student_type: accountStudentType,
-    enrollment_status: "NOT ENROLLED"
-  });
-
-  if (studentError) {
-    await admin.from("profiles").delete().eq("id", profileId);
-    await admin.auth.admin.deleteUser(profileId);
-    return { message: "Student record could not be created. Please contact an administrator." };
+  const registration = await performStudentRegistration(admin, details, password);
+  if (registration.error) {
+    return { message: registration.error };
   }
 
   return {

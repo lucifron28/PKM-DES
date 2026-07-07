@@ -16,7 +16,7 @@ export const COURSE_OFFERINGS_TERM_25_26 = {
   source_file: "docs/frd-files/LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx"
 };
 
-export const BEED_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const BEED_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "BEED",
     "academic_year": "2025-2026",
@@ -235,7 +235,7 @@ export const BEED_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] =
   }
 ];
 
-export const ENGLISH_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const ENGLISH_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "ENGLISH",
     "academic_year": "2025-2026",
@@ -463,7 +463,7 @@ export const ENGLISH_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[
   }
 ];
 
-export const FILIPINO_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const FILIPINO_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "FILIPINO",
     "academic_year": "2025-2026",
@@ -691,7 +691,7 @@ export const FILIPINO_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed
   }
 ];
 
-export const MATHEMATICS_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const MATHEMATICS_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "MATH",
     "academic_year": "2025-2026",
@@ -919,7 +919,7 @@ export const MATHEMATICS_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingS
   }
 ];
 
-export const SOCIAL_STUDIES_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const SOCIAL_STUDIES_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "SS",
     "academic_year": "2025-2026",
@@ -1147,7 +1147,7 @@ export const SOCIAL_STUDIES_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferi
   }
 ];
 
-export const ACP_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const ACP_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "ACP",
     "academic_year": "2025-2026",
@@ -1402,7 +1402,7 @@ export const ACP_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = 
   }
 ];
 
-export const FSM_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const FSM_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "FSM",
     "academic_year": "2025-2026",
@@ -1657,7 +1657,7 @@ export const FSM_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = 
   }
 ];
 
-export const BSAIS_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const BSAIS_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "BSAIS",
     "academic_year": "2025-2026",
@@ -1885,7 +1885,7 @@ export const BSAIS_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] 
   }
 ];
 
-export const BSMA_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const BSMA_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "BSMA",
     "academic_year": "2025-2026",
@@ -2104,7 +2104,7 @@ export const BSMA_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] =
   }
 ];
 
-export const CRIMINOLOGY_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
+const CRIMINOLOGY_SECOND_SEMESTER_AY_2025_2026_OFFERINGS: CourseOfferingSeed[] = [
   {
     "source_program_code": "CRIM",
     "academic_year": "2025-2026",

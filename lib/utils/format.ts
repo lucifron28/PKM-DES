@@ -16,9 +16,3 @@ export function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
-export function currency(value: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP"
-  }).format(value);
-}

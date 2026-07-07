@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/cn";
 
-export function FieldLabel({
+function FieldLabel({
   htmlFor,
   children,
   required

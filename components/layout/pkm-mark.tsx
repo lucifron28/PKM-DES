@@ -13,7 +13,7 @@ export function PkmMark() {
   );
 }
 
-export function MaubanMark() {
+function MaubanMark() {
   return (
     <Image
       src="/brand/mauban-logo.png"

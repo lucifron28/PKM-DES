@@ -5,17 +5,17 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SelectInput } from "@/components/ui/field";
 import { SimpleTable } from "@/components/tables/simple-table";
 import { PrintButton } from "@/components/print/print-button";
-import { PROGRAM, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { ENROLLMENT_REVIEW_STATUSES } from "@/lib/constants/enrollment";
 import { requireRole } from "@/lib/auth/session";
 import { formatName } from "@/lib/utils/format";
-import type { Enrollment, EnrollmentReviewStatus, Profile, Program, Semester, Student, YearLevel } from "@/types/database";
+import type { Enrollment, EnrollmentReviewStatus, Profile, Semester, Student, YearLevel } from "@/types/database";
+
+import { fetchEnrollmentFilterData } from "@/lib/enrollment/query";
 
 type MasterlistRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
 };
-
-type ProgramOption = Pick<Program, "id" | "name" | "code">;
 
 export default async function EnrollmentMasterlistPage({
   searchParams
@@ -29,42 +29,9 @@ export default async function EnrollmentMasterlistPage({
 }) {
   const { supabase } = await requireRole("admin");
   const params = (await searchParams) ?? {};
-  const { data: programsData } = await supabase
-    .from("programs")
-    .select("id, name, code")
-    .order("name")
-    .returns<ProgramOption[]>();
-
-  const programOptions: ProgramOption[] = programsData?.length
-    ? programsData
-    : [{ id: PROGRAM.code, name: PROGRAM.name, code: PROGRAM.code }];
-  const selectedProgram = params.program
-    ? programOptions.find((program) => program.id === params.program || program.code === params.program)
-    : null;
-
-  let query = supabase
-    .from("enrollments")
-    .select("*, students(*, profiles(*)), programs(*)")
-    .order("submitted_at", { ascending: false });
-
-  if (selectedProgram && selectedProgram.id !== PROGRAM.code) {
-    query = query.eq("program_id", selectedProgram.id);
-  }
-
-  if (params.year_level && YEAR_LEVELS.includes(params.year_level)) {
-    query = query.eq("year_level", params.year_level);
-  }
-
-  if (params.semester && SEMESTERS.includes(params.semester)) {
-    query = query.eq("semester", params.semester);
-  }
-
-  if (params.status && ENROLLMENT_REVIEW_STATUSES.includes(params.status)) {
-    query = query.eq("status", params.status);
-  }
-
-  const { data } = await query;
-  const rows = (data as MasterlistRow[] | null) ?? [];
+  
+  const { programOptions, enrollments } = await fetchEnrollmentFilterData(supabase, params);
+  const rows = enrollments as MasterlistRow[];
 
   return (
     <div className="space-y-6">

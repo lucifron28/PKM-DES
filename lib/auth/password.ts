@@ -1,9 +1,12 @@
-export type PasswordChangeResult = {
+import { revalidatePath } from "next/cache";
+import { requireRole } from "@/lib/auth/session";
+
+export type ChangePasswordState = {
   message?: string;
   success?: boolean;
 };
 
-export async function changeSignedInUserPassword({
+async function changeSignedInUserPassword({
   supabase,
   email,
   currentPassword,
@@ -20,7 +23,7 @@ export async function changeSignedInUserPassword({
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}): Promise<PasswordChangeResult> {
+}): Promise<ChangePasswordState> {
   if (!currentPassword || !newPassword || !confirmPassword) {
     return { message: "Please complete all password fields." };
   }
@@ -56,3 +59,28 @@ export async function changeSignedInUserPassword({
 
   return { message: "Password updated successfully.", success: true };
 }
+
+export async function handleChangePasswordAction(
+  role: "admin" | "student",
+  revalidateUrl: string,
+  formData: FormData
+): Promise<ChangePasswordState> {
+  const { supabase, profile } = await requireRole(role);
+  const currentPassword = String(formData.get("current_password") ?? "");
+  const newPassword = String(formData.get("new_password") ?? "");
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
+  const result = await changeSignedInUserPassword({
+    supabase,
+    email: profile.email,
+    currentPassword,
+    newPassword,
+    confirmPassword
+  });
+
+  if (result.success) {
+    revalidatePath(revalidateUrl);
+  }
+
+  return result;
+}
+

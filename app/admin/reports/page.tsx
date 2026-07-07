@@ -7,20 +7,19 @@ import { SelectInput } from "@/components/ui/field";
 import { StatCard } from "@/components/ui/stat-card";
 import { PrintButton } from "@/components/print/print-button";
 import { ENROLLMENT_REVIEW_STATUSES } from "@/lib/constants/enrollment";
-import { ACADEMIC_YEAR_OPTIONS, PROGRAM, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { ACADEMIC_YEAR_OPTIONS, SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type {
   Enrollment,
   EnrollmentReviewStatus,
   Profile,
-  Program,
   Semester,
   Student,
   YearLevel
 } from "@/types/database";
 
-type ProgramOption = Pick<Program, "id" | "name" | "code">;
+import { fetchEnrollmentFilterData } from "@/lib/enrollment/query";
 
 type ReportRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
@@ -49,46 +48,9 @@ export default async function EnrollmentReportsPage({
 }) {
   const { supabase } = await requireRole("admin");
   const params = (await searchParams) ?? {};
-  const { data: programsData } = await supabase
-    .from("programs")
-    .select("id, name, code")
-    .order("name")
-    .returns<ProgramOption[]>();
 
-  const programOptions: ProgramOption[] = programsData?.length
-    ? programsData
-    : [{ id: PROGRAM.code, name: PROGRAM.name, code: PROGRAM.code }];
-  const selectedProgram = params.program
-    ? programOptions.find((program) => program.id === params.program || program.code === params.program)
-    : null;
-
-  let query = supabase
-    .from("enrollments")
-    .select("*, students(*, profiles(*)), programs(*)")
-    .order("submitted_at", { ascending: false });
-
-  if (selectedProgram && selectedProgram.id !== PROGRAM.code) {
-    query = query.eq("program_id", selectedProgram.id);
-  }
-
-  if (params.academic_year && ACADEMIC_YEAR_OPTIONS.includes(params.academic_year)) {
-    query = query.eq("academic_year", params.academic_year);
-  }
-
-  if (params.year_level && YEAR_LEVELS.includes(params.year_level)) {
-    query = query.eq("year_level", params.year_level);
-  }
-
-  if (params.semester && SEMESTERS.includes(params.semester)) {
-    query = query.eq("semester", params.semester);
-  }
-
-  if (params.status && ENROLLMENT_REVIEW_STATUSES.includes(params.status)) {
-    query = query.eq("status", params.status);
-  }
-
-  const { data } = await query;
-  const rows = (data as ReportRow[] | null) ?? [];
+  const { programOptions, selectedProgram, enrollments } = await fetchEnrollmentFilterData(supabase, params);
+  const rows = enrollments as ReportRow[];
   const pendingCount = countByStatus(rows, "PENDING");
   const approvedCount = countByStatus(rows, "APPROVED");
   const rejectedCount = countByStatus(rows, "REJECTED");

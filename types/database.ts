@@ -73,31 +73,6 @@ export type Enrollment = {
   programs?: Program | null;
 };
 
-export type Grade = {
-  id: string;
-  student_id: string;
-  subject_id: string;
-  grade: string | null;
-  remarks: string | null;
-  subjects?: Subject | null;
-};
-
-export type ClassSchedule = {
-  id: string;
-  subject_id: string;
-  day: string | null;
-  time: string | null;
-  room: string | null;
-  subjects?: Subject | null;
-};
-
-export type Balance = {
-  id: string;
-  student_id: string;
-  fee_description: string;
-  amount: number;
-  payment_status: string;
-};
 
 export type OfficialStudentRecord = {
   id: string;

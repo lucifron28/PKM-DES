@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { DetailList } from "@/components/ui/detail-list";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChangePasswordForm } from "@/components/forms/change-password-form";
@@ -61,18 +62,7 @@ async function getMatchingOfficialRecord({
   return (studentIdMatch as OfficialStudentRecord | null) ?? null;
 }
 
-function DetailList({ rows }: { rows: Array<[string, string]> }) {
-  return (
-    <dl className="grid gap-3 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="grid gap-1 border-b border-slateui-border pb-3 sm:grid-cols-[220px_1fr]">
-          <dt className="font-medium text-slateui-muted">{label}</dt>
-          <dd className="font-semibold text-slateui-text">{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
+
 
 export default async function StudentAccountPage() {
   const { profile } = await requireRole("student");
