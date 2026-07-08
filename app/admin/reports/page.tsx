@@ -42,7 +42,7 @@ export default async function EnrollmentReportsPage({
 
   return (
     <section className="print-page space-y-6">
-      <Card>
+      <Card className="print-hidden">
         <CardHeader
           title="Enrollment Reports"
           description="MVP browser-print report for Registrar review."
@@ -56,7 +56,7 @@ export default async function EnrollmentReportsPage({
         />
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid gap-4 lg:grid-cols-4 print:grid-cols-4 print:gap-2">
         <StatCard
           label="Pending"
           value={pendingCount}
@@ -92,7 +92,7 @@ export default async function EnrollmentReportsPage({
           title="Enrollment Report Output"
           description={`Generated ${generatedAt}`}
         />
-        <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:mb-3 print:grid-cols-6">
           {reportCriteria.map(([label, value]) => (
             <div key={label} className="rounded-md border border-slateui-border bg-slateui-surfaceAlt p-3">
               <p className="text-xs font-semibold uppercase text-slateui-muted">{label}</p>
@@ -102,7 +102,7 @@ export default async function EnrollmentReportsPage({
         </div>
         {rows.length ? (
           <div className="overflow-hidden rounded-lg border border-slateui-border">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto print:overflow-x-visible">
               <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
                 <thead className="bg-primary-800 text-white">
                   <tr>

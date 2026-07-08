@@ -41,7 +41,7 @@ textarea {
 
 @media print {
   @page {
-    size: A4 portrait;
+    size: A4;
     margin: 0.25in;
   }
 
