@@ -41,14 +41,15 @@ textarea {
 
 @media print {
   @page {
-    size: letter portrait;
-    margin: 0.35in;
+    size: A4 portrait;
+    margin: 0.25in;
   }
 
   html,
   body {
     background: #ffffff !important;
-    font-size: 10.5px !important;
+    font-size: 9.5px !important;
+    height: auto !important;
   }
 
   aside,
@@ -60,6 +61,10 @@ textarea {
   main,
   .print-page {
     width: 100% !important;
+  }
+
+  main {
+    display: block !important;
   }
 
   .print-page {
@@ -78,38 +83,37 @@ textarea {
   .registration-print-header {
     align-items: flex-start !important;
     flex-direction: row !important;
-    gap: 0.2in !important;
-    margin-bottom: 0.12in !important;
-    padding-bottom: 0.1in !important;
+    gap: 0.12in !important;
+    margin-bottom: 0.08in !important;
+    padding-bottom: 0.08in !important;
   }
 
   .registration-print-marks {
-    margin-bottom: 0.08in !important;
+    margin-bottom: 0.04in !important;
   }
 
   .registration-print h2 {
-    font-size: 17px !important;
+    font-size: 15px !important;
     line-height: 1.15 !important;
     margin-top: 0.02in !important;
   }
 
   .registration-print p {
-    line-height: 1.35 !important;
+    line-height: 1.25 !important;
   }
 
   .registration-print-header p {
-    font-size: 10px !important;
+    font-size: 8.5px !important;
     margin-top: 0.04in !important;
   }
 
-  .registration-print-summary,
-  .registration-print-details {
-    gap: 0.07in !important;
-    margin-bottom: 0.1in !important;
+  .registration-print-summary {
+    display: none !important;
   }
 
-  .registration-print-summary {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  .registration-print-details {
+    gap: 0.07in !important;
+    margin-bottom: 0.08in !important;
   }
 
   .registration-print-details {
@@ -118,7 +122,7 @@ textarea {
 
   .registration-print-detail {
     border-radius: 4px !important;
-    padding: 0.06in 0.08in !important;
+    padding: 0.045in 0.06in !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
@@ -129,7 +133,7 @@ textarea {
   }
 
   .registration-print-detail dd {
-    font-size: 9.5px !important;
+    font-size: 8.75px !important;
     line-height: 1.25 !important;
     margin-top: 0.03in !important;
     overflow-wrap: anywhere !important;
@@ -140,28 +144,32 @@ textarea {
   }
 
   .registration-print-notice {
-    font-size: 9.5px !important;
-    line-height: 1.3 !important;
-    margin-top: 0.1in !important;
-    padding: 0.07in 0.09in !important;
+    font-size: 8.5px !important;
+    line-height: 1.25 !important;
+    margin-top: 0.08in !important;
+    padding: 0.05in 0.07in !important;
   }
 
   .registration-print-subjects {
-    margin-top: 0.14in !important;
+    margin-top: 0.1in !important;
   }
 
   .registration-print-subject-heading {
     align-items: flex-start !important;
-    margin-bottom: 0.06in !important;
+    margin-bottom: 0.04in !important;
   }
 
   .registration-print-subject-heading h3 {
-    font-size: 13px !important;
+    font-size: 11px !important;
     line-height: 1.2 !important;
   }
 
   .registration-print-subject-heading p {
-    font-size: 9px !important;
+    font-size: 8.25px !important;
+  }
+
+  .registration-print-subject-note {
+    display: none !important;
   }
 
   .registration-print-table-wrap {
@@ -170,7 +178,7 @@ textarea {
   }
 
   .registration-print-table {
-    font-size: 9px !important;
+    font-size: 8px !important;
     line-height: 1.2 !important;
     page-break-inside: auto !important;
   }
@@ -190,28 +198,28 @@ textarea {
 
   .registration-print-table th,
   .registration-print-table td {
-    padding: 0.045in 0.06in !important;
+    padding: 0.035in 0.045in !important;
   }
 
   .registration-print-table th {
-    font-size: 8.5px !important;
+    font-size: 7.5px !important;
   }
 
   .registration-print-signoff {
-    gap: 0.1in !important;
+    gap: 0.08in !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    margin-top: 0.14in !important;
-    padding-top: 0.1in !important;
+    margin-top: 0.1in !important;
+    padding-top: 0.08in !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
 
   .registration-print-signoff-card {
-    padding: 0.08in !important;
+    padding: 0.06in !important;
   }
 
   .registration-print-signoff-card p {
-    font-size: 9px !important;
-    line-height: 1.3 !important;
+    font-size: 8px !important;
+    line-height: 1.25 !important;
   }
 }

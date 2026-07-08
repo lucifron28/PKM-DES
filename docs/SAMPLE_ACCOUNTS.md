@@ -10,7 +10,9 @@ Create the Supabase Auth user manually first, then run `supabase/registrar_admin
 
 | Role | Name | Email | Password |
 | --- | --- | --- | --- |
-| Registrar/Admin | Shaira Mae E. Pajares | `pkmregistrarofficial@gmail.com` | Set manually in Supabase Auth |
+| Registrar/Admin | Shaira Mae E. Pajares | `pkmregistrarofficial@gmail.com` | `Demo1234!` for the shared demo setup |
+
+If the Supabase Auth user was created with a different password, update it in Supabase Auth before the demo.
 
 ## Old Student Self-Registration
 

@@ -157,7 +157,10 @@ export default async function EnrollmentReportsPage({
             </div>
           </div>
         ) : (
-          <EmptyState title="No enrollment records match the selected filters." />
+          <EmptyState
+            title="No enrollment records match the selected filters."
+            description="Reports are generated from submitted enrollment records only. Saved Official Student Records appear here after students claim accounts and submit Online Enrollment."
+          />
         )}
       </Card>
     </section>

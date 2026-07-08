@@ -63,6 +63,13 @@ export default async function AdminDashboardPage() {
       </div>
       <Card>
         <CardHeader title="Admin Controls" description="Monitor and review enrollment records." />
+        <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <p className="font-semibold">Demo path</p>
+          <p className="mt-1">
+            Add or confirm an Official Student Record, let the student claim the account, then submit Online Enrollment.
+            Only submitted enrollment records are counted on this dashboard.
+          </p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ButtonLink href="/admin/enrollments">View Pending Enrollments</ButtonLink>
           <ButtonLink href="/admin/enrollments" variant="outline">
