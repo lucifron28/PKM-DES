@@ -15,6 +15,7 @@ export type FetchEnrollmentsParams = {
   year_level?: YearLevel;
   semester?: Semester;
   status?: EnrollmentReviewStatus;
+  search?: string;
 };
 
 function applyEnrollmentFilters<T>(
@@ -75,9 +76,23 @@ export async function fetchEnrollmentFilterData(
   const query = applyEnrollmentFilters(baseQuery, selectedProgram, params);
 
   const { data } = await query;
+  let enrollments = data || [];
+
+  if (params.search) {
+    const term = params.search.toLowerCase();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    enrollments = enrollments.filter((e: any) => {
+      const studentId = e.students?.student_id_number?.toLowerCase() || "";
+      const firstName = e.students?.profiles?.first_name?.toLowerCase() || "";
+      const lastName = e.students?.profiles?.last_name?.toLowerCase() || "";
+      const fullName = `${firstName} ${lastName}`;
+      return studentId.includes(term) || firstName.includes(term) || lastName.includes(term) || fullName.includes(term);
+    });
+  }
+
   return {
     programOptions,
     selectedProgram,
-    enrollments: data || []
+    enrollments
   };
 }

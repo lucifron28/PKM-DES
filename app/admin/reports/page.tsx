@@ -32,6 +32,7 @@ export default async function EnrollmentReportsPage({
   const generatedAt = formatDate(new Date().toISOString());
 
   const reportCriteria: [string, string][] = [
+    ["Search Query", params.search || "None"],
     ["Program", params.program || "All"],
     ["Academic Year", params.academic_year || "All"],
     ["Year Level", params.year_level || "All"],

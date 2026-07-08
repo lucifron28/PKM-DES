@@ -1,4 +1,4 @@
-import { SelectInput } from "@/components/ui/field";
+import { SelectInput, TextInput } from "@/components/ui/field";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { SEMESTERS, YEAR_LEVELS, ACADEMIC_YEAR_OPTIONS } from "@/lib/constants/pkm";
 import { ENROLLMENT_REVIEW_STATUSES } from "@/lib/constants/enrollment";
@@ -23,6 +23,13 @@ export function EnrollmentFilterGrid({
 
   return (
     <form className={gridClass}>
+      <TextInput
+        label="Search"
+        name="search"
+        placeholder="Name or ID"
+        defaultValue={params.search ?? ""}
+      />
+
       <SelectInput label="Program" name="program" defaultValue={params.program ?? ""}>
         <option value="">All programs</option>
         {programOptions.map((program) => (
