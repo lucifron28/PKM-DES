@@ -82,7 +82,9 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <div className="registration-print-subject-heading mb-3 flex items-end justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slateui-text">Attached Subjects</h3>
-            <p className="text-sm text-slateui-muted">Subjects are attached from the enrolled year level and semester.</p>
+            <p className="registration-print-subject-note text-sm text-slateui-muted">
+              Subjects are attached from the enrolled year level and semester.
+            </p>
           </div>
           <p className="text-sm font-semibold text-slateui-text">Total Units: {totalUnits}</p>
         </div>
