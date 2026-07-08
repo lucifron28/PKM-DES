@@ -18,7 +18,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Supabase Row Level Security
 - SQLite local development database setup
 - Supabase Storage: not used in this MVP
-- Browser printing for MVP draft registration forms; official PDF/COR generation remains pending until an official template is supplied
+- Browser printing for MVP draft registration forms using the supplied sample workbook as a layout reference; official PDF/COR generation remains pending until PKM confirms the final approved template
 
 ## 3. Source Documents Used
 
@@ -28,6 +28,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - `data-sources/FRD1.pdf`: expected outputs, functional requirements, manual enrollment process, and study objectives
 - `data-sources/Joshua.pdf`: system overview, navigation structure, public pages, student module, admin module, login behavior, account behavior, enrollment behavior, empty states, and missing-information warnings
 - `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files/decisions
+- `REGISTRATION FORM 4G.xlsx`: client-supplied registration form sample used as a browser-print layout reference only; student list data from the workbook is not imported
 
 ## 4. Current MVP Scope
 
@@ -72,7 +73,8 @@ Manual enrollment background from the FRD: students receive four registration-fo
 - Audit log insert for approve/reject actions
 - Enrollment masterlist with year-level and semester filters
 - Admin Account page with internal account details and password change
-- MVP draft printable registration form using existing enrollment, attached subject data, generated date, and draft-output notices
+- MVP draft printable registration form aligned with the supplied registration form sample layout
+- Printable registration form displays student details, classification markers, attached subjects, total units, fee/payment placeholders, signature labels, and data privacy authorization text
 - Admin view/print access for individual enrollment registration forms
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
 - Official student records list displays derived student-account match status for Registrar review
@@ -95,7 +97,7 @@ The Create Student Account page includes an MVP password setup block so local Su
 ## 7. Missing Information / Future Inputs Needed
 
 Missing Information / Future Inputs Needed:
-- Official COR / registration form template
+- Official confirmation that the supplied registration form sample is the final approved COR/registration template
 - Official printable enrollment/masterlist report format
 - Official student/admitted-applicant import file format
 - Official student data sample, ideally anonymized
@@ -116,6 +118,8 @@ SQLite local development notes are in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE
 Development sample accounts are in [docs/SAMPLE_ACCOUNTS.md](./docs/SAMPLE_ACCOUNTS.md).
 
 Demo walkthrough instructions are in [docs/DEMO_RUNBOOK.md](./docs/DEMO_RUNBOOK.md).
+
+Registration form sample scope notes are in [docs/REGISTRATION_FORM_SAMPLE_SCOPE.md](./docs/REGISTRATION_FORM_SAMPLE_SCOPE.md).
 
 Short setup:
 
@@ -252,7 +256,7 @@ Student:
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
 - Enrollment status becomes PENDING.
 - Student can open and browser-print the MVP draft registration form after enrollment submission.
-- Draft registration form displays attached subjects, total units, generated date, student certification context, and Registrar review context.
+- Draft registration form follows the supplied sample layout and displays attached subjects, total units, fee/payment placeholders, signature labels, and Registrar review context.
 - Grades page shows empty state when no grades exist.
 - Schedule page shows empty state when no schedule exists.
 - Balances page shows empty state when no balance exists.
@@ -271,6 +275,7 @@ Admin:
 - Admin can edit an official student/admitted-applicant record.
 - Admin can view pending enrollments.
 - Admin can open and browser-print an individual enrollment registration form.
+- Admin registration form printout follows the supplied sample layout without importing workbook student-list data.
 - Admin can approve enrollment.
 - Approved student appears as ENROLLED.
 - Admin can reject enrollment.
@@ -292,7 +297,9 @@ Security:
 - Guided admin field options are provisional MVP values until PKM supplies official value lists.
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.
-- Browser-printable draft registration forms are implemented for MVP testing, but the official COR/PDF template is not implemented without PKM's official template.
+- Browser-printable draft registration forms follow the supplied sample layout, but final official template approval and locked PDF generation are not implemented.
+- The supplied registration form workbook includes real-looking student-list rows and BTVTED sample data; those rows are not imported, seeded, or treated as AIS curriculum data.
+- Registration form fee, scholarship, payment, section, and schedule values remain placeholders until PKM supplies official rules and encoded data.
 - Enrollment reports are browser-printable MVP outputs; official export, PDF, or printable report format must be supplied before final report generation.
 - Grades, schedule, balances, student records, and encode workflows are placeholders.
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
@@ -310,7 +317,7 @@ Security:
 
 - Official admitted-applicant and student import workflow
 - Admin-managed account review if PKM later requires manual overrides
-- Official COR PDF generation using the supplied PKM template
+- Official COR PDF generation after PKM confirms the final approved template
 - Official printable enrollment/masterlist report format
 - Registrar-managed official student/admitted-applicant import
 - Expanded account matching rules if PKM supplies stricter official requirements

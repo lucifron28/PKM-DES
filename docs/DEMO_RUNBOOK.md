@@ -33,7 +33,7 @@ For student testing, see [SAMPLE_ACCOUNTS.md](./SAMPLE_ACCOUNTS.md). If a sample
 12. Log back in as Registrar/Admin.
 13. Open Pending Enrollments and approve or reject the submitted request.
 14. Show the updated Admin Dashboard counts and Enrollment Masterlist.
-15. Open View/Print Form and use browser print preview for the MVP draft registration form.
+15. Open View/Print Form and use browser print preview for the MVP draft registration form based on the supplied sample workbook layout.
 
 ## What To Say About Counts
 
@@ -43,7 +43,8 @@ For student testing, see [SAMPLE_ACCOUNTS.md](./SAMPLE_ACCOUNTS.md). If a sample
 
 ## Placeholder Talking Points
 
-- The registration form is a browser-print MVP draft, not the final official COR template.
+- The registration form follows the supplied sample workbook layout, but it is still a browser-print MVP draft until PKM confirms the final official COR template.
+- Fee, scholarship, payment, section, and schedule values remain placeholders unless official encoded data exists.
 - Grades, Class Schedule, Balances, Student Records expansion, and Encode Grades/Schedule are placeholder pages.
 - Generated-password email delivery is not implemented yet.
 - Digital clearance/signature routing is a future workflow after PKM supplies the official order and rules.
@@ -64,4 +65,4 @@ Then verify:
 - Student claim flow works for one sample official record.
 - Student enrollment submission creates a pending enrollment.
 - Admin dashboard counts update after submission and approval/rejection.
-- Registration form print preview hides sidebar/navigation and keeps the draft disclaimer visible.
+- Registration form print preview hides sidebar/navigation, keeps the draft disclaimer visible, and shows the sample-style fields, subject table, fee placeholders, and signature labels.
