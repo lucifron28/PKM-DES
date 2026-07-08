@@ -34,7 +34,11 @@ export default async function EnrollmentMasterlistPage({
           description="Officially enrolled students and pending or incomplete enrollment records."
           action={<PrintButton label="Print Masterlist" />}
         />
-        <EnrollmentFilterGrid params={params} programOptions={programOptions} />
+        <EnrollmentFilterGrid 
+          params={params} 
+          programOptions={programOptions} 
+          resetHref="/admin/masterlist"
+        />
       </Card>
       {rows.length ? (
         <SimpleTable

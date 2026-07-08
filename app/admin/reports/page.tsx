@@ -52,7 +52,7 @@ export default async function EnrollmentReportsPage({
           params={params}
           programOptions={programOptions}
           showAcademicYear
-          showReset
+          resetHref="/admin/reports"
         />
       </Card>
 

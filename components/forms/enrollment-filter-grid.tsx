@@ -8,14 +8,14 @@ type EnrollmentFilterGridProps = {
   params: FetchEnrollmentsParams;
   programOptions: ProgramOption[];
   showAcademicYear?: boolean;
-  showReset?: boolean;
+  resetHref?: string;
 };
 
 export function EnrollmentFilterGrid({
   params,
   programOptions,
   showAcademicYear = false,
-  showReset = false
+  resetHref
 }: EnrollmentFilterGridProps) {
   const gridClass = showAcademicYear
     ? "print-hidden grid gap-4 lg:grid-cols-report-filters lg:items-end"
@@ -77,10 +77,10 @@ export function EnrollmentFilterGrid({
         ))}
       </SelectInput>
 
-      <Button type="submit">Apply {showReset ? "" : "Filters"}</Button>
+      <Button type="submit">Apply {resetHref ? "" : "Filters"}</Button>
 
-      {showReset && (
-        <ButtonLink href="/admin/reports" variant="outline">
+      {resetHref && (
+        <ButtonLink href={resetHref} variant="outline">
           Reset
         </ButtonLink>
       )}
