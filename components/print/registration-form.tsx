@@ -1,4 +1,3 @@
-import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
 import { BrandMarks } from "@/components/layout/pkm-mark";
 import { PrintButton } from "@/components/print/print-button";
 import { formatDate, formatName } from "@/lib/utils/format";
@@ -16,17 +15,17 @@ export type PrintableEnrollment = Enrollment & {
 
 function FormField({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
-    <div className={`registration-print-field flex min-h-10 items-end gap-2 border-b border-slate-400 ${className}`}>
-      <span className="shrink-0 text-xs font-bold uppercase text-slateui-text">{label}:</span>
-      <span className="min-w-0 flex-1 pb-1 text-sm font-semibold text-slateui-text">{value}</span>
+    <div className={`registration-print-field flex min-h-10 items-end gap-2 border-b border-black ${className}`}>
+      <span className="shrink-0 text-xs font-bold uppercase text-black">{label}:</span>
+      <span className="min-w-0 flex-1 pb-1 text-sm font-semibold text-black">{value}</span>
     </div>
   );
 }
 
 function MarkBox({ label, checked }: { label: string; checked: boolean }) {
   return (
-    <span className="registration-print-mark inline-flex items-center gap-2 text-xs font-bold uppercase text-slateui-text">
-      <span className="flex h-4 w-4 items-center justify-center border border-slate-700 text-[10px] leading-none">
+    <span className="registration-print-mark inline-flex items-center gap-2 text-xs font-bold uppercase text-black">
+      <span className="flex h-4 w-4 items-center justify-center border border-black text-[10px] leading-none">
         {checked ? "X" : ""}
       </span>
       {label}
@@ -37,7 +36,7 @@ function MarkBox({ label, checked }: { label: string; checked: boolean }) {
 function SignatureBlock({ label }: { label: string }) {
   return (
     <div className="registration-print-signature flex min-h-16 flex-col justify-end text-center">
-      <div className="border-t border-slate-500 pt-1 text-xs font-bold uppercase text-slateui-text">{label}</div>
+      <div className="border-t border-black pt-1 text-xs font-bold uppercase text-black">{label}</div>
     </div>
   );
 }
@@ -73,16 +72,16 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
   const studentName = formatName(profile?.first_name, profile?.last_name);
 
   return (
-    <section className="registration-print print-page rounded-lg border border-slateui-border bg-white p-6 shadow-sm">
-      <div className="registration-print-header mb-5 flex flex-col gap-4 border-b-2 border-primary-800 pb-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="registration-print print-page rounded-lg border border-black bg-white p-6">
+      <div className="registration-print-header mb-5 flex flex-col gap-4 border-b-2 border-black pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <BrandMarks className="registration-print-marks mb-4" />
-          <p className="text-sm font-bold uppercase text-primary-800">Pambayang Kolehiyo ng Mauban</p>
-          <p className="text-xs font-semibold text-slateui-secondary">
+          <BrandMarks className="registration-print-marks mb-4 grayscale" />
+          <p className="text-sm font-bold uppercase text-black">Pambayang Kolehiyo ng Mauban</p>
+          <p className="text-xs font-semibold text-black">
             Africandaisy St. Sitio Pilaway Brgy. Polo Mauban, Quezon
           </p>
-          <h2 className="mt-2 text-2xl font-black uppercase tracking-normal text-slateui-text">Registration Form</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-slateui-secondary">
+          <h2 className="mt-2 text-2xl font-black uppercase tracking-normal text-black">Registration Form</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-black">
             MVP draft printout based on the supplied registration form sample. Official COR approval and final
             template confirmation are still pending.
           </p>
@@ -101,8 +100,8 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <FormField label="Status" value={getAcademicStatus(student?.student_type)} />
       </div>
 
-      <div className="registration-print-classification mb-5 flex flex-wrap items-center gap-4 border-y border-slateui-border py-3">
-        <p className="text-xs font-bold uppercase text-slateui-text">Classification:</p>
+      <div className="registration-print-classification mb-5 flex flex-wrap items-center gap-4 border-y border-black py-3">
+        <p className="text-xs font-bold uppercase text-black">Classification:</p>
         <MarkBox label="New" checked={marks.newStudent} />
         <MarkBox label="Old" checked={marks.oldStudent} />
         <MarkBox label="Transferee" checked={marks.transferee} />
@@ -110,28 +109,28 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         <MarkBox label="Irregular" checked={marks.irregular} />
       </div>
 
-      <div className="registration-print-review mb-5 grid gap-3 rounded-md border border-slateui-border bg-slateui-surfaceAlt p-3 text-sm md:grid-cols-4">
+      <div className="registration-print-review mb-5 grid gap-3 rounded-md border border-black bg-white p-3 text-sm md:grid-cols-4">
         <div>
-          <p className="text-xs font-bold uppercase text-slateui-muted">Enrollment Review</p>
-          <div className="mt-1">
-            <Badge tone={enrollmentBadgeTone(enrollment.status)}>{enrollment.status}</Badge>
-          </div>
+          <p className="text-xs font-bold uppercase text-black">Enrollment Review</p>
+          <p className="mt-1 inline-flex rounded-sm border border-black bg-white px-2 py-1 text-xs font-bold uppercase text-black">
+            {enrollment.status}
+          </p>
         </div>
         <div>
-          <p className="text-xs font-bold uppercase text-slateui-muted">Submitted</p>
-          <p className="mt-1 font-semibold text-slateui-text">{formatDate(enrollment.submitted_at)}</p>
+          <p className="text-xs font-bold uppercase text-black">Submitted</p>
+          <p className="mt-1 font-semibold text-black">{formatDate(enrollment.submitted_at)}</p>
         </div>
         <div>
-          <p className="text-xs font-bold uppercase text-slateui-muted">Reviewed</p>
-          <p className="mt-1 font-semibold text-slateui-text">{formatDate(enrollment.reviewed_at)}</p>
+          <p className="text-xs font-bold uppercase text-black">Reviewed</p>
+          <p className="mt-1 font-semibold text-black">{formatDate(enrollment.reviewed_at)}</p>
         </div>
         <div>
-          <p className="text-xs font-bold uppercase text-slateui-muted">Remarks</p>
-          <p className="mt-1 font-semibold text-slateui-text">{enrollment.remarks || "None"}</p>
+          <p className="text-xs font-bold uppercase text-black">Remarks</p>
+          <p className="mt-1 font-semibold text-black">{enrollment.remarks || "None"}</p>
         </div>
       </div>
 
-      <div className="registration-print-notice mb-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+      <div className="registration-print-notice mb-5 rounded-md border border-black bg-white px-4 py-3 text-sm leading-6 text-black">
         This printout is a draft system output for Registrar review and student reference. It is not an official
         Certificate of Registration until PKM confirms and approves the official registration form template.
       </div>
@@ -139,18 +138,18 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
       <div className="registration-print-subjects">
         <div className="registration-print-subject-heading mb-3 flex items-end justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold uppercase text-slateui-text">Subject Load</h3>
-            <p className="registration-print-subject-note text-sm text-slateui-muted">
+            <h3 className="text-lg font-bold uppercase text-black">Subject Load</h3>
+            <p className="registration-print-subject-note text-sm text-black">
               Time, day, and room remain placeholders until official schedule data is encoded.
             </p>
           </div>
-          <p className="text-sm font-semibold text-slateui-text">Total Units: {totalUnits}</p>
+          <p className="text-sm font-semibold text-black">Total Units: {totalUnits}</p>
         </div>
 
         {subjects.length ? (
-          <div className="registration-print-table-wrap overflow-hidden rounded-lg border border-slateui-border">
-            <table className="registration-print-table min-w-full divide-y divide-slateui-border text-left text-sm">
-              <thead className="bg-primary-800 text-white">
+          <div className="registration-print-table-wrap overflow-hidden rounded-lg border border-black">
+            <table className="registration-print-table min-w-full divide-y divide-black text-left text-sm">
+              <thead className="bg-white text-black">
                 <tr>
                   {["Subject Code", "Subject Description", "Time", "Day", "Room", "Unit"].map((column) => (
                     <th key={column} className="px-4 py-3 font-semibold">
@@ -159,44 +158,44 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slateui-border bg-white">
+              <tbody className="divide-y divide-black bg-white">
                 {subjects.map((subject) => (
                   <tr key={subject.id}>
-                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-slateui-text">{subject.course_code}</td>
-                    <td className="px-4 py-3 text-slateui-secondary">{subject.course_description}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">TBA</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">TBA</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">TBA</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{subject.units}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-black">{subject.course_code}</td>
+                    <td className="px-4 py-3 text-black">{subject.course_description}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-black">TBA</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-black">TBA</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-black">TBA</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-black">{subject.units}</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-slateui-surfaceAlt">
+              <tfoot className="bg-white">
                 <tr>
-                  <td className="px-4 py-3 text-sm font-semibold text-slateui-text" colSpan={2}>
+                  <td className="px-4 py-3 text-sm font-semibold text-black" colSpan={2}>
                     Total
                   </td>
                   <td colSpan={3} />
-                  <td className="px-4 py-3 text-sm font-semibold text-slateui-text">{totalUnits}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-black">{totalUnits}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-slateui-border p-6 text-sm text-slateui-muted">
+          <div className="rounded-lg border border-dashed border-black p-6 text-sm text-black">
             No subjects are attached to this enrollment record.
           </div>
         )}
       </div>
 
       <div className="registration-print-fees mt-6 grid gap-4 lg:grid-cols-[1.15fr_1fr]">
-        <div className="overflow-hidden rounded-lg border border-slateui-border">
-          <div className="bg-primary-800 px-4 py-2 text-sm font-bold uppercase text-white">
+        <div className="overflow-hidden rounded-lg border border-black">
+          <div className="border-b border-black bg-white px-4 py-2 text-sm font-bold uppercase text-black">
             Assessment of Tuition and Other School Fees (TOSF)
           </div>
           <div className="grid gap-0 md:grid-cols-2">
-            <div className="border-b border-slateui-border p-4 md:border-b-0 md:border-r">
-              <p className="mb-2 text-xs font-bold uppercase text-slateui-text">Miscellaneous Fee</p>
+            <div className="border-b border-black p-4 md:border-b-0 md:border-r">
+              <p className="mb-2 text-xs font-bold uppercase text-black">Miscellaneous Fee</p>
               {[
                 "Admission Fee",
                 "Athletic Fee",
@@ -212,7 +211,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
                 "Registration Fee",
                 "School ID Fee"
               ].map((fee) => (
-                <div key={fee} className="flex justify-between gap-3 border-b border-slate-100 py-1 text-xs">
+                <div key={fee} className="flex justify-between gap-3 border-b border-black py-1 text-xs text-black">
                   <span>{fee}</span>
                   <span className="font-semibold">--</span>
                 </div>
@@ -236,7 +235,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
           </div>
         </div>
 
-        <div className="registration-print-privacy rounded-lg border border-slateui-border p-4 text-sm leading-6 text-slateui-secondary">
+        <div className="registration-print-privacy rounded-lg border border-black p-4 text-sm leading-6 text-black">
           <p>
             I hereby authorize the Pambayang Kolehiyo ng Mauban to collect, process, store and utilize my personal data
             for the management of my academic records and related administrative purposes. This includes, but is not
@@ -245,7 +244,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         </div>
       </div>
 
-      <div className="registration-print-signoff mt-8 grid gap-6 border-t border-slateui-border pt-8 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="registration-print-signoff mt-8 grid gap-6 border-t border-black pt-8 sm:grid-cols-2 lg:grid-cols-5">
         <SignatureBlock label="Dean" />
         <SignatureBlock label="Librarian" />
         <SignatureBlock label="Nurse" />
