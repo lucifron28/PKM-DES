@@ -115,6 +115,8 @@ SQLite local development notes are in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE
 
 Development sample accounts are in [docs/SAMPLE_ACCOUNTS.md](./docs/SAMPLE_ACCOUNTS.md).
 
+Demo walkthrough instructions are in [docs/DEMO_RUNBOOK.md](./docs/DEMO_RUNBOOK.md).
+
 Short setup:
 
 1. Create or open the Supabase project.
