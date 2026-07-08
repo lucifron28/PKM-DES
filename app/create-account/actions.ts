@@ -314,7 +314,8 @@ async function resolveOldManualDetails(
   const programCode = String(formData.get("program_code") ?? "").trim();
   const yearLevel = String(formData.get("year_level") ?? "").trim() as YearLevel;
 
-  if (!firstName || !lastName || !email || !studentIdNumber || !programCode || !yearLevel) {
+  const fields = [firstName, lastName, email, studentIdNumber, programCode, yearLevel];
+  if (fields.some((field) => !field)) {
     return { error: "Please complete all required Old Student account fields." };
   }
 

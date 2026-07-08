@@ -2,5 +2,11 @@
   "ignoreDependencies": [
     "eslint-config-next",
     "tailwindcss"
-  ]
+  ],
+  "health": {
+    "maxCyclomatic": 15,
+    "maxCognitive": 15,
+    "maxUnitSize": 200,
+    "maxCrap": 700
+  }
 }
