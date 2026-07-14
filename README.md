@@ -244,7 +244,8 @@ Public:
 Student:
 - All student types are blocked when no matching official record exists.
 - All student types can create an account after claiming an exact matching official record.
-- Student sees a clear message when a found official record has a different student type.
+- Wrong student type returns the same generic verification failure as other non-claimable attempts.
+- Public account-claim responses do not reveal whether an email, Student ID, or stored classification exists.
 - Duplicate account creation for an existing email address or Student ID Number is blocked.
 - Student can log in.
 - Student dashboard displays profile information.
@@ -299,6 +300,8 @@ Security:
 ## 14. Known Limitations
 
 - Account creation for every student type depends on an exact Registrar-managed official record, but bulk import is not implemented.
+- Account-claim rate limiting is future hardening and is not implemented in this research MVP.
+- The signed account-claim proof is an MVP safeguard, not production-grade institutional identity proofing.
 - Guided admin field options are provisional MVP values until PKM supplies official value lists.
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.

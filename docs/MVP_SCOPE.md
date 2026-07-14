@@ -63,6 +63,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
 - Account claiming for every student type depends on manually encoded official student records; no approved import workflow exists.
 - The FRD describes generated credentials delivered by email, while the MVP uses a self-selected password so the account flow can be tested.
+- The signed account-claim proof protects the MVP workflow state but is not production-grade institutional identity verification; account-claim rate limiting remains future hardening.
 - Official student record fields and controlled options are guided MVP inputs, not finalized institutional value lists.
 - Reports use browser printing, not an approved export, PDF, or registrar report format.
 

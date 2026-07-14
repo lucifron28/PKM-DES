@@ -110,6 +110,40 @@ Remote migrations recorded by Supabase MCP:
 - `official_student_records`
 - `enrollment_term_uniqueness`
 
+## Student Account Claim Integrity Migration
+
+Migration: `supabase/migrations/20260714000000_student_account_claim_integrity.sql`
+
+The migration first checks for normalized duplicates before changing any row. It then normalizes profile and official-record emails to lowercase trimmed text, and Student ID values to trimmed text with blank values converted to `null`. It adds `profiles_email_unique` on `lower(email)` and `students_student_id_number_unique` for non-null Student IDs.
+
+Duplicates must be resolved manually before applying this migration. It does not delete or merge rows. Do not apply it when any of these read-only preflight queries returns rows:
+
+```sql
+select lower(btrim(email)) as normalized_email, count(*)
+from public.profiles
+group by lower(btrim(email))
+having count(*) > 1;
+
+select nullif(btrim(student_id_number), '') as normalized_student_id, count(*)
+from public.students
+where nullif(btrim(student_id_number), '') is not null
+group by nullif(btrim(student_id_number), '')
+having count(*) > 1;
+
+select lower(btrim(email)) as normalized_email, count(*)
+from public.official_student_records
+group by lower(btrim(email))
+having count(*) > 1;
+
+select nullif(btrim(student_id_number), '') as normalized_student_id, count(*)
+from public.official_student_records
+where nullif(btrim(student_id_number), '') is not null
+group by nullif(btrim(student_id_number), '')
+having count(*) > 1;
+```
+
+This migration is tracked in the repository but has not been applied to a remote Supabase project from this branch.
+
 ## Initial Schema Migration
 
 File:
