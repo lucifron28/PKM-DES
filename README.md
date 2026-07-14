@@ -14,6 +14,8 @@ PKM-DES is a research-presentation MVP. The online deployment is a temporary cli
 
 Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/FRD_TRACEABILITY.md). The formal research MVP boundary is documented in [docs/MVP_SCOPE.md](./docs/MVP_SCOPE.md), and the high-level interaction model is available in [docs/diagrams/pkm-des-use-case.puml](./docs/diagrams/pkm-des-use-case.puml).
 
+Client source artifacts and their tracked implementation references are listed in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
+
 ## 2. Tech Stack
 
 - Next.js App Router
@@ -28,13 +30,9 @@ Functional, partial, placeholder, deferred, and client-confirmation-dependent re
 
 ## 3. Source Documents Used
 
-- `data-sources/About Us.pdf`: PKM identity, About content, vision, mission, goals, address, email, website, and social links
-- `data-sources/Subjects.pdf`: initial Accounting Information System subject seed list
-- `docs/frd-files/LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`: source for displayed BSAIS course offerings for SY 2025-2026, 2nd Semester
-- `data-sources/FRD1.pdf`: expected outputs, functional requirements, manual enrollment process, and study objectives
-- `data-sources/Joshua.pdf`: system overview, navigation structure, public pages, student module, admin module, login behavior, account behavior, enrollment behavior, empty states, and missing-information warnings
-- `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files/decisions
-- `REGISTRATION FORM 4G.xlsx`: client-supplied registration form sample used as a browser-print layout reference only; student list data from the workbook is not imported
+Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`, `Joshua.pdf`, `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`, and `REGISTRATION FORM 4G.xlsx`, are documented in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/SOURCE_DOCUMENT_REGISTER.md). Their original files are intentionally excluded from the public repository.
+
+- `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files or decisions
 
 ## 4. Current MVP Scope
 
@@ -42,7 +40,7 @@ Functional, partial, placeholder, deferred, and client-confirmation-dependent re
 - Student pages: Dashboard, Online Enrollment, Subject List, Enrollment Status Result, Grades placeholder, Class Schedule placeholder, Balances placeholder, Account, Logout
 - Admin pages: Dashboard, Pending Enrollments, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
 - Admin reporting: Enrollment Reports with filters, status summaries, and browser-print output
-- Database: Supabase schema, RLS policies, audit log table, and seed data for one AIS program and the provided subject list
+- Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, and BSAIS curriculum subject seed data
 
 ## 5. Features Implemented
 
@@ -63,7 +61,7 @@ Functional, partial, placeholder, deferred, and client-confirmation-dependent re
 - Student Account page displays core account data and matching Registrar-managed official profile details when available
 - Signed-in students can change their password from the Account page
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
-- Subject List includes source-labeled BSAIS course offerings for SY 2025-2026, 2nd Semester
+- Subject List includes source-labeled workbook-derived course offerings for several programs for SY 2025-2026, 2nd Semester
 - Online enrollment form that creates a `PENDING` enrollment record
 - Online enrollment is currently limited to the client-confirmed MVP term: AY 2026-2027, 1st Semester
 - Duplicate enrollment submissions are blocked for the same student, academic year, and semester when any enrollment record already exists
@@ -148,8 +146,7 @@ The service-role key is not documented here and should never be pasted into chat
 Initial Registrar setup template:
 
 - File: `supabase/registrar_admin_setup.example.sql`
-- Confirmed Registrar: Shaira Mae E. Pajares
-- Email: `pkmregistrarofficial@gmail.com`
+- Create the designated internal Registrar/Auth account using credentials provided privately.
 - Create the Supabase Auth user first, then replace `<auth-user-uuid>` in the template.
 
 ## 9. Environment Variables
@@ -207,12 +204,9 @@ RLS policies are included for student-owned records, admin review access, authen
 
 ## 12. Seed Data
 
-The seed includes one program:
+The tracked Supabase seed defines a catalog of 10 programs: BSAIS, BSMA, BEED, English, Filipino, Mathematics, Social Studies, Criminology, Agriculture Crop Production, and Food Service Management. The official program names and curricula still require client confirmation where not yet finalized.
 
-- Name: Accounting Information System
-- Code: AIS
-
-The exact official program title should be verified because the available Subjects.pdf contains Accounting Information System-related courses, but no separate formal program-title document was provided.
+Only BSAIS has 56 seeded curriculum subject rows from the supplied subject reference. The exact official BSAIS program title should still be verified because no separate formal program-title document was provided.
 
 Subject summary from the source list:
 
@@ -224,13 +218,15 @@ Subject summary from the source list:
 - NSTP: 6
 - Total Number of Units: 167
 
-Remote seed verification on the configured Supabase project:
+Current tracked `supabase/seed.sql` definition:
 
-- Programs: 1
-- Subjects: 56
-- Total units: 167
+- Program catalog records: 10
+- BSAIS curriculum subjects: 56
+- BSAIS curriculum units: 167
 
-No other programs or subjects are added.
+The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
+
+SQLite development seeding is documented separately in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
 
 ## 13. Manual Test Checklist
 
@@ -252,7 +248,7 @@ Student:
 - Student account page displays confirmed official profile fields when a matching official record exists.
 - Student can change password from the Account page after entering the current password.
 - Student can view subject list.
-- Student can view BSAIS course offerings labeled with SY 2025-2026 and 2nd Semester.
+- Student can view source-labeled workbook-derived course offerings for the student's program where configured for SY 2025-2026, 2nd Semester.
 - Subject list displays separate tables by year level and semester.
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
@@ -310,10 +306,11 @@ Security:
 - Grades, schedule, balances, student records, and encode workflows are placeholders.
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
-- Subject List uses source-grounded local seed data for fast student navigation; the same data is also seeded in Supabase.
-- BSAIS course offerings from `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx` are displayed as term offerings only; they do not replace the full curriculum seed.
-- The BSAIS course offering workbook has duplicate BSAIS blocks and a 4th Year total with no visible 4th Year course rows.
-- Enrollment submission still attaches subjects from the database subject seed until PKM supplies an official term-offering-to-enrollment rule.
+- Subject List uses tracked source-derived constants for display and the Supabase `subjects` table for enrollment attachment.
+- The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
+- Workbook-derived offerings are display-only term references; they do not replace database curriculum subjects used by enrollment.
+- The source workbook contains duplicate BSAIS blocks and a 4th Year BSAIS total with no visible 4th Year BSAIS course rows.
+- Enrollment submission attaches matching BSAIS subjects from the database until PKM supplies approved curriculum and term-enrollment rules for other programs.
 - Client has confirmed First Semester AY 2026-2027 as the current MVP enrollment term, but the app still needs a full academic calendar configuration before additional terms are opened.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Student Account official-detail display depends on an exact matching Registrar-managed official record and server-only Supabase service-role configuration.
@@ -331,5 +328,5 @@ Security:
 - Grade encoding and release workflow
 - Class schedule assignment workflow
 - Balance/payment records workflow
-- Multi-program support after official program lists are supplied
+- Complete multi-program enrollment support after approved curricula and enrollment rules are supplied for each program
 - Email templates and generated-password delivery

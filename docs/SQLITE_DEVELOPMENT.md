@@ -47,13 +47,15 @@ The generated SQLite database file is ignored by git.
 The SQLite init script:
 
 - Creates local development tables equivalent to the current MVP schema.
-- Seeds one program: Accounting Information System / AIS.
-- Reads the source-grounded AIS subjects from `lib/constants/subjects.ts`.
+- Seeds a separate local-development catalog of 10 programs.
+- Seeds 56 BSAIS curriculum subjects from `lib/constants/subjects.ts`.
 - Enforces one enrollment record per student, academic year, and semester.
 - Verifies the expected local totals:
-  - Programs: 1
+  - Programs: 10
   - Subjects: 56
   - Total units: 167
+
+This local seed is independent from the deployed Supabase environment. Refer to [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for the current Supabase seed definition and deployment guidance.
 
 ## Current Boundary
 

@@ -54,13 +54,13 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Supabase Auth sessions.
 - Active-account and student/admin role checks in server-side route access.
-- Row Level Security policies for the current database-backed MVP flows.
+- Row Level Security policies are present for the current database-backed MVP flows. The research MVP has not undergone production security certification or penetration testing.
 
 ## 4. Partial or Demonstration-Only Capabilities
 
 - The current registration output is a browser-print **draft registration form**, not final official COR generation.
 - The deployment is a temporary client preview and should use limited demonstration data.
-- Available curriculum and program information is limited to the source-grounded AIS seed data and a labeled BSAIS term offering reference.
+- The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
 - Account claiming for Incoming First Year Students and Transferees depends on manually encoded official student records; no approved import workflow exists.
 - The FRD describes generated credentials delivered by email, while the MVP uses a self-selected password so the account flow can be tested.
 - Official student record fields and controlled options are guided MVP inputs, not finalized institutional value lists.

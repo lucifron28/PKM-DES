@@ -27,11 +27,11 @@ This verifies that the deployment is not using SQLite and that the required Supa
 
 1. Listed Supabase projects and found the new `PKM-DES` project.
 2. Applied the initial schema migration.
-3. Ran the AIS program and subject seed SQL.
-4. Verified seed totals:
-   - Programs: 1
-   - Subjects: 56
-   - Total units: 167
+3. Ran the current program-catalog and BSAIS curriculum-subject seed SQL.
+4. The tracked seed definition contains:
+   - Program catalog records: 10
+   - BSAIS curriculum subjects: 56
+   - BSAIS curriculum units: 167
 5. Retrieved the project URL and publishable keys for local environment setup.
 6. Created local `.env.local` with:
    - `NEXT_PUBLIC_SUPABASE_URL`
@@ -194,33 +194,22 @@ File:
 supabase/seed.sql
 ```
 
-Seeded one program:
+The current seed creates a catalog of 10 program records: `BSAIS`, `BSMA`, `BEED`, `ENGLISH`, `FILIPINO`, `MATH`, `SS`, `CRIM`, `ACP`, and `FSM`.
 
-- Name: `Accounting Information System`
-- Code: `AIS`
+Only `BSAIS` has 56 seeded curriculum subject rows, totaling 167 units, from the supplied subject reference. The seed does not create curriculum subject rows for the other program catalog entries.
 
-Seeded 56 subject rows from the supplied Subjects.pdf list.
-
-Verified totals:
-
-- Programs: 1
-- Subjects: 56
-- Total units: 167
-
-No other programs or subjects were invented.
+The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
 
 ## Term Course Offerings From Workbook
 
-File:
+Source artifact:
 
-```text
-docs/frd-files/LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx
-```
+- `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`, recorded in [SOURCE_DOCUMENT_REGISTER.md](./SOURCE_DOCUMENT_REGISTER.md). The original workbook is intentionally excluded from the public repository.
 
 Current MVP behavior:
 
-- The app displays the BSAIS rows from the workbook as course offerings for `SY 2025-2026`, `2nd Semester`.
-- These rows are source-labeled on the Student Subject List page.
+- The app displays workbook-derived course offerings for several programs for `SY 2025-2026`, `2nd Semester`, based on the student's program.
+- These display-only offerings are source-labeled on the Student Subject List page.
 - The workbook is treated as term offering data, not as a full curriculum replacement.
 - No Supabase schema or subject seed migration is added for these offerings yet.
 
@@ -335,11 +324,7 @@ Admin password changes:
 
 Admin accounts are internal and are not created through public registration.
 
-Initial client-provided Registrar account:
-
-- Name: Shaira Mae E. Pajares
-- Email: `pkmregistrarofficial@gmail.com`
-- Role: Registrar
+Designated Registrar account details are distributed privately. The role is `Registrar`.
 
 1. Go to Supabase Dashboard -> Authentication -> Users.
 2. Add an admin user with email and password. Do not commit or paste that password into project files or chat.
@@ -507,8 +492,8 @@ order by table_name, grantee, privilege_type;
 
 ## Notes and Boundaries
 
-- The initial client-provided Registrar account is Shaira Mae E. Pajares, `pkmregistrarofficial@gmail.com`.
+- Designated Registrar account details are distributed privately and must not be committed to project documentation.
 - Official admitted-applicant matching is implemented for manual official records, but import format, sample data, and generated password/email delivery remain future work.
 - No official COR template was provided, so only an MVP draft browser-print registration form is implemented; official COR/PDF output remains future work.
 - No official grading, schedule, or balance format was provided, so those modules remain placeholders.
-- Subject List uses the same source-grounded AIS subject data locally for fast tab navigation and in Supabase for database-backed records.
+- The Subject List uses source-derived curriculum and workbook-offering data for display. Only BSAIS curriculum subjects are seeded in Supabase for online enrollment attachment.
