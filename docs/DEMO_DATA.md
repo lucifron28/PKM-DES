@@ -11,6 +11,7 @@ The fictional records in `scripts/demo/demo-records.mjs` make the PKM-DES resear
 - Passwords are supplied through environment variables and are never committed.
 - Active Registrar credentials are distributed privately.
 - Do not run the scripts against a real institutional database containing live student information.
+- Exact dashboard verification requires a clean, dedicated preview or test Supabase database. Unrelated enrollment records make the documented presentation totals unreliable.
 
 ## Demonstration States
 
@@ -41,7 +42,9 @@ The claim-only official record does not appear in enrollment counts because it h
 3. After claiming it, submit a new enrollment request.
 4. Verify that pending and total counts increase.
 5. Review the new enrollment through the Registrar/Admin workflow.
-6. Reset the fictional demo state after testing or before another presentation.
+6. Reset the fictional demo state before another presentation when the preview database is clean.
+
+If the claim-only record was claimed during a presentation, the guarded reset intentionally stops rather than deleting that student row automatically. Remove only that exact fictional account and its matching rows through an approved preview-data cleanup process before running the reset again.
 
 See [DEMO_RESET.md](./DEMO_RESET.md) for the guarded reset and verification steps.
 
