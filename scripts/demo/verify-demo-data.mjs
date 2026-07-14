@@ -1,21 +1,23 @@
 import {
-  ACCOUNT_DEMO_EMAILS,
   ACCOUNT_DEMO_RECORDS,
   CLAIM_ONLY_DEMO_RECORD,
+  DEMO_EMAILS,
   DEMO_RECORDS,
   DEMO_STUDENT_IDS,
   DEMO_STUDENT_TYPE,
   DEMO_YEAR_LEVEL,
-  recordForEmail,
   recordForStudentId
 } from "./demo-records.mjs";
 import {
   assertNoError,
   createSupabaseAdminClient,
+  calculateDashboardCounts,
   printDemoPlan,
   readVerificationConfiguration,
+  resolveOptionalReviewerId,
   resolveProgramAndSubjects,
-  targetHost
+  targetHost,
+  validateExactSubjectSet
 } from "./demo-utils.mjs";
 
 function check(condition, message, failures) {
@@ -58,7 +60,7 @@ async function getStudentForProfile(supabase, profileId) {
 async function getCurrentTermEnrollments(supabase, studentId, term) {
   const { data, error } = await supabase
     .from("enrollments")
-    .select("id, status, remarks, academic_year, semester, year_level, program_id")
+    .select("id, status, remarks, academic_year, semester, year_level, program_id, reviewed_at, reviewed_by")
     .eq("student_id", studentId)
     .eq("academic_year", term.academicYear)
     .eq("semester", term.semester);
@@ -66,13 +68,13 @@ async function getCurrentTermEnrollments(supabase, studentId, term) {
   return data ?? [];
 }
 
-async function getAttachmentCount(supabase, enrollmentId) {
-  const { count, error } = await supabase
+async function getAttachmentSubjectIds(supabase, enrollmentId) {
+  const { data, error } = await supabase
     .from("enrollment_subjects")
-    .select("id", { count: "exact", head: true })
+    .select("subject_id")
     .eq("enrollment_id", enrollmentId);
-  assertNoError(error, "Could not count enrollment subjects");
-  return count ?? 0;
+  assertNoError(error, "Could not read enrollment subjects");
+  return (data ?? []).map((attachment) => attachment.subject_id);
 }
 
 async function findExactAuthUsers(supabase) {
@@ -84,7 +86,7 @@ async function findExactAuthUsers(supabase) {
     assertNoError(error, "Could not list Auth users");
 
     const users = data?.users ?? [];
-    matches.push(...users.filter((user) => ACCOUNT_DEMO_EMAILS.includes(String(user.email).toLowerCase())));
+    matches.push(...users.filter((user) => DEMO_EMAILS.includes(String(user.email).toLowerCase())));
 
     if (users.length < perPage) {
       break;
@@ -92,6 +94,36 @@ async function findExactAuthUsers(supabase) {
   }
 
   return matches;
+}
+
+function verifyAuthUsers(authUsers, failures) {
+  for (const record of DEMO_RECORDS) {
+    const matchingUsers = authUsers.filter((user) => String(user.email).toLowerCase() === record.email);
+
+    if (!record.hasAccount) {
+      check(matchingUsers.length === 0, "Claim-only demo email has an Auth user.", failures);
+      continue;
+    }
+
+    check(matchingUsers.length === 1, `${record.key}: expected exactly one Auth user.`, failures);
+    const authUser = matchingUsers[0];
+    if (authUser) {
+      check(Boolean(authUser.email_confirmed_at), `${record.key}: Auth email is not confirmed.`, failures);
+    }
+  }
+}
+
+async function verifyDashboardCounts(supabase, failures) {
+  const { data, error } = await supabase.from("enrollments").select("status");
+  assertNoError(error, "Could not read enrollment records for dashboard verification");
+
+  const counts = calculateDashboardCounts(data ?? []);
+  const isExpected = counts.pending === 1 && counts.approved === 1 && counts.rejected === 1 && counts.total === 3;
+  check(
+    isExpected,
+    `Dashboard totals are Pending ${counts.pending}, Approved ${counts.approved}, Rejected ${counts.rejected}, Total ${counts.total}. The database contains additional records or an unexpected presentation state, so documented dashboard totals cannot be guaranteed.`,
+    failures
+  );
 }
 
 async function verifyReservedStudentIds(supabase, failures) {
@@ -140,7 +172,7 @@ async function verifyClaimOnlyRecord(supabase, programId, failures) {
   check((students ?? []).length === 0, "Claim-only record has a student row or enrollment path.", failures);
 }
 
-async function verifyAccountRecord(supabase, record, programId, term, expectedSubjectCount, failures) {
+async function verifyAccountRecord(supabase, record, programId, term, expectedSubjectIds, reviewerId, authUser, failures) {
   const officialRecord = await getExactOfficialRecord(supabase, record);
   check(Boolean(officialRecord), `${record.key}: official record is missing.`, failures);
 
@@ -148,6 +180,7 @@ async function verifyAccountRecord(supabase, record, programId, term, expectedSu
   check(Boolean(profile), `${record.key}: profile is missing.`, failures);
   check(profile?.role === "student", `${record.key}: profile role is not student.`, failures);
   check(profile?.account_status === "ACTIVE", `${record.key}: profile is not ACTIVE.`, failures);
+  check(profile?.id === authUser?.id, `${record.key}: profile ID does not match its Auth user.`, failures);
 
   if (!profile || !officialRecord) {
     return { attachmentCount: 0 };
@@ -185,10 +218,28 @@ async function verifyAccountRecord(supabase, record, programId, term, expectedSu
   check(enrollment.semester === term.semester, `${record.key}: semester is incorrect.`, failures);
   check(enrollment.remarks === record.remarks, `${record.key}: remarks are incorrect.`, failures);
 
-  const attachmentCount = await getAttachmentCount(supabase, enrollment.id);
-  check(attachmentCount === expectedSubjectCount, `${record.key}: expected ${expectedSubjectCount} attached subjects, found ${attachmentCount}.`, failures);
+  if (record.reviewStatus === "PENDING") {
+    check(enrollment.reviewed_at === null, `${record.key}: pending enrollment has a reviewed timestamp.`, failures);
+    check(enrollment.reviewed_by === null, `${record.key}: pending enrollment has a reviewer.`, failures);
+  } else {
+    const reviewedAt = enrollment.reviewed_at ? new Date(enrollment.reviewed_at) : null;
+    check(Boolean(reviewedAt && !Number.isNaN(reviewedAt.valueOf())), `${record.key}: reviewed timestamp is missing or invalid.`, failures);
+    check(Boolean(reviewedAt && reviewedAt.valueOf() <= Date.now()), `${record.key}: reviewed timestamp is in the future.`, failures);
+    check(
+      enrollment.reviewed_by === null || enrollment.reviewed_by === reviewerId,
+      `${record.key}: reviewer is not the optional Registrar profile.`,
+      failures
+    );
+  }
 
-  return { attachmentCount };
+  const attachmentSubjectIds = await getAttachmentSubjectIds(supabase, enrollment.id);
+  try {
+    validateExactSubjectSet(expectedSubjectIds, attachmentSubjectIds);
+  } catch (error) {
+    check(false, `${record.key}: ${error.message}`, failures);
+  }
+
+  return { attachmentCount: attachmentSubjectIds.length };
 }
 
 async function main() {
@@ -207,18 +258,29 @@ async function main() {
   await verifyClaimOnlyRecord(supabase, program.id, failures);
 
   const authUsers = await findExactAuthUsers(supabase);
-  check(authUsers.length === ACCOUNT_DEMO_RECORDS.length, "Expected exactly three fictional Auth users.", failures);
-  for (const user of authUsers) {
-    check(Boolean(recordForEmail(user.email)?.hasAccount), "A matched Auth user is not an account-backed demo record.", failures);
-  }
+  verifyAuthUsers(authUsers, failures);
+  const authUserByEmail = new Map(authUsers.map((user) => [String(user.email).toLowerCase(), user]));
+
+  const reviewerId = await resolveOptionalReviewerId(supabase, configuration.registrarEmail);
 
   const summaries = [];
   for (const record of ACCOUNT_DEMO_RECORDS) {
-    const result = await verifyAccountRecord(supabase, record, program.id, configuration.term, subjects.length, failures);
+    const result = await verifyAccountRecord(
+      supabase,
+      record,
+      program.id,
+      configuration.term,
+      subjects.map((subject) => subject.id),
+      reviewerId,
+      authUserByEmail.get(record.email),
+      failures
+    );
     summaries.push({ record: record.key, status: record.reviewStatus, subjects: result.attachmentCount });
   }
 
   console.table(summaries);
+
+  await verifyDashboardCounts(supabase, failures);
 
   if (failures.length) {
     console.error("Demo verification failed:");
