@@ -8,6 +8,12 @@ Some data in the FRD is marked as for revision, pending requirements, or work in
 
 Manual enrollment background from the FRD: students receive four registration-form copies, collect professor, Dean, Library, Clinic/Nurse, and Accounting Office signatures, submit final copies to Accounting, receive one copy back, and receive a blank class card for the next semester. Digital clearance and signature routing are documented as future enhancements, not implemented in this MVP.
 
+## Research MVP Status
+
+PKM-DES is a research-presentation MVP. The online deployment is a temporary client preview that demonstrates the proposed student-to-Registrar enrollment workflow. It is not ready for real institutional data, official enrollment operations, or replacement of the current PKM Registrar process.
+
+Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/FRD_TRACEABILITY.md). The formal research MVP boundary is documented in [docs/MVP_SCOPE.md](./docs/MVP_SCOPE.md), and the high-level interaction model is available in [docs/diagrams/pkm-des-use-case.puml](./docs/diagrams/pkm-des-use-case.puml).
+
 ## 2. Tech Stack
 
 - Next.js App Router
