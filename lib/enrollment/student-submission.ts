@@ -9,7 +9,12 @@ export type StandardLoadEligibility =
   | "invalid_student_record"
   | "no_configured_subjects";
 
-export type StudentSubmissionOutcome = StandardLoadEligibility | "duplicate" | "submitted" | "submission_failed";
+export type StudentSubmissionOutcome =
+  | StandardLoadEligibility
+  | "term_not_open"
+  | "duplicate"
+  | "submitted"
+  | "submission_failed";
 
 export type TrustedStudentEnrollmentContext = {
   studentIdNumber: string | null;
@@ -41,6 +46,7 @@ export const STUDENT_SUBMISSION_MESSAGES: Record<StudentSubmissionOutcome, strin
   missing_student_id: "Your student record needs a Student ID before online enrollment can be submitted. Please contact the Registrar.",
   invalid_student_record: "Your student record could not be used for online enrollment. Please contact the Registrar.",
   no_configured_subjects: "No subjects are configured for your recorded year level and the current semester.",
+  term_not_open: "Online enrollment is not available for the configured academic term. Please contact the Registrar.",
   duplicate: "You already have an enrollment request for this academic year and semester.",
   submitted: "",
   submission_failed: "Enrollment request could not be completed. Please try again."

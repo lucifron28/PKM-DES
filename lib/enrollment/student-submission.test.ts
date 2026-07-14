@@ -91,6 +91,13 @@ test("unsupported-program outcome maps to the program notice", () => {
   assert.match(getStudentSubmissionMessage("unsupported_program"), /not yet configured for your program/);
 });
 
+test("closed-term outcome maps to the safe term notice", () => {
+  assert.equal(
+    getStudentSubmissionMessage("term_not_open"),
+    "Online enrollment is not available for the configured academic term. Please contact the Registrar."
+  );
+});
+
 test("unexpected database outcome maps to a generic failure", () => {
   assert.equal(
     getStudentSubmissionMessage("submission_failed"),

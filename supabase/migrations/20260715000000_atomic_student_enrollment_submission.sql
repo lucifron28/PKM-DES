@@ -4,8 +4,12 @@
 drop policy if exists "enrollments_insert_own" on public.enrollments;
 drop policy if exists "enrollment_subjects_insert_own_pending_matching_subject" on public.enrollment_subjects;
 drop policy if exists "enrollments_delete_own_pending_without_subjects" on public.enrollments;
+drop function if exists public.submit_standard_student_enrollment();
 
-create or replace function public.submit_standard_student_enrollment()
+create function public.submit_standard_student_enrollment(
+  p_academic_year text,
+  p_semester text
+)
 returns table (
   outcome text,
   enrollment_id uuid,
@@ -25,8 +29,6 @@ declare
   v_subject_count integer;
   v_attached_subject_count integer;
   v_enrollment_id uuid;
-  v_academic_year constant text := '2026-2027';
-  v_semester constant text := '1st Semester';
 begin
   if auth.uid() is null then
     return query select 'invalid_student_record'::text, null::uuid, 0;
@@ -89,9 +91,10 @@ begin
     return;
   end if;
 
-  -- The function has no caller-supplied term. These constants are the current approved MVP term.
-  if v_academic_year <> '2026-2027' or v_semester <> '1st Semester' then
-    return query select 'invalid_student_record'::text, null::uuid, 0;
+  -- The approved research-MVP term is AY 2026-2027, 1st Semester.
+  if p_academic_year is distinct from '2026-2027'
+    or p_semester is distinct from '1st Semester' then
+    return query select 'term_not_open'::text, null::uuid, 0;
     return;
   end if;
 
@@ -99,8 +102,8 @@ begin
     select 1
     from public.enrollments e
     where e.student_id = v_student_id
-      and e.academic_year = v_academic_year
-      and e.semester = v_semester
+      and e.academic_year = p_academic_year
+      and e.semester = p_semester
   ) then
     return query select 'duplicate'::text, null::uuid, 0;
     return;
@@ -111,7 +114,7 @@ begin
   from public.subjects s
   where s.program_id = v_program_id
     and s.year_level = v_year_level
-    and s.semester = v_semester;
+    and s.semester = p_semester;
 
   if v_subject_count < 1 then
     return query select 'no_configured_subjects'::text, null::uuid, 0;
@@ -134,8 +137,8 @@ begin
       v_student_id,
       v_program_id,
       v_year_level,
-      v_academic_year,
-      v_semester,
+      p_academic_year,
+      p_semester,
       'PENDING',
       null,
       null,
@@ -148,7 +151,7 @@ begin
     from public.subjects s
     where s.program_id = v_program_id
       and s.year_level = v_year_level
-      and s.semester = v_semester;
+      and s.semester = p_semester;
 
     get diagnostics v_attached_subject_count = row_count;
 
@@ -171,6 +174,6 @@ exception
 end;
 $$;
 
-revoke all on function public.submit_standard_student_enrollment() from public;
-revoke execute on function public.submit_standard_student_enrollment() from anon;
-grant execute on function public.submit_standard_student_enrollment() to authenticated;
+revoke all on function public.submit_standard_student_enrollment(text, text) from public;
+revoke execute on function public.submit_standard_student_enrollment(text, text) from anon;
+grant execute on function public.submit_standard_student_enrollment(text, text) to authenticated;

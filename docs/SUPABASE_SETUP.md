@@ -244,11 +244,11 @@ File:
 supabase/migrations/20260715000000_atomic_student_enrollment_submission.sql
 ```
 
-This migration replaces the direct student insert path with `public.submit_standard_student_enrollment()`. The authenticated RPC derives the student, program, year level, student type, and fixed MVP term internally. It permits only BSAIS Incoming 1st Year, Old, Continuing, and Regular Student standard loads, creates one `PENDING` enrollment, and attaches its complete matching subject set in one transaction.
+This migration replaces the direct student insert path with `public.submit_standard_student_enrollment(p_academic_year text, p_semester text)`. The server action supplies `CURRENT_ENROLLMENT_TERM`; the authenticated RPC derives the student, program, year level, and student type internally, then validates the supplied term against the database-approved MVP term. It permits only BSAIS Incoming 1st Year, Old, Continuing, and Regular Student standard loads, creates one `PENDING` enrollment, and attaches its complete matching subject set in one transaction.
 
-The function accepts no browser-selected student, program, year, term, status, or subject values. It returns a controlled outcome, handles unique-index races as a duplicate result, and rolls back entirely if attachment fails. Students retain read access to their own enrollment rows and attached subjects, while direct student inserts into `enrollments` and `enrollment_subjects` are removed. Admin management policies are unchanged.
+The function accepts no browser-selected student, program, year, term, status, or subject values. A term mismatch returns `term_not_open` and creates no enrollment or student-status change. It returns controlled outcomes, handles unique-index races as a duplicate result, and rolls back entirely if attachment fails. Students retain read access to their own enrollment rows and attached subjects, while direct student inserts into `enrollments` and `enrollment_subjects` are removed. Admin management policies are unchanged.
 
-The fixed term is `AY 2026-2027`, `1st Semester`. Until an approved academic-calendar module exists, change the application configuration and this database rule together when PKM opens a new term.
+The fixed term is `AY 2026-2027`, `1st Semester`. Until an approved academic-calendar module exists, changing terms requires coordinated application configuration and database-rule updates.
 
 ### Read-Only Integrity Checks
 

@@ -22,7 +22,7 @@ export default async function OnlineEnrollmentPage() {
     return <EmptyState title="Student record not found." description="Please contact the Registrar." />;
   }
 
-  const [{ count: matchingSubjectCount }, { data: existingEnrollment }] = await Promise.all([
+  const [subjectResult, enrollmentResult] = await Promise.all([
     supabase
       .from("subjects")
       .select("id", { count: "exact", head: true })
@@ -37,6 +37,19 @@ export default async function OnlineEnrollmentPage() {
       .eq("semester", CURRENT_ENROLLMENT_TERM.semester)
       .maybeSingle()
   ]);
+
+  if (subjectResult.error || enrollmentResult.error) {
+    console.error("Enrollment information preload failed.", { stage: "preload" });
+    return (
+      <EmptyState
+        title="Enrollment information could not be loaded."
+        description="Please try again."
+      />
+    );
+  }
+
+  const matchingSubjectCount = subjectResult.count;
+  const existingEnrollment = enrollmentResult.data;
 
   const eligibility = evaluateStandardLoadEligibility({
     studentIdNumber: student.student_id_number,

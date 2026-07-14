@@ -63,6 +63,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Subject List includes source-labeled workbook-derived course offerings for several programs for SY 2025-2026, 2nd Semester
 - Online enrollment uses the authenticated student's recorded program, year level, student type, and Student ID; the browser submits only the certification checkbox
 - Automatic standard-load submission is limited to eligible BSAIS students for the client-confirmed MVP term: AY 2026-2027, 1st Semester
+- The server action supplies `CURRENT_ENROLLMENT_TERM` to the RPC, which validates it against the database-approved term; a mismatch creates no enrollment
 - Transferee and Irregular Student loads are directed to Registrar-managed subject assignment; no transfer-credit or adjusted-load rules are invented
 - One atomic database submission creates a `PENDING` enrollment and its complete matching `enrollment_subjects` set, while the unique student-term index handles concurrent duplicates safely
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
