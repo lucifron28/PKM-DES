@@ -1,17 +1,65 @@
-"use client";
-
+import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnrollmentForm } from "@/components/forms/enrollment-form";
-import { useStudentPortal } from "@/components/student/student-portal-provider";
+import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { CURRENT_ENROLLMENT_TERM } from "@/lib/constants/pkm";
+import {
+  evaluateStandardLoadEligibility,
+  getStudentSubmissionMessage
+} from "@/lib/enrollment/student-submission";
 import { formatName } from "@/lib/utils/format";
+import type { Enrollment } from "@/types/database";
 
-export default function OnlineEnrollmentPage() {
-  const { profile, student } = useStudentPortal();
+type TermEnrollment = Pick<Enrollment, "status" | "academic_year" | "semester">;
+
+export default async function OnlineEnrollmentPage() {
+  const { supabase, profile } = await requireRole("student");
+  const student = await getStudentForProfile(profile.id);
 
   if (!student) {
-    return <EmptyState title="Student record not found." description="Please contact an administrator." />;
+    return <EmptyState title="Student record not found." description="Please contact the Registrar." />;
   }
+
+  const [subjectResult, enrollmentResult] = await Promise.all([
+    supabase
+      .from("subjects")
+      .select("id", { count: "exact", head: true })
+      .eq("program_id", student.program_id)
+      .eq("year_level", student.year_level)
+      .eq("semester", CURRENT_ENROLLMENT_TERM.semester),
+    supabase
+      .from("enrollments")
+      .select("status, academic_year, semester")
+      .eq("student_id", student.id)
+      .eq("academic_year", CURRENT_ENROLLMENT_TERM.academicYear)
+      .eq("semester", CURRENT_ENROLLMENT_TERM.semester)
+      .maybeSingle()
+  ]);
+
+  if (subjectResult.error || enrollmentResult.error) {
+    console.error("Enrollment information preload failed.", { stage: "preload" });
+    return (
+      <EmptyState
+        title="Enrollment information could not be loaded."
+        description="Please try again."
+      />
+    );
+  }
+
+  const matchingSubjectCount = subjectResult.count;
+  const existingEnrollment = enrollmentResult.data;
+
+  const eligibility = evaluateStandardLoadEligibility({
+    studentIdNumber: student.student_id_number,
+    programId: student.program_id,
+    programCode: student.programs?.code ?? null,
+    yearLevel: student.year_level,
+    studentType: student.student_type,
+    matchingSubjectCount: matchingSubjectCount ?? 0
+  });
+  const termEnrollment = (existingEnrollment as TermEnrollment | null) ?? null;
 
   return (
     <div className="space-y-6">
@@ -31,7 +79,23 @@ export default function OnlineEnrollmentPage() {
             <p className="mt-1 break-all font-semibold text-slateui-text">{profile.email}</p>
           </div>
         </div>
-        <EnrollmentForm student={student} />
+        {termEnrollment ? (
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+            <p className="font-semibold">An enrollment request already exists for this term.</p>
+            <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div><dt className="font-medium">Academic Year</dt><dd>{termEnrollment.academic_year}</dd></div>
+              <div><dt className="font-medium">Semester</dt><dd>{termEnrollment.semester}</dd></div>
+              <div><dt className="font-medium">Current Status</dt><dd><Badge tone="info">{termEnrollment.status}</Badge></dd></div>
+            </dl>
+            <ButtonLink className="mt-4" href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>
+          </div>
+        ) : eligibility === "eligible" ? (
+          <EnrollmentForm student={student} />
+        ) : (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            {getStudentSubmissionMessage(eligibility)}
+          </div>
+        )}
       </Card>
     </div>
   );

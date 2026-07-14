@@ -3,10 +3,9 @@
 import { useActionState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { submitEnrollmentAction, type EnrollmentState } from "@/app/student/enrollment/actions";
-import { CURRENT_ENROLLMENT_TERM, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { CURRENT_ENROLLMENT_TERM } from "@/lib/constants/pkm";
 import type { Student } from "@/types/database";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { SelectInput } from "@/components/ui/field";
 
 const initialState: EnrollmentState = {};
 
@@ -20,37 +19,23 @@ export function EnrollmentForm({ student }: { student: Student }) {
           {state.message}
         </div>
       ) : null}
-      <input type="hidden" name="program_id" value={student.program_id} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <SelectInput label="Program" name="program_display" defaultValue={student.programs?.name ?? "Accounting Information System"} disabled>
-          <option>{student.programs?.name ?? "Accounting Information System"}</option>
-        </SelectInput>
-        <SelectInput label="Year Level" name="year_level" defaultValue={student.year_level} required>
-          {YEAR_LEVELS.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </SelectInput>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <SelectInput
-          label="Academic Year"
-          name="academic_year"
-          defaultValue={CURRENT_ENROLLMENT_TERM.academicYear}
-          required
-        >
-          <option value={CURRENT_ENROLLMENT_TERM.academicYear}>{CURRENT_ENROLLMENT_TERM.academicYear}</option>
-        </SelectInput>
-        <SelectInput
-          label="Semester"
-          name="semester"
-          defaultValue={CURRENT_ENROLLMENT_TERM.semester}
-          required
-        >
-          <option value={CURRENT_ENROLLMENT_TERM.semester}>{CURRENT_ENROLLMENT_TERM.semester}</option>
-        </SelectInput>
-      </div>
+      <dl className="grid gap-4 sm:grid-cols-2">
+        {[
+          ["Program", student.programs?.name ?? "Not available"],
+          ["Year Level", student.year_level],
+          ["Student Type", student.student_type],
+          ["Current Academic Year", CURRENT_ENROLLMENT_TERM.academicYear],
+          ["Current Semester", CURRENT_ENROLLMENT_TERM.semester]
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-md border border-slateui-border bg-slateui-surfaceAlt p-4">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slateui-muted">{label}</dt>
+            <dd className="mt-1 text-sm font-semibold text-slateui-text">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-sm text-slateui-secondary">
+        The system uses the program and year level recorded in your student account.
+      </p>
       <p className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-900">
         Current enrollment term: {CURRENT_ENROLLMENT_TERM.label}. Additional terms require the official academic calendar.
       </p>

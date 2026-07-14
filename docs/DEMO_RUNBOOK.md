@@ -30,7 +30,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 7. Use the claim-only record's exact fictional email, Student ID, and `Incoming 1st Year Student` selection as the live account-claim example.
 8. Log in as the student and open the Student Dashboard.
 9. Open Subject List and show the year/semester grouped tables.
-10. Submit Online Enrollment for AY 2026-2027, 1st Semester.
+10. Open Online Enrollment and point out the read-only recorded program, year level, student type, and fixed AY 2026-2027, 1st Semester. Submit using an eligible fictional BSAIS standard-load student.
 11. Show Enrollment Status Result with `PENDING` status.
 12. Log back in as Registrar/Admin.
 13. Open Pending Enrollments and approve or reject the submitted request.
@@ -42,6 +42,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 - Official Student Records are not enrollment submissions.
 - Admin Dashboard, Pending Enrollments, Reports, and Masterlist count submitted enrollment records only.
 - A student appears in those enrollment pages after they claim an account and submit Online Enrollment.
+- The browser does not choose academic details or subjects. Transferee and Irregular Student records require Registrar-managed subject assignment and are not used for the automatic submission demonstration.
 
 ## Placeholder Talking Points
 

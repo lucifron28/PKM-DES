@@ -36,6 +36,7 @@ This document records client-provided answers received after reviewing the FRD g
 - For irregular students, the Registrar should load the specific subjects to be taken.
 - The Registrar is responsible for assigning Regular, Irregular, and Continuing classification tags.
 - For transferees, credited subjects from the previous school should reduce or adjust the subject load during enrollment.
+- The current research MVP therefore directs Transferee and Irregular Student records to Registrar-managed handling instead of automatically attaching a standard load. It does not implement transfer-credit evaluation or adjusted subject loading without the required official rules.
 
 ### Student Records
 

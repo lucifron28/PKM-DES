@@ -13,7 +13,7 @@ The hosted deployment is a client preview environment. It demonstrates a propose
 3. The student logs in.
 4. The student views the dashboard and available subjects.
 5. The student submits an enrollment request for the configured MVP term.
-6. The enrollment request is saved with `PENDING` status and matching seed subjects are attached.
+6. For an eligible BSAIS standard load, the server saves the request with `PENDING` status and atomically attaches matching curriculum subjects.
 7. The Registrar/Admin opens Pending Enrollments and reviews the request.
 8. The Registrar/Admin approves or rejects the request and may add free-text rejection remarks.
 9. The student views the updated enrollment-status result.
@@ -34,7 +34,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Dashboard with profile-derived information, enrollment status, and quick actions.
 - View-only subject list grouped by year level and semester.
-- Online enrollment request submission for the configured MVP term.
+- Trusted server-derived online enrollment request submission for eligible BSAIS standard loads in the configured MVP term.
 - Enrollment status result, including free-text rejection remarks when entered.
 - Account information display and signed-in password change.
 
@@ -61,6 +61,9 @@ The demonstration does not validate real admission requirements, financial oblig
 - The current registration output is a browser-print **draft registration form**, not final official COR generation.
 - The deployment is a temporary client preview and should use limited demonstration data.
 - The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
+- The browser cannot choose a student's program, year level, student type, term, status, or subjects. The current term is fixed to AY 2026-2027, 1st Semester until an approved academic-calendar module exists.
+- Transferee and Irregular Student records require Registrar-managed subject assignment. The MVP does not invent transfer-credit, irregular-load, requirement-checklist, or subject-adjustment rules.
+- Enrollment creation and subject attachment use one database transaction. The student-term unique index remains the concurrent duplicate safeguard.
 - Account claiming for every student type depends on manually encoded official student records; no approved import workflow exists.
 - The FRD describes generated credentials delivered by email, while the MVP uses a self-selected password so the account flow can be tested.
 - The signed account-claim proof protects the MVP workflow state but is not production-grade institutional identity verification; account-claim rate limiting remains future hardening.
