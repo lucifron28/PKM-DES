@@ -1,0 +1,55 @@
+@startuml
+title PKM-DES Research MVP Use Case Diagram
+
+left to right direction
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor Visitor
+actor Student
+actor "Registrar / Admin" as Admin
+
+rectangle "PKM Digital Enrollment System" {
+  usecase "View Home and About" as UC1
+  usecase "Create Student Account" as UC2
+  usecase "Log In / Log Out" as UC3
+
+  usecase "View Student Dashboard" as UC4
+  usecase "View Subject List" as UC5
+  usecase "Submit Enrollment Request" as UC6
+  usecase "View Enrollment Status" as UC7
+  usecase "View / Print Draft\nRegistration Form" as UC8
+  usecase "Manage Account and Password" as UC9
+
+  usecase "Manage Official\nStudent Records" as UC10
+  usecase "Review Pending Enrollments" as UC11
+  usecase "Approve or Reject Enrollment" as UC12
+  usecase "View Masterlist and Reports" as UC13
+}
+
+Visitor --> UC1
+Visitor --> UC2
+
+Student --> UC3
+Student --> UC4
+Student --> UC5
+Student --> UC6
+Student --> UC7
+Student --> UC8
+Student --> UC9
+
+Admin --> UC3
+Admin --> UC10
+Admin --> UC11
+Admin --> UC13
+Admin --> UC8
+
+UC11 .> UC12 : <<include>>
+
+note bottom of UC8
+  MVP browser-print output.
+  Official COR generation is deferred.
+end note
+
+@enduml

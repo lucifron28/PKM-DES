@@ -1,15 +1,14 @@
 -- PKM-DES Registrar admin profile setup template.
 --
+-- Replace every placeholder below before running this file.
+--
 -- 1. Create the Auth user first:
 --    Supabase Dashboard -> Authentication -> Users -> Add user
---    Email: pkmregistrarofficial@gmail.com
+--    Email: <registrar-email>
 --
 -- 2. Copy the created Auth user UUID.
 --
--- 3. Replace <auth-user-uuid> below, then run this SQL in the Supabase SQL editor.
---
--- Do not put passwords in this file.
--- The MVP database role value is "admin" for Registrar / authorized enrollment staff.
+-- 3. Replace the placeholders below, then run this SQL.
 
 insert into public.profiles (
   id,
@@ -22,9 +21,9 @@ insert into public.profiles (
 values (
   '<auth-user-uuid>',
   'admin',
-  'Shaira Mae E.',
-  'Pajares',
-  'pkmregistrarofficial@gmail.com',
+  '<registrar-first-name>',
+  '<registrar-last-name>',
+  '<registrar-email>',
   'ACTIVE'
 )
 on conflict (id) do update
@@ -44,4 +43,4 @@ select
   email,
   account_status
 from public.profiles
-where email = 'pkmregistrarofficial@gmail.com';
+where email = '<registrar-email>';

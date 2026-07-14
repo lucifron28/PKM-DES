@@ -14,11 +14,10 @@ This document records client-provided answers received after reviewing the FRD g
 - The system should generate initial passwords and email them to students.
 - Students should be allowed to change their passwords after account creation.
 
-### Initial Admin User
+### Initial Registrar Role
 
-- Name: Shaira Mae E. Pajares
-- Email: `pkmregistrarofficial@gmail.com`
 - Role: Registrar
+- The designated account identity and email are distributed privately and are not included in public project documentation.
 
 ### Academic Calendar
 
@@ -98,7 +97,7 @@ These items remain needed before implementation can be considered official:
 
 1. Registrar-managed official student/admitted-applicant list.
 2. Automatic matching during account creation.
-3. Registrar account setup for Shaira Mae E. Pajares.
+3. Registrar account setup for the designated internal Registrar account.
 4. Generated password and email delivery workflow.
 5. Printable registration form/COR output using the official template.
 6. Student record fields expansion.
