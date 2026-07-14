@@ -17,15 +17,17 @@ Development credentials depend on the current Supabase Auth or SQLite seed state
 
 For student testing, see [SAMPLE_ACCOUNTS.md](./SAMPLE_ACCOUNTS.md). If a sample student has not claimed an account yet, create or confirm the matching Official Student Record first, then claim the account through `/create-account`.
 
+Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DEMO_RESET.md](./DEMO_RESET.md) for the guarded reset procedure. Active credentials remain private.
+
 ## Main Demo Story
 
 1. Open the Home page and show the PKM-DES public entry point.
 2. Open About Us and show the PKM identity, mission, goals, and contact details from the provided source document.
-3. Log in as Registrar/Admin.
+3. Log in as Registrar/Admin and show the existing pending, approved, and rejected fictional enrollment examples.
 4. Open Student Records and explain that these are Registrar-managed official records used for account matching.
-5. Add or confirm a sample Official Student Record.
+5. Locate the fictional claim-only official record described in [DEMO_DATA.md](./DEMO_DATA.md).
 6. Log out, then open Create Student Account.
-7. Claim the student record using the active email address or Student ID Number.
+7. Use the claim-only record as the live account-claim example.
 8. Log in as the student and open the Student Dashboard.
 9. Open Subject List and show the year/semester grouped tables.
 10. Submit Online Enrollment for AY 2026-2027, 1st Semester.
@@ -57,11 +59,13 @@ Before the demo:
 npm run typecheck
 npm run lint
 npm run build
+npm run demo:verify
 ```
 
 Then verify:
 
 - Admin login works.
+- Demo verification passes before the presentation.
 - Student claim flow works for one sample official record.
 - Student enrollment submission creates a pending enrollment.
 - Admin dashboard counts update after submission and approval/rejection.
