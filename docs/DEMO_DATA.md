@@ -17,7 +17,7 @@ The fictional records in `scripts/demo/demo-records.mjs` make the PKM-DES resear
 
 | Demo record | Student ID | Intended state | Presentation purpose |
 | --- | --- | --- | --- |
-| Andrea Reyes | `99-90001` | Claim-only official record | Demonstrate that a student can find an official record and claim an account. No Auth user, profile, student row, or enrollment exists before claiming. |
+| Andrea Reyes | `99-90001` | Claim-only official record | Demonstrate that a student can claim an official record using its exact fictional email, Student ID, and compatible type. No Auth user, profile, student row, or enrollment exists before claiming. |
 | Benjamin Cruz | `99-90002` | Pending enrollment | Demonstrate the Registrar queue and pending result. |
 | Camille Garcia | `99-90003` | Approved enrollment | Demonstrate enrolled status, masterlist, reports, and draft registration-form printing. |
 | Daniel Mendoza | `99-90004` | Rejected enrollment | Demonstrate a rejected result with the neutral fictional remark recorded by the script. |

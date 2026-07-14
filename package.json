@@ -12,7 +12,8 @@
     "db:sqlite:init": "node scripts/sqlite/init-dev-db.mjs",
     "demo:reset": "node scripts/demo/reset-demo-data.mjs",
     "demo:verify": "node scripts/demo/verify-demo-data.mjs",
-    "demo:test": "node --test scripts/demo/*.test.mjs"
+    "demo:test": "node --test scripts/demo/*.test.mjs",
+    "test:account-claim": "tsx --test lib/account-claim/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -29,11 +30,12 @@
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.3",
-    "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.1",
     "typescript": "^5.7.2"
   }
 }

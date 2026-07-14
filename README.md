@@ -51,9 +51,8 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Production environment check for Supabase/Vercel configuration
 - Student account creation through Supabase Auth when `SUPABASE_SERVICE_ROLE_KEY` is configured
 - Create-account dropdown values exactly as requested: Incoming 1st Year Student, Transferee, Old Student
-- Incoming 1st Year Student and Transferee account creation uses a claim flow against a matching official Registrar-managed record
-- Old Student accounts require a Student ID Number
-- Old Student accounts use official record details when found, or minimal self-registration when no official record exists
+- Every student type uses a claim flow against an exact matching official Registrar-managed record
+- Account claims require the selected student type, active email address, and Student ID Number
 - Create-account flow blocks duplicate student accounts by email address or Student ID Number before Auth user creation
 - Admin Student Records uses guided MVP controls for common status/classification fields
 - Matched student accounts become `ACTIVE`
@@ -158,9 +157,12 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 DATABASE_PROVIDER=supabase
 SUPABASE_SERVICE_ROLE_KEY=
+ACCOUNT_CLAIM_SECRET=
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only. It is used by the account creation action to create Supabase Auth users and must never be exposed in client code.
+
+`ACCOUNT_CLAIM_SECRET` is server-only, must contain at least 32 characters, and signs the short-lived account-claim proof stored in an HTTP-only cookie.
 
 Use `DATABASE_PROVIDER=sqlite` only for local development. Vercel deployment must use `DATABASE_PROVIDER=supabase`.
 
@@ -237,13 +239,13 @@ Public:
 - About Us page displays PKM information.
 - Login page validates missing password.
 - Create account page shows required fields.
-- Create account page lets students find a record by email or Student ID before setting a password.
+- Create account page requires an exact official-record match using email, Student ID, and student type before password setup.
 
 Student:
-- Student can create an Old Student account when `SUPABASE_SERVICE_ROLE_KEY` is configured.
-- Incoming 1st Year Student and Transferee account creation is blocked when no matching official record exists.
-- Incoming 1st Year Student and Transferee account creation succeeds after claiming a matching official record.
-- Student sees a clear message when a found official record has a different student type.
+- All student types are blocked when no matching official record exists.
+- All student types can create an account after claiming an exact matching official record.
+- Wrong student type returns the same generic verification failure as other non-claimable attempts.
+- Public account-claim responses do not reveal whether an email, Student ID, or stored classification exists.
 - Duplicate account creation for an existing email address or Student ID Number is blocked.
 - Student can log in.
 - Student dashboard displays profile information.
@@ -297,7 +299,9 @@ Security:
 
 ## 14. Known Limitations
 
-- Incoming 1st Year Student and Transferee account creation now depends on official records, but bulk import is not implemented.
+- Account creation for every student type depends on an exact Registrar-managed official record, but bulk import is not implemented.
+- Account-claim rate limiting is future hardening and is not implemented in this research MVP.
+- The signed account-claim proof is an MVP safeguard, not production-grade institutional identity proofing.
 - Guided admin field options are provisional MVP values until PKM supplies official value lists.
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.

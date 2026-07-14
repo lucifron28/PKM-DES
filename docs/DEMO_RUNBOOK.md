@@ -27,7 +27,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 4. Open Student Records and explain that these are Registrar-managed official records used for account matching.
 5. Locate the fictional claim-only official record described in [DEMO_DATA.md](./DEMO_DATA.md).
 6. Log out, then open Create Student Account.
-7. Use the claim-only record as the live account-claim example.
+7. Use the claim-only record's exact fictional email, Student ID, and `Incoming 1st Year Student` selection as the live account-claim example.
 8. Log in as the student and open the Student Dashboard.
 9. Open Subject List and show the year/semester grouped tables.
 10. Submit Online Enrollment for AY 2026-2027, 1st Semester.

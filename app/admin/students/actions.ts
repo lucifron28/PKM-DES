@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
+import { normalizeClaimEmail, normalizeStudentId } from "@/lib/account-claim/rules";
 import {
   ADMISSION_STATUS_OPTIONS,
   CIVIL_STATUS_OPTIONS,
@@ -33,10 +34,10 @@ function redirectWithError(code: string, path = "/admin/students"): never {
 }
 
 function readOfficialRecordInput(formData: FormData) {
-  const studentIdNumber = optionalValue(formData.get("student_id_number"));
+  const studentIdNumber = normalizeStudentId(String(formData.get("student_id_number") ?? "")) || null;
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = normalizeClaimEmail(String(formData.get("email") ?? ""));
   const programId = String(formData.get("program_id") ?? "").trim();
   const yearLevel = String(formData.get("year_level") ?? "").trim() as YearLevel;
   const studentType = String(formData.get("student_type") ?? "").trim() as StudentType;
