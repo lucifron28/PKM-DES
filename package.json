@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check:production-env": "node scripts/check-production-env.mjs",
-    "db:sqlite:init": "node scripts/sqlite/init-dev-db.mjs"
+    "db:sqlite:init": "node scripts/sqlite/init-dev-db.mjs",
+    "demo:reset": "node scripts/demo/reset-demo-data.mjs",
+    "demo:verify": "node scripts/demo/verify-demo-data.mjs",
+    "demo:test": "node --test scripts/demo/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

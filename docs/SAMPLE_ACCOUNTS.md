@@ -14,19 +14,8 @@ Create the Supabase Auth user manually first, then run `supabase/registrar_admin
 
 Set or update the preview password in Supabase Auth before the demo, then distribute it privately to authorized presenters.
 
-## Fictional Local Example
+## Fictional Demonstration Records
 
-This example is not a Supabase Auth account and must not be used to access the hosted client preview. It can be used to demonstrate the fields needed when creating a local fictional Official Student Record.
+The repeatable claim-only, pending, approved, and rejected demo records are documented in [DEMO_DATA.md](./DEMO_DATA.md). Their `example.com` identities are fictional and are not active preview credentials.
 
-| Field | Tested Value |
-| --- | --- |
-| Student ID Number | `25-00100` |
-| First Name | `Maria` |
-| Last Name | `Santos` |
-| Email | `maria.santos@example.com` |
-| Program | `Accounting Information System` |
-| Year Level | `1st Year` |
-| Student Type / Classification | `Incoming 1st Year Student` |
-| Enrollment Status | `NOT ENROLLED` (Changes to `PENDING` after enrollment submission) |
-
-For an actual preview walkthrough, authorized presenters must use the active student identity and password provided privately. Do not document or reuse those credentials outside the approved preview session.
+For an actual preview walkthrough, authorized presenters must use active student identity and password values provided privately. Do not document or reuse those credentials outside the approved preview session.
