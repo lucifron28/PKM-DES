@@ -61,6 +61,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - The current registration output is a browser-print **draft registration form**, not final official COR generation.
 - The deployment is a temporary client preview and should use limited demonstration data.
 - The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
+- Subject List workbook rows are historical AY 2025-2026, 2nd Semester display-only references, not the active AY 2026-2027 enrollment load. BSAIS curriculum rows are a separate reference; actual subject attachments belong to submitted enrollment records and cannot be selected by students on the Subject List page.
 - The browser cannot choose a student's program, year level, student type, term, status, or subjects. The current term is fixed to AY 2026-2027, 1st Semester until an approved academic-calendar module exists.
 - Transferee and Irregular Student records require Registrar-managed subject assignment. The MVP does not invent transfer-credit, irregular-load, requirement-checklist, or subject-adjustment rules.
 - Enrollment creation and subject attachment use one database transaction. The student-term unique index remains the concurrent duplicate safeguard.
