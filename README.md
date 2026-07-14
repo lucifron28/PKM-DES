@@ -123,6 +123,8 @@ Development sample accounts are in [docs/SAMPLE_ACCOUNTS.md](./docs/SAMPLE_ACCOU
 
 Demo walkthrough instructions are in [docs/DEMO_RUNBOOK.md](./docs/DEMO_RUNBOOK.md).
 
+Fictional presentation data and the guarded reset procedure are documented in [docs/DEMO_DATA.md](./docs/DEMO_DATA.md) and [docs/DEMO_RESET.md](./docs/DEMO_RESET.md).
+
 Registration form sample scope notes are in [docs/REGISTRATION_FORM_SAMPLE_SCOPE.md](./docs/REGISTRATION_FORM_SAMPLE_SCOPE.md).
 
 Short setup:

@@ -77,6 +77,16 @@ After changing `.env.local`, restart the dev server:
 npm run dev
 ```
 
+## Optional Fictional Demo Data Tooling
+
+The optional `demo:reset` and `demo:verify` commands prepare and inspect fictional research-presentation records. They are separate from migrations and `supabase/seed.sql`; they do not change schema, RLS, or the main program and subject seed.
+
+- `npm run demo:reset -- --dry-run` validates the configured project and prints the planned fictional state without changing data.
+- `npm run demo:reset` requires `SUPABASE_SERVICE_ROLE_KEY`, `DEMO_STUDENT_PASSWORD`, and the exact `DEMO_RESET_CONFIRM=RESET_PKM_DES_DEMO` value.
+- `npm run demo:verify` is read-only.
+
+Run these commands only against a dedicated preview or test database with no live institutional data. See [DEMO_DATA.md](./DEMO_DATA.md) and [DEMO_RESET.md](./DEMO_RESET.md).
+
 ## Migration Files
 
 Apply these files in filename order:
