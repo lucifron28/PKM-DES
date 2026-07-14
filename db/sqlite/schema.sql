@@ -39,6 +39,13 @@ create table if not exists students (
   updated_at text not null default current_timestamp
 );
 
+create unique index if not exists profiles_email_normalized_unique
+on profiles (lower(email));
+
+create unique index if not exists students_student_id_number_unique
+on students (student_id_number)
+where student_id_number is not null;
+
 create table if not exists subjects (
   id text primary key,
   program_id text not null references programs(id) on delete cascade,
@@ -76,6 +83,9 @@ create table if not exists official_student_records (
   created_at text not null default current_timestamp,
   updated_at text not null default current_timestamp
 );
+
+create unique index if not exists official_student_records_email_normalized_unique
+on official_student_records (lower(email));
 
 create table if not exists enrollments (
   id text primary key,
