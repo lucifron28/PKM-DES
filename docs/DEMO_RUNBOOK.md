@@ -9,11 +9,11 @@ Use this as the short script for a PKM-DES MVP walkthrough. The demo should show
 
 ## Demo Accounts
 
-Development credentials depend on the current Supabase Auth or SQLite seed state. For the shared demo setup, use:
+Development credentials depend on the current Supabase Auth or SQLite seed state. Preview credentials must be distributed privately and must not be stored in project documentation.
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Registrar/Admin | `pkmregistrarofficial@gmail.com` | `Demo1234!` |
+| Registrar/Admin | `pkmregistrarofficial@gmail.com` | `<provided privately>` |
 
 For student testing, see [SAMPLE_ACCOUNTS.md](./SAMPLE_ACCOUNTS.md). If a sample student has not claimed an account yet, create or confirm the matching Official Student Record first, then claim the account through `/create-account`.
 

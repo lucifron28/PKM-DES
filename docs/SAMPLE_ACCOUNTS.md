@@ -2,7 +2,7 @@
 
 These are development-only sample values for local testing and demos. They are not official PKM student records, registrar records, or production credentials.
 
-Do not use these passwords in production.
+Preview credentials must be distributed privately. Do not use them for production, institutional, or personal accounts.
 
 ## Admin / Registrar
 
@@ -10,9 +10,9 @@ Create the Supabase Auth user manually first, then run `supabase/registrar_admin
 
 | Role | Name | Email | Password |
 | --- | --- | --- | --- |
-| Registrar/Admin | Shaira Mae E. Pajares | `pkmregistrarofficial@gmail.com` | `Demo1234!` for the shared demo setup |
+| Registrar/Admin | Shaira Mae E. Pajares | `pkmregistrarofficial@gmail.com` | `<provided privately>` |
 
-If the Supabase Auth user was created with a different password, update it in Supabase Auth before the demo.
+Set or update the preview password in Supabase Auth before the demo, then distribute it privately to authorized presenters.
 
 ## Tested Demo Student Account
 
@@ -39,7 +39,7 @@ Use `/create-account`, choose `Incoming 1st Year Student`, and find the record u
 | --- | --- |
 | Email | `johndoe100@example.com` |
 | Student ID Number | `25-00100` |
-| Password | `TestPassword123!` |
+| Password | `<provided privately>` |
 
 **Expected result**: 
 1. The official record summary is shown.
