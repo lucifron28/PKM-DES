@@ -1,7 +1,8 @@
 const requiredProductionVars = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY"
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "ACCOUNT_CLAIM_SECRET"
 ];
 
 function fail(message) {
@@ -25,6 +26,10 @@ if (provider === "supabase") {
 
   if (missing.length > 0) {
     fail(`missing required Supabase environment variables: ${missing.join(", ")}.`);
+  }
+
+  if (process.env.ACCOUNT_CLAIM_SECRET.length < 32) {
+    fail("ACCOUNT_CLAIM_SECRET must be at least 32 characters.");
   }
 
   try {

@@ -9,7 +9,7 @@ The hosted deployment is a client preview environment. It demonstrates a propose
 ## 2. Primary Demonstration Workflow
 
 1. A Registrar/Admin creates or verifies an official student record.
-2. A student claims the matching record or, for the Old Student MVP path, completes the limited fallback registration form.
+2. A student claims a matching official record using the selected student type, active email address, and Student ID Number.
 3. The student logs in.
 4. The student views the dashboard and available subjects.
 5. The student submits an enrollment request for the configured MVP term.
@@ -28,7 +28,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Home and About Us pages.
 - Supabase-backed login and logout.
-- Student account claim and MVP registration paths.
+- Student account claim and MVP self-selected-password registration path.
 
 ### Student
 
@@ -61,7 +61,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - The current registration output is a browser-print **draft registration form**, not final official COR generation.
 - The deployment is a temporary client preview and should use limited demonstration data.
 - The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
-- Account claiming for Incoming First Year Students and Transferees depends on manually encoded official student records; no approved import workflow exists.
+- Account claiming for every student type depends on manually encoded official student records; no approved import workflow exists.
 - The FRD describes generated credentials delivered by email, while the MVP uses a self-selected password so the account flow can be tested.
 - Official student record fields and controlled options are guided MVP inputs, not finalized institutional value lists.
 - Reports use browser printing, not an approved export, PDF, or registrar report format.

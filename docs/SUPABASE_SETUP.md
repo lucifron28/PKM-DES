@@ -49,6 +49,7 @@ Use `.env.example` as the template:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+ACCOUNT_CLAIM_SECRET=
 ```
 
 For this project, the URL is:
@@ -68,6 +69,7 @@ Important:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` is used by browser and server clients operating under RLS.
 - `SUPABASE_SERVICE_ROLE_KEY` is used only by server actions that need privileged Auth operations.
 - The service-role key is required for the MVP Create Student Account flow because the app creates Supabase Auth users server-side.
+- `ACCOUNT_CLAIM_SECRET` must be a private random value of at least 32 characters. It signs the short-lived account-claim proof and must never use a `NEXT_PUBLIC_` name.
 - Vercel deployments must set `DATABASE_PROVIDER=supabase`.
 - `.env.local` is ignored by git and should stay local.
 
@@ -97,6 +99,7 @@ Apply these files in filename order:
 4. `supabase/migrations/20260502000300_enrollment_submission_integrity.sql`
 5. `supabase/migrations/20260502000400_official_student_records.sql`
 6. `supabase/migrations/20260618000000_enrollment_term_uniqueness.sql`
+7. `supabase/migrations/20260714000000_student_account_claim_integrity.sql`
 
 Remote migrations recorded by Supabase MCP:
 
@@ -299,22 +302,21 @@ For the MVP Create Student Account page to work:
 1. Add `SUPABASE_SERVICE_ROLE_KEY` to `.env.local`.
 2. Restart the dev server.
 3. Open `/create-account`.
-4. Create an account using Student Type `Old Student` for immediate testing.
-5. Log in at `/login`.
+4. Create or verify an official student record with the selected student type, active email address, and Student ID Number.
+5. Set `ACCOUNT_CLAIM_SECRET` to a private value of at least 32 characters.
+6. Open `/create-account` and claim the exact official record.
+7. Log in at `/login`.
 
 Account status behavior:
 
-- `Old Student` -> `ACTIVE` when Student ID Number is provided
-- `Incoming 1st Year Student` -> `ACTIVE` only after claiming a matching official record by email or Student ID Number
-- `Transferee` -> `ACTIVE` only after claiming a matching official record by email or Student ID Number
-- Duplicate account creation is blocked when the submitted email address or resolved Student ID Number already exists in student account records
+- Every public student type -> `ACTIVE` only after claiming an exact matching official record using student type, email, and Student ID Number
+- Duplicate account creation is blocked by both server checks and database uniqueness indexes for profile email and Student ID Number
 
 Only `ACTIVE` accounts can log in.
 
 Current client direction:
 
-- Incoming 1st Year Students and Transferees are matched against official Registrar-provided data before account access.
-- Old Student verification may use Student ID Number alone.
+- Every student type is matched against official Registrar-provided data before account access.
 - The target workflow is system-generated passwords sent by email, with students allowed to change passwords later.
 - The generated-password email workflow is not implemented yet and should be built before production use.
 
@@ -441,13 +443,13 @@ Create Student Account now uses the server-only Supabase admin client to check o
 
 Current behavior:
 
-1. Student first chooses a student type and enters either active email address or Student ID Number.
-2. Incoming 1st Year Student and Transferee claims look for an official record by case-insensitive email or exact Student ID Number.
-3. If a found record has a different student type, the app shows a clear mismatch message instead of a generic no-match error.
-4. When a matching official record exists, the app shows a read-only summary and asks only for password and confirmation.
-5. Final account creation re-fetches the official record by ID before creating Supabase Auth, profile, and student records.
-6. Old Student claims use official record details when found; if no official record exists, Old Student self-registration can continue with Student ID Number and basic account details.
-7. Before creating an Auth user, the app blocks duplicates by existing profile email or existing student Student ID Number.
+1. Student first chooses a student type and enters active email address and Student ID Number.
+2. Claims look for one official record using the normalized exact email-and-Student-ID pair.
+3. Missing records, mismatched values, incompatible types, and existing accounts return the same generic public result.
+4. When a matching record exists, the app shows only a masked recognition summary and asks for password and confirmation.
+5. The server stores a short-lived signed claim proof in an HTTP-only cookie; the browser never receives the official-record ID or raw official details.
+6. Final account creation re-fetches the official record, revalidates its fingerprint and compatible type, then creates Supabase Auth, profile, and student records.
+7. Before creating an Auth user, the app blocks duplicates by existing profile email or existing student Student ID Number; database indexes enforce the same uniqueness.
 8. The Auth user stores role/account hints in app metadata only; route protection and RLS still rely on `public.profiles`, not user-editable metadata.
 
 Remaining gaps:
