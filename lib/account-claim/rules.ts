@@ -22,6 +22,33 @@ export function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+export type ClaimLookupInputResult =
+  | { valid: true; email: string; studentIdNumber: string }
+  | { valid: false; code: "missing_email" | "missing_student_id" | "invalid_email" };
+
+export function validateClaimLookupInput({
+  email,
+  studentIdNumber
+}: {
+  email: string | null | undefined;
+  studentIdNumber: string | null | undefined;
+}): ClaimLookupInputResult {
+  const normalizedEmail = normalizeClaimEmail(email);
+  const normalizedStudentId = normalizeStudentId(studentIdNumber);
+
+  if (!normalizedEmail) {
+    return { valid: false, code: "missing_email" };
+  }
+  if (!normalizedStudentId) {
+    return { valid: false, code: "missing_student_id" };
+  }
+  if (!isValidEmail(normalizedEmail)) {
+    return { valid: false, code: "invalid_email" };
+  }
+
+  return { valid: true, email: normalizedEmail, studentIdNumber: normalizedStudentId };
+}
+
 export function isCompatibleStudentType(claimedType: StudentType, storedType: StudentType) {
   return claimedType === "Old Student"
     ? OLD_STUDENT_COMPATIBLE_TYPES.includes(storedType)
