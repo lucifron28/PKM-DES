@@ -13,7 +13,7 @@ Development credentials depend on the current Supabase Auth or SQLite seed state
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Registrar/Admin | `pkmregistrarofficial@gmail.com` | `<provided privately>` |
+| Registrar/Admin | `<provided privately>` | `<provided privately>` |
 
 For student testing, see [SAMPLE_ACCOUNTS.md](./SAMPLE_ACCOUNTS.md). If a sample student has not claimed an account yet, create or confirm the matching Official Student Record first, then claim the account through `/create-account`.
 
