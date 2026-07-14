@@ -100,6 +100,7 @@ Apply these files in filename order:
 5. `supabase/migrations/20260502000400_official_student_records.sql`
 6. `supabase/migrations/20260618000000_enrollment_term_uniqueness.sql`
 7. `supabase/migrations/20260714000000_student_account_claim_integrity.sql`
+8. `supabase/migrations/20260715000000_atomic_student_enrollment_submission.sql`
 
 Remote migrations recorded by Supabase MCP:
 
@@ -203,7 +204,7 @@ Current result:
 
 - Supabase security advisor returned no security lints after the cleanup migrations.
 
-## Enrollment Submission Integrity Migration
+## Historical Enrollment Submission Integrity Migration
 
 File:
 
@@ -211,7 +212,9 @@ File:
 supabase/migrations/20260502000300_enrollment_submission_integrity.sql
 ```
 
-What it adds:
+This earlier migration added an interim direct-table submission path. Its student insert and cleanup policies are removed by the atomic submission migration below.
+
+It originally added:
 
 - An initial partial unique index for active enrollment records, later replaced by the term uniqueness migration below.
 - A narrow RLS insert policy for `enrollment_subjects`.
@@ -232,6 +235,62 @@ What it adds:
 - Drops the active-only unique index from the earlier enrollment integrity migration.
 - Adds a full unique index on `student_id`, `academic_year`, and `semester`.
 - Enforces the client-confirmed rule that a rejected enrollment cannot be resubmitted for the same academic year and semester.
+
+## Atomic Standard-Load Enrollment Migration
+
+File:
+
+```text
+supabase/migrations/20260715000000_atomic_student_enrollment_submission.sql
+```
+
+This migration replaces the direct student insert path with `public.submit_standard_student_enrollment()`. The authenticated RPC derives the student, program, year level, student type, and fixed MVP term internally. It permits only BSAIS Incoming 1st Year, Old, Continuing, and Regular Student standard loads, creates one `PENDING` enrollment, and attaches its complete matching subject set in one transaction.
+
+The function accepts no browser-selected student, program, year, term, status, or subject values. It returns a controlled outcome, handles unique-index races as a duplicate result, and rolls back entirely if attachment fails. Students retain read access to their own enrollment rows and attached subjects, while direct student inserts into `enrollments` and `enrollment_subjects` are removed. Admin management policies are unchanged.
+
+The fixed term is `AY 2026-2027`, `1st Semester`. Until an approved academic-calendar module exists, change the application configuration and this database rule together when PKM opens a new term.
+
+### Read-Only Integrity Checks
+
+Run these queries only to inspect a safe preview or test database. Do not silently delete or rewrite inconsistent records.
+
+```sql
+select e.id, e.student_id, e.academic_year, e.semester, e.status
+from public.enrollments e
+where not exists (
+  select 1
+  from public.enrollment_subjects es
+  where es.enrollment_id = e.id
+);
+
+select e.id as enrollment_id, es.subject_id
+from public.enrollments e
+join public.enrollment_subjects es on es.enrollment_id = e.id
+join public.subjects s on s.id = es.subject_id
+where s.program_id <> e.program_id
+   or s.year_level <> e.year_level
+   or s.semester <> e.semester;
+
+select student_id, academic_year, semester, count(*)
+from public.enrollments
+group by student_id, academic_year, semester
+having count(*) > 1;
+
+select
+  s.id as student_id,
+  s.enrollment_status as stored_status,
+  case
+    when exists (select 1 from public.enrollments e where e.student_id = s.id and e.status = 'APPROVED') then 'ENROLLED'
+    when exists (select 1 from public.enrollments e where e.student_id = s.id and e.status = 'PENDING') then 'PENDING'
+    else 'NOT ENROLLED'
+  end as derived_status
+from public.students s
+where s.enrollment_status <> case
+  when exists (select 1 from public.enrollments e where e.student_id = s.id and e.status = 'APPROVED') then 'ENROLLED'
+  when exists (select 1 from public.enrollments e where e.student_id = s.id and e.status = 'PENDING') then 'PENDING'
+  else 'NOT ENROLLED'
+end;
+```
 
 ## Seed Data
 
@@ -292,7 +351,7 @@ Subjects:
 Enrollments:
 
 - Students can select their own enrollments.
-- Students can insert their own enrollment request.
+- Students submit standard-load requests only through the narrow authenticated atomic RPC.
 - Admins can select and update all enrollments.
 
 Enrollment subjects:
@@ -388,20 +447,19 @@ Then log in at `/login` with the admin email and password.
 Current MVP term:
 
 - Online enrollment is limited to the client-confirmed term `AY 2026-2027`, `1st Semester`.
-- The form preselects that term, and the server action rejects other academic year or semester values.
+- The form displays that term as read-only, and the atomic database submission rule does not accept another term from the browser.
 - Additional selectable terms require PKM's official academic calendar before being opened.
 
 Student submission:
 
-1. Student submits Online Enrollment.
-2. App checks for any existing enrollment for the same student, academic year, and semester.
-3. If a duplicate exists, the submission is blocked with a safe user-facing message.
-4. App inserts into `public.enrollments` with status `PENDING`.
-5. Database trigger updates the student's `enrollment_status` to `PENDING`.
-6. App queries matching subjects by program, year level, and semester.
-7. App inserts matching rows into `public.enrollment_subjects`.
-8. If subject attachment fails, the app deletes the newly created orphan enrollment where RLS allows cleanup.
-9. Pending record appears in Admin Pending Enrollments.
+1. The browser submits only certification; the authenticated RPC derives the student record, program, year level, student type, and term.
+2. It accepts only BSAIS standard loads for Incoming 1st Year, Old, Continuing, and Regular Student records. Transferee and Irregular Student records require Registrar-managed subject assignment.
+3. The RPC uses the fixed current term `AY 2026-2027`, `1st Semester`, checks existing student-term rows, then resolves matching subjects.
+4. One transaction inserts the `PENDING` enrollment and the complete matching `public.enrollment_subjects` set.
+5. The unique student-term index remains the authority for duplicate races; a duplicate returns a safe user-facing message.
+6. A failed attachment rolls back the enrollment, attachment rows, and pending-status trigger update together.
+7. The enrollment insert trigger updates the student's `enrollment_status` to `PENDING` only after successful submission.
+8. The pending record appears in Admin Pending Enrollments.
 
 Printable registration form:
 

@@ -61,10 +61,10 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Signed-in students can change their password from the Account page
 - Subject List grouped into separate tables by year level and semester, with a working year-level filter
 - Subject List includes source-labeled workbook-derived course offerings for several programs for SY 2025-2026, 2nd Semester
-- Online enrollment form that creates a `PENDING` enrollment record
-- Online enrollment is currently limited to the client-confirmed MVP term: AY 2026-2027, 1st Semester
-- Duplicate enrollment submissions are blocked for the same student, academic year, and semester when any enrollment record already exists
-- Successful enrollment submissions attach matching subjects into `enrollment_subjects`
+- Online enrollment uses the authenticated student's recorded program, year level, student type, and Student ID; the browser submits only the certification checkbox
+- Automatic standard-load submission is limited to eligible BSAIS students for the client-confirmed MVP term: AY 2026-2027, 1st Semester
+- Transferee and Irregular Student loads are directed to Registrar-managed subject assignment; no transfer-credit or adjusted-load rules are invented
+- One atomic database submission creates a `PENDING` enrollment and its complete matching `enrollment_subjects` set, while the unique student-term index handles concurrent duplicates safely
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
 - Admin dashboard with pending, approved, rejected, and total enrollment record counts
 - Admin dashboard enrollment counts are loaded with a single lightweight status query
