@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import {
   ACCOUNT_CLAIM_TOKEN_LIFETIME_SECONDS,
@@ -11,6 +12,7 @@ import {
 import { maskDisplayName, maskEmail, maskStudentId } from "@/lib/account-claim/masking";
 import {
   GENERIC_CLAIM_FAILURE,
+  getInvalidClaimRecoveryPath,
   isCompatibleStudentType,
   normalizeClaimEmail,
   normalizeStudentId,
@@ -39,10 +41,7 @@ export type ClaimAccountState = {
 export type CreateAccountState = {
   message?: string;
   success?: boolean;
-  requiresNewClaim?: boolean;
 };
-
-const EXPIRED_CLAIM_MESSAGE = "Your account claim is no longer valid. Find your official record again.";
 
 type OfficialRecordWithProgram = OfficialStudentRecord & {
   programs?: Pick<Program, "name"> | null;
@@ -343,7 +342,7 @@ export async function createStudentAccountAction(
   if (!proof) {
     await clearClaimCookie();
     logClaimFailure("claim_proof_invalid");
-    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
+    redirect(getInvalidClaimRecoveryPath());
   }
 
   const admin = await getAdminClient();
@@ -371,13 +370,13 @@ export async function createStudentAccountAction(
   if (!recordIsValid) {
     await clearClaimCookie();
     logClaimFailure("claim_proof_revalidation_failed");
-    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
+    redirect(getInvalidClaimRecoveryPath());
   }
 
   if (await findExistingStudentAccount({ admin, email, studentIdNumber })) {
     await clearClaimCookie();
     logClaimFailure("claim_already_exists_before_registration");
-    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
+    redirect(getInvalidClaimRecoveryPath());
   }
 
   const created = await performStudentRegistration(
@@ -396,7 +395,7 @@ export async function createStudentAccountAction(
 
   if (!created) {
     await clearClaimCookie();
-    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
+    redirect(getInvalidClaimRecoveryPath());
   }
 
   await clearClaimCookie();

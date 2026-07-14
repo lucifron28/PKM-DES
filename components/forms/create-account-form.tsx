@@ -10,6 +10,7 @@ import {
   type CreateAccountState
 } from "@/app/create-account/actions";
 import { CREATE_ACCOUNT_STUDENT_TYPES } from "@/lib/constants/pkm";
+import { EXPIRED_CLAIM_MESSAGE } from "@/lib/account-claim/rules";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { SelectInput, TextInput } from "@/components/ui/field";
 
@@ -79,14 +80,15 @@ function PasswordFields() {
   );
 }
 
-export function CreateAccountForm() {
+export function CreateAccountForm({ claimExpired = false }: { claimExpired?: boolean }) {
   const [claimState, claimAction, claiming] = useActionState(claimOfficialRecordAction, initialClaimState);
   const [createState, createAction, creating] = useActionState(createStudentAccountAction, initialCreateState);
-  const matchedRecord = !createState.requiresNewClaim && !createState.success ? claimState.matchedRecord : undefined;
+  const matchedRecord = !createState.success ? claimState.matchedRecord : undefined;
 
   return (
     <div className="space-y-6">
       <form action={claimAction} className="space-y-5">
+        {claimExpired ? <AlertMessage message={EXPIRED_CLAIM_MESSAGE} /> : null}
         <AlertMessage message={claimState.message} />
         <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
           <p className="font-semibold">Find your Registrar-managed record first.</p>
@@ -127,13 +129,6 @@ export function CreateAccountForm() {
           {claiming ? "Finding..." : "Find My Record"}
         </Button>
       </form>
-
-      {createState.requiresNewClaim ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold">Find your official record again.</p>
-          <p className="mt-1">Your previous claim is no longer available. Use the form above before setting a password.</p>
-        </div>
-      ) : null}
 
       {createState.success ? (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">

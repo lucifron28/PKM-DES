@@ -9,7 +9,13 @@ import {
   verifyAccountClaimProof,
   type AccountClaimProof
 } from "./token-core";
-import { isCompatibleStudentType, validateClaimLookupInput } from "./rules";
+import {
+  EXPIRED_CLAIM_MESSAGE,
+  EXPIRED_CLAIM_REDIRECT,
+  getInvalidClaimRecoveryPath,
+  isCompatibleStudentType,
+  validateClaimLookupInput
+} from "./rules";
 
 const secret = "account-claim-test-secret-with-at-least-thirty-two-characters";
 const now = 1_700_000_000_000;
@@ -168,4 +174,10 @@ test("token expiration must be after issuance", () => {
   const proof = createProof();
   const token = serializeAccountClaimProof({ ...proof, expiresAt: proof.issuedAt }, secret);
   assert.equal(verifyAccountClaimProof({ token, secret, now }), null);
+});
+
+test("invalid claim recovery uses a generic fresh-lookup redirect", () => {
+  assert.equal(getInvalidClaimRecoveryPath(), EXPIRED_CLAIM_REDIRECT);
+  assert.equal(EXPIRED_CLAIM_REDIRECT, "/create-account?claim=expired");
+  assert.equal(EXPIRED_CLAIM_MESSAGE, "Your account claim is no longer valid. Find your official record again.");
 });

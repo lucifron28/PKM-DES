@@ -2,6 +2,12 @@ import type { StudentType } from "@/types/database";
 
 export const GENERIC_CLAIM_FAILURE =
   "We could not verify a claimable official record using those details. Check your information or contact the Registrar.";
+export const EXPIRED_CLAIM_MESSAGE = "Your account claim is no longer valid. Find your official record again.";
+export const EXPIRED_CLAIM_REDIRECT = "/create-account?claim=expired";
+
+export function getInvalidClaimRecoveryPath() {
+  return EXPIRED_CLAIM_REDIRECT;
+}
 
 const OLD_STUDENT_COMPATIBLE_TYPES: StudentType[] = [
   "Old Student",

@@ -7,7 +7,14 @@ export const metadata: Metadata = {
   title: "Create Student Account"
 };
 
-export default function CreateAccountPage() {
+export default async function CreateAccountPage({
+  searchParams
+}: {
+  searchParams: Promise<{ claim?: string }>;
+}) {
+  const { claim } = await searchParams;
+  const claimExpired = claim === "expired";
+
   return (
     <div className="min-h-screen bg-slateui-background">
       <PublicHeader />
@@ -15,9 +22,9 @@ export default function CreateAccountPage() {
         <Card>
           <CardHeader
             title="Create Student Account"
-            description="Find your Registrar-managed record by email or Student ID, then set your password to claim the account."
+            description="Verify your Registrar-managed record using your email address and Student ID, then set your password."
           />
-          <CreateAccountForm />
+          <CreateAccountForm claimExpired={claimExpired} />
         </Card>
       </main>
     </div>
