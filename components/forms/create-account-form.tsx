@@ -82,6 +82,7 @@ function PasswordFields() {
 export function CreateAccountForm() {
   const [claimState, claimAction, claiming] = useActionState(claimOfficialRecordAction, initialClaimState);
   const [createState, createAction, creating] = useActionState(createStudentAccountAction, initialCreateState);
+  const matchedRecord = !createState.requiresNewClaim && !createState.success ? claimState.matchedRecord : undefined;
 
   return (
     <div className="space-y-6">
@@ -127,7 +128,21 @@ export function CreateAccountForm() {
         </Button>
       </form>
 
-      {claimState.matchedRecord ? (
+      {createState.requiresNewClaim ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Find your official record again.</p>
+          <p className="mt-1">Your previous claim is no longer available. Use the form above before setting a password.</p>
+        </div>
+      ) : null}
+
+      {createState.success ? (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+          <AlertMessage message={createState.message} success />
+          <ButtonLink href="/login" className="mt-3">Go to Login</ButtonLink>
+        </div>
+      ) : null}
+
+      {matchedRecord ? (
         <form action={createAction} className="space-y-5 rounded-lg border border-green-200 bg-white p-4">
           <AlertMessage message={createState.message} success={createState.success} />
           <div>
@@ -136,7 +151,7 @@ export function CreateAccountForm() {
               Review these official details, then set your password to create the account.
             </p>
           </div>
-          <DetailGrid record={claimState.matchedRecord} />
+          <DetailGrid record={matchedRecord} />
           <PasswordFields />
           <Button type="submit" disabled={creating}>
             <UserPlus className="h-4 w-4" aria-hidden="true" />

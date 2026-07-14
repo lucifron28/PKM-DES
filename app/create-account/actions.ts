@@ -12,9 +12,9 @@ import { maskDisplayName, maskEmail, maskStudentId } from "@/lib/account-claim/m
 import {
   GENERIC_CLAIM_FAILURE,
   isCompatibleStudentType,
-  isValidEmail,
   normalizeClaimEmail,
-  normalizeStudentId
+  normalizeStudentId,
+  validateClaimLookupInput
 } from "@/lib/account-claim/rules";
 import { CREATE_ACCOUNT_STUDENT_TYPES } from "@/lib/constants/pkm";
 import type { OfficialStudentRecord, Program, StudentType, YearLevel } from "@/types/database";
@@ -39,7 +39,10 @@ export type ClaimAccountState = {
 export type CreateAccountState = {
   message?: string;
   success?: boolean;
+  requiresNewClaim?: boolean;
 };
+
+const EXPIRED_CLAIM_MESSAGE = "Your account claim is no longer valid. Find your official record again.";
 
 type OfficialRecordWithProgram = OfficialStudentRecord & {
   programs?: Pick<Program, "name"> | null;
@@ -251,18 +254,24 @@ export async function claimOfficialRecordAction(
   await clearClaimCookie();
 
   const studentType = readStudentType(formData.get("student_type"));
-  const email = normalizeClaimEmail(String(formData.get("email") ?? ""));
-  const studentIdNumber = normalizeStudentId(String(formData.get("student_id_number") ?? ""));
+  const lookupInput = validateClaimLookupInput({
+    email: String(formData.get("email") ?? ""),
+    studentIdNumber: String(formData.get("student_id_number") ?? "")
+  });
 
   if (!studentType) {
     return { message: "Please select a valid student type." };
   }
-  if (!email || !studentIdNumber) {
-    return { message: "Active Email Address and Student ID Number are required.", selectedStudentType: studentType };
+  if (!lookupInput.valid && lookupInput.code === "missing_email") {
+    return { message: "Active Email Address is required.", selectedStudentType: studentType };
   }
-  if (!isValidEmail(email)) {
+  if (!lookupInput.valid && lookupInput.code === "missing_student_id") {
+    return { message: "Student ID Number is required.", selectedStudentType: studentType };
+  }
+  if (!lookupInput.valid) {
     return { message: "Please use a valid active email address.", selectedStudentType: studentType };
   }
+  const { email, studentIdNumber } = lookupInput;
 
   const admin = await getAdminClient();
   if (!admin) {
@@ -334,7 +343,7 @@ export async function createStudentAccountAction(
   if (!proof) {
     await clearClaimCookie();
     logClaimFailure("claim_proof_invalid");
-    return { message: GENERIC_CLAIM_FAILURE };
+    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
   }
 
   const admin = await getAdminClient();
@@ -362,13 +371,13 @@ export async function createStudentAccountAction(
   if (!recordIsValid) {
     await clearClaimCookie();
     logClaimFailure("claim_proof_revalidation_failed");
-    return { message: GENERIC_CLAIM_FAILURE };
+    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
   }
 
   if (await findExistingStudentAccount({ admin, email, studentIdNumber })) {
     await clearClaimCookie();
     logClaimFailure("claim_already_exists_before_registration");
-    return { message: GENERIC_CLAIM_FAILURE };
+    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
   }
 
   const created = await performStudentRegistration(
@@ -387,7 +396,7 @@ export async function createStudentAccountAction(
 
   if (!created) {
     await clearClaimCookie();
-    return { message: GENERIC_CLAIM_FAILURE };
+    return { message: EXPIRED_CLAIM_MESSAGE, requiresNewClaim: true };
   }
 
   await clearClaimCookie();
