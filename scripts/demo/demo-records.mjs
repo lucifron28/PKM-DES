@@ -3,7 +3,6 @@ export const DEMO_YEAR_LEVEL = "1st Year";
 export const DEMO_STUDENT_TYPE = "Incoming 1st Year Student";
 export const DEMO_RESET_CONFIRMATION = "RESET_PKM_DES_DEMO";
 export const DEMO_REJECTION_REMARK = "Demonstration record: submitted information requires correction.";
-export const DEMO_REVIEWED_AT = "2026-10-15T09:00:00.000Z";
 
 export const DEMO_RECORDS = Object.freeze([
   {

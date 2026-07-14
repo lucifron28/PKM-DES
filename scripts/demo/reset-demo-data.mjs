@@ -2,7 +2,6 @@ import {
   ACCOUNT_DEMO_RECORDS,
   DEMO_EMAILS,
   DEMO_RECORDS,
-  DEMO_REVIEWED_AT,
   DEMO_STUDENT_IDS,
   recordForEmail,
   recordForStudentId
@@ -13,8 +12,10 @@ import {
   createSupabaseAdminClient,
   printDemoPlan,
   readResetConfiguration,
+  resolveOptionalReviewerId,
   resolveProgramAndSubjects,
-  targetHost
+  targetHost,
+  validateDemoStudentOwnership
 } from "./demo-utils.mjs";
 
 const isDryRun = process.argv.includes("--dry-run");
@@ -118,20 +119,44 @@ async function fetchAndValidateDemoProfilesAndStudents(supabase, authUsers) {
     .in("student_id_number", DEMO_STUDENT_IDS);
   assertNoError(studentsByStudentIdError, "Could not check reserved demo Student IDs");
 
-  const profileById = new Map((emailProfiles ?? []).map((profile) => [profile.id, profile]));
-  const students = [...(studentsByProfile ?? []), ...(studentsByStudentId ?? [])].filter(
-    (student, index, list) => list.findIndex((candidate) => candidate.id === student.id) === index
-  );
+  const reservedProfileIds = [...new Set((studentsByStudentId ?? []).map((student) => student.profile_id))];
+  const { data: reservedProfiles, error: reservedProfilesError } = reservedProfileIds.length
+    ? await supabase.from("profiles").select("id, email").in("id", reservedProfileIds)
+    : { data: [], error: null };
+  assertNoError(reservedProfilesError, "Could not check profiles linked to reserved demo Student IDs");
 
-  for (const student of students) {
+  const profileById = new Map([...(emailProfiles ?? []), ...(reservedProfiles ?? [])].map((profile) => [profile.id, profile]));
+  const validateStudent = (student) => {
     const profile = profileById.get(student.profile_id);
-    const expected = profile ? recordForEmail(profile.email) : recordForStudentId(student.student_id_number);
-    if (!expected || student.student_id_number !== expected.studentIdNumber) {
-      throw new Error("A reserved demo Student ID is associated with a non-demo student row. Demo data was not changed.");
+    const expectedByEmail = profile ? recordForEmail(profile.email) : null;
+    const expectedByStudentId = recordForStudentId(student.student_id_number);
+
+    if (!profile || !expectedByEmail || expectedByEmail !== expectedByStudentId) {
+      throw new Error("A reserved demo Student ID is linked to a non-demo or mismatched profile. Demo data was not changed.");
+    }
+
+    validateDemoStudentOwnership({
+      student,
+      profile,
+      authUser: authUserById.get(profile.id),
+      expectedRecord: expectedByEmail
+    });
+  };
+
+  // Reserved-ID results are collision checks only. They never expand the cleanup list.
+  for (const student of studentsByStudentId ?? []) {
+    validateStudent(student);
+  }
+
+  const deletableStudents = [];
+  for (const student of studentsByProfile ?? []) {
+    validateStudent(student);
+    if (!deletableStudents.some((candidate) => candidate.id === student.id)) {
+      deletableStudents.push(student);
     }
   }
 
-  return { profiles: emailProfiles ?? [], students };
+  return { profiles: emailProfiles ?? [], students: deletableStudents };
 }
 
 async function removeExistingDemoData(supabase) {
@@ -164,22 +189,6 @@ async function removeExistingDemoData(supabase) {
   }
 }
 
-async function findOptionalReviewerId(supabase, registrarEmail) {
-  if (!registrarEmail) {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("email", registrarEmail)
-    .eq("role", "admin")
-    .maybeSingle();
-  assertNoError(error, "Could not look up the optional demo reviewer");
-
-  return data?.id ?? null;
-}
-
 async function createOfficialRecords(supabase, programId) {
   const { error } = await supabase
     .from("official_student_records")
@@ -187,7 +196,7 @@ async function createOfficialRecords(supabase, programId) {
   assertNoError(error, "Could not create fictional official student records");
 }
 
-async function createAccountBackedDemoRecord(supabase, record, programId, password, term, subjectIds, reviewerId) {
+async function createAccountBackedDemoRecord(supabase, record, programId, password, term, subjectIds, reviewerId, reviewedAt) {
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: record.email,
     password,
@@ -232,7 +241,7 @@ async function createAccountBackedDemoRecord(supabase, record, programId, passwo
     semester: term.semester,
     status: record.reviewStatus,
     remarks: record.remarks,
-    reviewed_at: record.reviewStatus === "PENDING" ? null : DEMO_REVIEWED_AT,
+    reviewed_at: record.reviewStatus === "PENDING" ? null : reviewedAt,
     reviewed_by: record.reviewStatus === "PENDING" ? null : reviewerId
   };
 
@@ -273,10 +282,11 @@ async function main() {
     return;
   }
 
+  const reviewedAt = new Date().toISOString();
   await removeExistingDemoData(supabase);
   await createOfficialRecords(supabase, program.id);
 
-  const reviewerId = await findOptionalReviewerId(supabase, configuration.registrarEmail);
+  const reviewerId = await resolveOptionalReviewerId(supabase, configuration.registrarEmail);
   const subjectIds = subjects.map((subject) => subject.id);
 
   for (const record of ACCOUNT_DEMO_RECORDS) {
@@ -287,7 +297,8 @@ async function main() {
       configuration.password,
       configuration.term,
       subjectIds,
-      reviewerId
+      reviewerId,
+      reviewedAt
     );
   }
 

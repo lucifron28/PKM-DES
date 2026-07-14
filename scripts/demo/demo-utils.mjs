@@ -41,6 +41,7 @@ export function readVerificationConfiguration(environment = process.env) {
   return {
     url,
     serviceRoleKey,
+    registrarEmail: environment.DEMO_REGISTRAR_EMAIL?.trim().toLowerCase() || null,
     term: resolveDemoTerm(environment)
   };
 }
@@ -108,6 +109,82 @@ export function createOfficialRecordPayload(record, programId) {
     student_type: DEMO_STUDENT_TYPE,
     enrollment_status: record.enrollmentStatus
   };
+}
+
+export function validateDemoStudentOwnership({ student, profile, authUser, expectedRecord }) {
+  if (!student || !profile || !authUser || !expectedRecord) {
+    throw new Error("A reserved demo Student ID could not be matched to its exact demo identity.");
+  }
+
+  if (!expectedRecord.hasAccount) {
+    throw new Error("The claim-only demo Student ID has a student row. Demo data was not changed.");
+  }
+
+  const profileEmail = String(profile.email).toLowerCase();
+  const authEmail = String(authUser.email).toLowerCase();
+  const hasExactMatch =
+    student.profile_id === profile.id &&
+    profile.id === authUser.id &&
+    profileEmail === expectedRecord.email &&
+    authEmail === expectedRecord.email &&
+    student.student_id_number === expectedRecord.studentIdNumber;
+
+  if (!hasExactMatch) {
+    throw new Error("A reserved demo Student ID is linked to a non-demo or mismatched student identity. Demo data was not changed.");
+  }
+
+  return true;
+}
+
+export function validateExactSubjectSet(expectedSubjectIds, attachedSubjectIds) {
+  const expected = [...expectedSubjectIds].sort();
+  const attached = [...attachedSubjectIds].sort();
+  const uniqueAttached = new Set(attached);
+
+  if (uniqueAttached.size !== attached.length) {
+    throw new Error("Duplicate subject attachments were found.");
+  }
+
+  if (expected.length !== attached.length) {
+    throw new Error(`Expected ${expected.length} attached subjects, found ${attached.length}.`);
+  }
+
+  for (let index = 0; index < expected.length; index += 1) {
+    if (expected[index] !== attached[index]) {
+      throw new Error("Attached subjects do not exactly match the configured demo subject set.");
+    }
+  }
+
+  return attached.length;
+}
+
+export function calculateDashboardCounts(enrollments) {
+  return enrollments.reduce(
+    (counts, enrollment) => {
+      if (enrollment.status === "PENDING") counts.pending += 1;
+      if (enrollment.status === "APPROVED") counts.approved += 1;
+      if (enrollment.status === "REJECTED") counts.rejected += 1;
+      counts.total += 1;
+      return counts;
+    },
+    { pending: 0, approved: 0, rejected: 0, total: 0 }
+  );
+}
+
+export async function resolveOptionalReviewerId(supabase, registrarEmail) {
+  if (!registrarEmail) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", registrarEmail)
+    .eq("role", "admin")
+    .maybeSingle();
+  assertNoError(error, "Could not look up the optional demo reviewer");
+
+  return data?.id ?? null;
 }
 
 export function printDemoPlan({ host, term, subjectCount }) {
