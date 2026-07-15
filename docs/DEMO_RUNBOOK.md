@@ -41,6 +41,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 
 - Official Student Records are not enrollment submissions.
 - Admin Dashboard, Pending Enrollments, Reports, and Masterlist count submitted enrollment records only.
+- Reports and Masterlist use the same submitted-request source and can filter by program, academic year, year level, semester, review status, and student identity. Overall Student Status in the Masterlist is separate from the request review status.
 - A student appears in those enrollment pages after they claim an account and submit Online Enrollment.
 - The browser does not choose academic details or subjects. Transferee and Irregular Student records require Registrar-managed subject assignment and are not used for the automatic submission demonstration.
 

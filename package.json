@@ -15,6 +15,7 @@
     "demo:test": "node --test scripts/demo/*.test.mjs",
     "test:account-claim": "tsx --test lib/account-claim/*.test.ts",
     "test:student-enrollment": "tsx --test lib/enrollment/*.test.ts",
+    "test:enrollment-reporting": "tsx --test lib/enrollment/reporting.test.ts",
     "test:admin-enrollment-review": "tsx --test lib/enrollment/admin-review.test.ts",
     "test:admin-student-records": "tsx --test lib/admin-student-records/*.test.ts"
   },

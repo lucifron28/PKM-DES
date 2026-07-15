@@ -71,6 +71,7 @@ The examples were given with names, but the likely ID pattern is the two-digit y
 - Printable enrollment/masterlist reports are required.
 - The client emphasized that the most important next output is the ability to generate, report, and produce a printable registration form.
 - The dashboard should remain accessible to both students and administrators.
+- The current research MVP report and masterlist present submitted enrollment requests through browser printing only; PKM still needs to supply the approved final report/export format.
 
 ### Future Modules
 
