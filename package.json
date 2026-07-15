@@ -17,7 +17,8 @@
     "test:student-enrollment": "tsx --test lib/enrollment/*.test.ts",
     "test:enrollment-reporting": "tsx --test lib/enrollment/reporting.test.ts",
     "test:admin-enrollment-review": "tsx --test lib/enrollment/admin-review.test.ts",
-    "test:admin-student-records": "tsx --test lib/admin-student-records/*.test.ts"
+    "test:admin-student-records": "tsx --test lib/admin-student-records/*.test.ts",
+    "test:registration-form": "tsx --test lib/registration-form/presentation.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
