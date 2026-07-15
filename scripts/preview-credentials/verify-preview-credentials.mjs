@@ -3,6 +3,8 @@ import path from "node:path";
 import { ACCOUNT_DEMO_RECORDS, CLAIM_ONLY_DEMO_RECORD } from "../demo/demo-records.mjs";
 import {
   assertManifestGitSafety,
+  assertRegistrarManifestAgreement,
+  buildCredentialLeakScanEntries,
   createSupabaseClients,
   getManifestPaths,
   normalizeEmail,
@@ -105,14 +107,7 @@ async function main() {
 
   const leakFindings = await scanTrackedFilesForSecrets({
     repositoryRoot,
-    secrets: {
-      registrar_password: configuration.registrarPassword,
-      registrar_email: configuration.registrarEmail,
-      service_role_key: configuration.serviceRoleKey,
-      account_claim_secret: process.env.ACCOUNT_CLAIM_SECRET ?? "",
-      ...Object.fromEntries(manifest.accounts.map((account) => [`${account.key}_password`, account.password])),
-      claim_only_password: manifest.claimOnly.passwordForLiveClaim
-    }
+    secrets: buildCredentialLeakScanEntries({ configuration, manifest })
   });
   if (leakFindings.length) {
     for (const finding of leakFindings) console.error(`Tracked credential leak detected: ${finding.file} (${finding.labels.join(", ")})`);
@@ -121,7 +116,7 @@ async function main() {
 
   const { admin, createAnonClient } = createSupabaseClients(configuration);
   const registrar = accountByKey(manifest, "registrar");
-  if (normalizeEmail(registrar.email) !== configuration.registrarEmail) stop("registrar_manifest_mismatch");
+  assertRegistrarManifestAgreement({ manifestRegistrar: registrar, configuration });
   await verifyLogin(createAnonClient, registrar, "admin");
   for (const record of ACCOUNT_DEMO_RECORDS) {
     const account = accountByKey(manifest, record.key);

@@ -8,10 +8,12 @@ import {
   createPartialManifest,
   createPasswordPlan,
   createSupabaseClients,
-  getManifestPaths,
   normalizeEmail,
+  preflightManifestStorage,
   readPreviewConfiguration,
   redactedPlanSummary,
+  removePrivateManifest,
+  rotatePreviewPasswords,
   writePrivateManifest
 } from "./credential-utils.mjs";
 
@@ -73,13 +75,17 @@ async function verifyStudentRecord(admin, record, authUser) {
     admin
       .from("students")
       .select("id, profile_id, student_id_number")
-      .eq("profile_id", profile.id)
-      .eq("student_id_number", record.studentIdNumber),
+      .eq("profile_id", profile.id),
     "student_record_lookup_failed"
   );
   if (students.length !== 1 || students[0].profile_id !== profile.id || students[0].student_id_number !== record.studentIdNumber) {
     stop("student_record_preflight_failed");
   }
+  const sameIdStudents = await getExactRows(
+    admin.from("students").select("id, profile_id, student_id_number").eq("student_id_number", record.studentIdNumber),
+    "student_id_collision_lookup_failed"
+  );
+  if (sameIdStudents.length !== 1 || sameIdStudents[0].profile_id !== profile.id) stop("student_id_collision_preflight_failed");
 }
 
 async function verifyClaimOnlyRecord(admin, authMatches) {
@@ -103,15 +109,18 @@ async function verifyClaimOnlyRecord(admin, authMatches) {
     stop("claim_record_auth_collision");
   }
 
-  const profiles = await getExactRows(
+  const [profiles, students, enrollments] = await Promise.all([
+    getExactRows(
     admin.from("profiles").select("id").eq("email", CLAIM_ONLY_DEMO_RECORD.email),
-    "claim_profile_lookup_failed"
-  );
-  const students = await getExactRows(
+    "claim_profile_lookup_failed"),
+    getExactRows(
     admin.from("students").select("id").eq("student_id_number", CLAIM_ONLY_DEMO_RECORD.studentIdNumber),
-    "claim_student_lookup_failed"
-  );
-  if (profiles.length !== 0 || students.length !== 0) stop("claim_record_has_account");
+    "claim_student_lookup_failed"),
+    getExactRows(
+      admin.from("enrollments").select("id, students!inner(student_id_number)").eq("students.student_id_number", CLAIM_ONLY_DEMO_RECORD.studentIdNumber),
+      "claim_enrollment_lookup_failed")
+  ]);
+  if (profiles.length !== 0 || students.length !== 0 || enrollments.length !== 0) stop("claim_record_has_account");
 }
 
 async function verifyRegistrarSignIn(createAnonClient, configuration, expectedAuthUser) {
@@ -178,39 +187,32 @@ async function main() {
     return;
   }
 
+  const storage = await preflightManifestStorage({ repositoryRoot, overwrite });
   const plan = createPasswordPlan();
-  const successfulUpdates = [];
-  const paths = getManifestPaths(repositoryRoot);
-  for (const item of plan.accounts) {
-    const { error } = await admin.auth.admin.updateUserById(usersByRecordKey.get(item.record.key).id, {
-      password: item.password
-    });
-    if (error) {
-      const partialManifest = createPartialManifest({
-        targetHost: configuration.targetHost,
-        registrarEmail: configuration.registrarEmail,
-        registrarPassword: configuration.registrarPassword,
-        successfulUpdates
-      });
-      await writePrivateManifest({
-        repositoryRoot,
-        manifestPath: paths.partial,
-        manifest: partialManifest,
-        overwrite
-      });
-      stop("student_password_update_failed_partial_manifest_written");
-    }
-    successfulUpdates.push(item);
-  }
-
-  const manifest = createCompleteManifest({
-    targetHost: configuration.targetHost,
-    registrarEmail: configuration.registrarEmail,
-    registrarPassword: configuration.registrarPassword,
-    accountPasswords: successfulUpdates,
-    claimOnlyPassword: plan.claimOnlyPassword
+  await rotatePreviewPasswords({
+    accounts: plan.accounts,
+    updatePassword: async (item) => {
+      const { error } = await admin.auth.admin.updateUserById(usersByRecordKey.get(item.record.key).id, { password: item.password });
+      if (error) stop("student_password_update_failed");
+    },
+    createComplete: (successfulUpdates) => createCompleteManifest({
+      targetHost: configuration.targetHost,
+      registrarEmail: configuration.registrarEmail,
+      registrarPassword: configuration.registrarPassword,
+      accountPasswords: successfulUpdates,
+      claimOnlyPassword: plan.claimOnlyPassword
+    }),
+    writeComplete: (manifest) => writePrivateManifest({ repositoryRoot, manifestPath: storage.paths.complete, manifest, overwrite: true }),
+    createPartial: (successfulUpdates) => createPartialManifest({
+      targetHost: configuration.targetHost,
+      registrarEmail: configuration.registrarEmail,
+      registrarPassword: configuration.registrarPassword,
+      successfulUpdates
+    }),
+    writePartial: (manifest) => writePrivateManifest({ repositoryRoot, manifestPath: storage.paths.partial, manifest, overwrite: true }),
+    removeComplete: () => removePrivateManifest({ repositoryRoot, manifestPath: storage.paths.complete }),
+    removePartial: () => removePrivateManifest({ repositoryRoot, manifestPath: storage.paths.partial })
   });
-  await writePrivateManifest({ repositoryRoot, manifestPath: paths.complete, manifest, overwrite });
   console.log(`Private credential manifest prepared at .preview/${COMPLETE_MANIFEST_FILE}.`);
   console.log("Run npm run preview:credentials:verify before presenting.");
 }

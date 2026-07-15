@@ -18,12 +18,18 @@ export function normalizeEmail(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
-export function requireValue(name, value) {
+export function requireTrimmedValue(name, value) {
   if (!String(value ?? "").trim()) {
     throw new Error(`${name} is required.`);
   }
 
   return String(value).trim();
+}
+
+export function requireSecretValue(name, value) {
+  const secret = String(value ?? "");
+  if (!secret.trim()) throw new Error(`${name} is required.`);
+  return secret;
 }
 
 export function validatePreviewTarget({ url, expectedHost }) {
@@ -34,7 +40,7 @@ export function validatePreviewTarget({ url, expectedHost }) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL must be a valid URL.");
   }
 
-  const normalizedExpectedHost = requireValue("PREVIEW_EXPECTED_SUPABASE_HOST", expectedHost).toLowerCase();
+  const normalizedExpectedHost = requireTrimmedValue("PREVIEW_EXPECTED_SUPABASE_HOST", expectedHost).toLowerCase();
   if (parsedUrl.protocol !== "https:") {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL must use HTTPS.");
   }
@@ -49,11 +55,11 @@ export function validatePreviewTarget({ url, expectedHost }) {
 }
 
 export function readPreviewConfiguration(environment = process.env) {
-  const url = requireValue("NEXT_PUBLIC_SUPABASE_URL", environment.NEXT_PUBLIC_SUPABASE_URL);
-  const anonKey = requireValue("NEXT_PUBLIC_SUPABASE_ANON_KEY", environment.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  const serviceRoleKey = requireValue("SUPABASE_SERVICE_ROLE_KEY", environment.SUPABASE_SERVICE_ROLE_KEY);
-  const registrarEmail = normalizeEmail(requireValue("PREVIEW_REGISTRAR_EMAIL", environment.PREVIEW_REGISTRAR_EMAIL));
-  const registrarPassword = requireValue("PREVIEW_REGISTRAR_PASSWORD", environment.PREVIEW_REGISTRAR_PASSWORD);
+  const url = requireTrimmedValue("NEXT_PUBLIC_SUPABASE_URL", environment.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = requireSecretValue("NEXT_PUBLIC_SUPABASE_ANON_KEY", environment.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const serviceRoleKey = requireSecretValue("SUPABASE_SERVICE_ROLE_KEY", environment.SUPABASE_SERVICE_ROLE_KEY);
+  const registrarEmail = normalizeEmail(requireTrimmedValue("PREVIEW_REGISTRAR_EMAIL", environment.PREVIEW_REGISTRAR_EMAIL));
+  const registrarPassword = requireSecretValue("PREVIEW_REGISTRAR_PASSWORD", environment.PREVIEW_REGISTRAR_PASSWORD);
   const targetHost = validatePreviewTarget({
     url,
     expectedHost: environment.PREVIEW_EXPECTED_SUPABASE_HOST
@@ -85,13 +91,14 @@ export function generatePreviewPassword() {
 }
 
 export function createPasswordPlan(records = ACCOUNT_DEMO_RECORDS, generatePassword = generatePreviewPassword) {
-  const rotatableRecords = records.filter((record) => ROTATABLE_KEYS.includes(record.key));
-  if (rotatableRecords.length !== ROTATABLE_KEYS.length || rotatableRecords.some((record) => !record.hasAccount)) {
+  const keys = records.map((record) => record.key);
+  const keysAreExact = keys.length === ROTATABLE_KEYS.length && new Set(keys).size === keys.length && ROTATABLE_KEYS.every((key) => keys.includes(key));
+  if (!keysAreExact || records.some((record) => !record.hasAccount || record.key === CLAIM_ONLY_DEMO_RECORD.key)) {
     throw new Error("The account-backed preview allowlist is incomplete or invalid.");
   }
 
   const passwords = new Set();
-  const accounts = rotatableRecords.map((record) => {
+  const accounts = ROTATABLE_KEYS.map((key) => records.find((record) => record.key === key)).map((record) => {
     let password = generatePassword();
     while (passwords.has(password)) password = generatePassword();
     passwords.add(password);
@@ -143,25 +150,19 @@ export function redactedPlanSummary({ targetHost, accountKeys, registrarEmail })
   };
 }
 
-function isForbiddenManifestKey(key) {
-  const normalized = key.toLowerCase();
-  return normalized.includes("service") || normalized.includes("token") || normalized === "userid" || normalized === "profileid" || normalized === "authuserid";
-}
-
-function assertNoForbiddenManifestFields(value) {
-  if (!value || typeof value !== "object") return;
-  for (const [key, child] of Object.entries(value)) {
-    if (isForbiddenManifestKey(key)) {
-      throw new Error("Credential manifest contains a prohibited secret or identity field.");
-    }
-    assertNoForbiddenManifestFields(child);
+function assertExactKeys(value, allowedKeys) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Credential manifest has an unsupported schema.");
+  const keys = Object.keys(value);
+  if (keys.length !== allowedKeys.length || keys.some((key) => !allowedKeys.includes(key))) {
+    throw new Error("Credential manifest contains an unsupported field.");
   }
 }
 
 function assertManifestAccount(account, expectedKey) {
-  if (!account || account.key !== expectedKey || !account.role || !account.email || !account.password) {
-    throw new Error("Credential manifest is missing a required account.");
-  }
+  const isRegistrar = expectedKey === "registrar";
+  assertExactKeys(account, isRegistrar ? ["key", "role", "email", "password"] : ["key", "role", "demoState", "email", "studentIdNumber", "password"]);
+  if (account.key !== expectedKey || !account.role || !account.email || !account.password) throw new Error("Credential manifest is missing a required account.");
+  if (!isRegistrar && !account.studentIdNumber) throw new Error("Credential manifest is missing a required student identifier.");
 }
 
 export function validateCredentialManifest(manifest, { allowPartial = false } = {}) {
@@ -171,21 +172,32 @@ export function validateCredentialManifest(manifest, { allowPartial = false } = 
   if (manifest.partial && !allowPartial) {
     throw new Error("A partial credential manifest cannot be verified as a complete preview set.");
   }
-
-  assertNoForbiddenManifestFields(manifest);
+  const partial = manifest.partial === true;
+  assertExactKeys(
+    manifest,
+    partial
+      ? ["schemaVersion", "partial", "generatedAt", "targetHost", "warning", "completedStudentKeys", "accounts"]
+      : ["schemaVersion", "generatedAt", "targetHost", "warning", "accounts", "claimOnly"]
+  );
   const accountKeys = manifest.accounts?.map((account) => account.key) ?? [];
   if (new Set(accountKeys).size !== accountKeys.length) {
     throw new Error("Credential manifest contains duplicate account keys.");
   }
 
-  const requiredKeys = manifest.partial ? ["registrar", ...(manifest.completedStudentKeys ?? [])] : ["registrar", ...ROTATABLE_KEYS];
+  const completedStudentKeys = partial ? manifest.completedStudentKeys : ROTATABLE_KEYS;
+  if (!Array.isArray(completedStudentKeys) || new Set(completedStudentKeys).size !== completedStudentKeys.length || completedStudentKeys.some((key) => !ROTATABLE_KEYS.includes(key))) {
+    throw new Error("Credential manifest contains invalid student account keys.");
+  }
+  const requiredKeys = ["registrar", ...completedStudentKeys];
+  const keysAreExact = accountKeys.length === requiredKeys.length && requiredKeys.every((key) => accountKeys.includes(key));
+  if (!keysAreExact) throw new Error("Credential manifest is missing required preview identities.");
   for (const key of requiredKeys) {
     assertManifestAccount(manifest.accounts.find((account) => account.key === key), key);
   }
 
-  if (!manifest.partial) {
-    const keysAreExact = accountKeys.length === requiredKeys.length && requiredKeys.every((key) => accountKeys.includes(key));
-    if (!keysAreExact || !manifest.claimOnly?.email || !manifest.claimOnly?.studentIdNumber || !manifest.claimOnly?.passwordForLiveClaim) {
+  if (!partial) {
+    assertExactKeys(manifest.claimOnly, ["email", "studentIdNumber", "studentType", "passwordForLiveClaim", "activeBeforeClaim", "instruction"]);
+    if (!keysAreExact || !manifest.claimOnly.email || !manifest.claimOnly.studentIdNumber || !manifest.claimOnly.passwordForLiveClaim) {
       throw new Error("Credential manifest is missing required preview identities.");
     }
   }
@@ -266,21 +278,55 @@ export async function assertManifestGitSafety({ repositoryRoot, manifestPath }) 
   return outputPath;
 }
 
-async function assertSafePreviewDirectory(previewDirectory) {
-  await fs.mkdir(previewDirectory, { recursive: true });
-  const stat = await fs.lstat(previewDirectory);
+async function assertSafePreviewDirectory(previewDirectory, fsApi = fs) {
+  await fsApi.mkdir(previewDirectory, { recursive: true });
+  const stat = await fsApi.lstat(previewDirectory);
   if (stat.isSymbolicLink() || !stat.isDirectory()) {
     throw new Error("The .preview directory must be a real directory, not a symbolic link.");
   }
 }
 
-export async function writePrivateManifest({ repositoryRoot, manifestPath, manifest, overwrite = false }) {
+async function inspectManifestDestination(destination, fsApi = fs) {
+  try {
+    const stat = await fsApi.lstat(destination);
+    if (stat.isSymbolicLink()) throw new Error("Credential manifest path cannot be a symbolic link.");
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+export async function preflightManifestStorage({ repositoryRoot, overwrite = false, fsApi = fs, assertGitSafety = assertManifestGitSafety }) {
+  const paths = getManifestPaths(repositoryRoot);
+  await assertGitSafety({ repositoryRoot, manifestPath: paths.complete });
+  await assertGitSafety({ repositoryRoot, manifestPath: paths.partial });
+  await assertSafePreviewDirectory(paths.previewDirectory, fsApi);
+  const completeExists = await inspectManifestDestination(paths.complete, fsApi);
+  const partialExists = await inspectManifestDestination(paths.partial, fsApi);
+  if (!overwrite && (completeExists || partialExists)) {
+    throw new Error("A credential manifest already exists. Use --overwrite only when intentionally replacing it.");
+  }
+
+  const probe = path.join(paths.previewDirectory, `.preview-credentials-probe-${randomBytes(12).toString("hex")}.tmp`);
+  try {
+    await fsApi.writeFile(probe, "preview-credential-storage-probe\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+    const renamedProbe = `${probe}.renamed`;
+    await fsApi.rename(probe, renamedProbe);
+    await fsApi.rm(renamedProbe, { force: true });
+  } finally {
+    await fsApi.rm(probe, { force: true }).catch(() => undefined);
+  }
+  return { paths, completeExists, partialExists };
+}
+
+export async function writePrivateManifest({ repositoryRoot, manifestPath, manifest, overwrite = false, fsApi = fs }) {
   const outputPath = await assertManifestGitSafety({ repositoryRoot, manifestPath });
   const previewDirectory = path.dirname(outputPath);
-  await assertSafePreviewDirectory(previewDirectory);
+  await assertSafePreviewDirectory(previewDirectory, fsApi);
 
   try {
-    const existing = await fs.lstat(outputPath);
+    const existing = await fsApi.lstat(outputPath);
     if (existing.isSymbolicLink()) throw new Error("Credential manifest path cannot be a symbolic link.");
     if (!overwrite) throw new Error("A credential manifest already exists. Use --overwrite only when intentionally replacing it.");
   } catch (error) {
@@ -289,15 +335,44 @@ export async function writePrivateManifest({ repositoryRoot, manifestPath, manif
 
   const temporaryPath = path.join(previewDirectory, `.preview-credentials-${randomBytes(12).toString("hex")}.tmp`);
   try {
-    await fs.writeFile(temporaryPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
-    await fs.chmod(temporaryPath, 0o600).catch(() => undefined);
-    await fs.rename(temporaryPath, outputPath);
-    await fs.chmod(outputPath, 0o600).catch(() => undefined);
+    await fsApi.writeFile(temporaryPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    await fsApi.chmod(temporaryPath, 0o600).catch(() => undefined);
+    await fsApi.rename(temporaryPath, outputPath);
+    await fsApi.chmod(outputPath, 0o600).catch(() => undefined);
   } finally {
-    await fs.rm(temporaryPath, { force: true }).catch(() => undefined);
+    await fsApi.rm(temporaryPath, { force: true }).catch(() => undefined);
   }
 
   return outputPath;
+}
+
+export async function removePrivateManifest({ repositoryRoot, manifestPath, fsApi = fs }) {
+  const outputPath = await assertManifestGitSafety({ repositoryRoot, manifestPath });
+  const exists = await inspectManifestDestination(outputPath, fsApi);
+  if (exists) await fsApi.rm(outputPath, { force: true });
+}
+
+export async function rotatePreviewPasswords({ accounts, updatePassword, createComplete, writeComplete, createPartial, writePartial, removeComplete, removePartial }) {
+  const successfulUpdates = [];
+  try {
+    for (const account of accounts) {
+      await updatePassword(account);
+      successfulUpdates.push(account);
+    }
+    await writeComplete(createComplete(successfulUpdates));
+    await removePartial();
+    return { kind: "complete", successfulUpdates };
+  } catch (error) {
+    if (successfulUpdates.length) {
+      try {
+        await writePartial(createPartial(successfulUpdates));
+        await removeComplete();
+      } catch {
+        throw new Error("credential_recovery_write_failed");
+      }
+    }
+    throw error;
+  }
 }
 
 export async function readPrivateManifest({ repositoryRoot, manifestPath }) {
@@ -328,6 +403,31 @@ export async function scanTrackedFilesForSecrets({ repositoryRoot, secrets }) {
   }
 
   return findings;
+}
+
+export function buildCredentialLeakScanEntries({ configuration, manifest }) {
+  const accounts = new Map(manifest.accounts.map((account) => [account.key, account]));
+  return {
+    registrar_environment_password: configuration.registrarPassword,
+    registrar_manifest_password: accounts.get("registrar")?.password ?? "",
+    registrar_email: configuration.registrarEmail,
+    service_role_key: configuration.serviceRoleKey,
+    account_claim_secret: process.env.ACCOUNT_CLAIM_SECRET ?? "",
+    pending_student_password: accounts.get("pending")?.password ?? "",
+    approved_student_password: accounts.get("approved")?.password ?? "",
+    rejected_student_password: accounts.get("rejected")?.password ?? "",
+    claim_only_password: manifest.claimOnly?.passwordForLiveClaim ?? ""
+  };
+}
+
+export function assertRegistrarManifestAgreement({ manifestRegistrar, configuration }) {
+  if (
+    !manifestRegistrar ||
+    normalizeEmail(manifestRegistrar.email) !== configuration.registrarEmail ||
+    manifestRegistrar.password !== configuration.registrarPassword
+  ) {
+    throw new Error("registrar_manifest_mismatch");
+  }
 }
 
 export function createSupabaseClients(configuration) {

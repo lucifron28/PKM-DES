@@ -14,6 +14,7 @@ It is for authorized presenters using a confirmed safe Supabase preview project.
 - The tooling accepts only an HTTPS Supabase URL whose host exactly matches `PREVIEW_EXPECTED_SUPABASE_HOST` and ends in `.supabase.co`.
 - It changes only the password of the three allowlisted fictional account-backed demo students. The claim-only official record is never given an Auth account by this tooling.
 - Use a dedicated preview or test project. Do not run `--apply` against a project containing institutional or unrelated data.
+- Before any password is generated or changed, the command validates both ignored manifest destinations, rejects symlinked paths, performs a secret-free write/rename/delete probe, and stops if either manifest already exists unless `--overwrite` is explicitly supplied.
 
 ## Required Local Environment
 
@@ -70,7 +71,11 @@ npm run preview:credentials:prepare -- --apply
 
 This writes `.preview/preview-credentials.local.json` with restrictive POSIX permissions when the operating system supports them. Windows ACL behavior varies, so presenters must still protect the local device and remove the file after use.
 
-If an update fails after one or more student passwords were changed, the command stops with a nonzero exit code and writes only the successfully changed credentials to `.preview/preview-credentials.partial.local.json`. Resolve the failure privately, then intentionally rerun with `--overwrite` only when replacing the local recovery manifest is appropriate.
+Both `.preview/preview-credentials.local.json` and `.preview/preview-credentials.partial.local.json` are protected destinations. If either exists, preparation stops before changing an Auth password unless `--overwrite` is supplied.
+
+If any step fails after one or more student passwords were changed, the command stops with a nonzero exit code and writes only the successfully changed credentials to `.preview/preview-credentials.partial.local.json`. It then invalidates the complete manifest so verification cannot use a stale credential set. Resolve the failure privately, then intentionally rerun with `--overwrite` only when replacing the local recovery manifest is appropriate. If no password was changed, no recovery manifest is written.
+
+After complete success, the command removes a stale partial manifest only after the complete manifest is stored safely.
 
 Verify the private manifest before presenting:
 
@@ -78,7 +83,7 @@ Verify the private manifest before presenting:
 npm run preview:credentials:verify
 ```
 
-Verification signs in the Registrar/Admin and each fictional student separately, checks role and active status, verifies the student identity pair, confirms claim-only readiness, signs out every test session, and scans tracked files for prepared secret values. It does not update passwords, profiles, records, or enrollment data.
+Verification requires the Registrar email and password in the manifest to exactly match the local Registrar environment credentials (email is normalized; password characters are preserved). It signs in the Registrar/Admin and each fictional student separately, checks role and active status, verifies the student identity pair, confirms claim-only readiness, signs out every test session, and scans tracked files for prepared secret values. It does not update passwords, profiles, records, or enrollment data.
 
 ## Private Handoff and Cleanup
 
