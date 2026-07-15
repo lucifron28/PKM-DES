@@ -12,7 +12,7 @@ Create the Supabase Auth user manually first, then run `supabase/registrar_admin
 | --- | --- | --- | --- |
 | Registrar/Admin | `<provided privately>` | `<provided privately>` | `<provided privately>` |
 
-Set or update the preview password in Supabase Auth before the demo, then distribute it privately to authorized presenters.
+For the Supabase preview workflow, prepare unique fictional student passwords and verify the existing Registrar/Admin credential using [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md). Distribute the generated values privately to authorized presenters.
 
 ## Fictional Demonstration Records
 

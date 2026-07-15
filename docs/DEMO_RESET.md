@@ -60,3 +60,5 @@ If manual cleanup is necessary, remove only the exact fictional users from Supab
 ## Registrar Privacy
 
 The optional `DEMO_REGISTRAR_EMAIL` only looks up an existing admin profile for reviewed demo records. The script never creates a Registrar account, and active Registrar credentials remain private.
+
+After a successful reset and `npm run demo:verify`, previously prepared preview passwords may no longer be appropriate. Follow [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md) to prepare and verify a new private presentation set on the same dedicated preview/test project.

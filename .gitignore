@@ -13,6 +13,7 @@ tsconfig.tsbuildinfo
 # local env
 .env
 .env*.local
+.preview/
 
 # logs
 npm-debug.log*
