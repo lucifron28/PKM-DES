@@ -14,7 +14,8 @@
     "demo:verify": "node scripts/demo/verify-demo-data.mjs",
     "demo:test": "node --test scripts/demo/*.test.mjs",
     "test:account-claim": "tsx --test lib/account-claim/*.test.ts",
-    "test:student-enrollment": "tsx --test lib/enrollment/*.test.ts"
+    "test:student-enrollment": "tsx --test lib/enrollment/*.test.ts",
+    "test:admin-student-records": "tsx --test lib/admin-student-records/*.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

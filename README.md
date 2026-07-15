@@ -54,7 +54,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Every student type uses a claim flow against an exact matching official Registrar-managed record
 - Account claims require the selected student type, active email address, and Student ID Number
 - Create-account flow blocks duplicate student accounts by email address or Student ID Number before Auth user creation
-- Admin Student Records uses guided MVP controls for common status/classification fields
+- Admin Student Records uses guided MVP controls for common status/classification fields; it surfaces exact, partial, conflicting, and missing account links without repairing them automatically
 - Matched student accounts become `ACTIVE`
 - Student dashboard with student information, enrollment status, and quick actions
 - Student Account page displays core account data and matching Registrar-managed official profile details when available
@@ -82,7 +82,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Printable registration form displays student details, classification markers, attached subjects, total units, fee/payment placeholders, signature labels, and data privacy authorization text
 - Admin view/print access for individual enrollment registration forms
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
-- Official student records list displays derived student-account match status for Registrar review
+- Official student records list displays page-scoped account-match status for Registrar review; its source enrollment status never creates or changes an online enrollment request
 - Faster student tab navigation through a student portal context and lighter placeholder routes
 - Sidebar links prefetch on hover/focus, with student/admin loading shells for slower server-rendered routes
 
@@ -306,6 +306,7 @@ Security:
 - Account-claim rate limiting is future hardening and is not implemented in this research MVP.
 - The signed account-claim proof is an MVP safeguard, not production-grade institutional identity proofing.
 - Guided admin field options are provisional MVP values until PKM supplies official value lists.
+- Student ID remains format-flexible until PKM confirms the official validation rule; manual official-record bulk import remains deferred.
 - Official regular/irregular/continuing classification rules are not implemented.
 - Official rejection categories are not invented; rejection remarks are free text only.
 - Browser-printable draft registration forms follow the supplied sample layout, but final official template approval and locked PDF generation are not implemented.
