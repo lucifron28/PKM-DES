@@ -7,6 +7,12 @@ Use this as the short script for a PKM-DES MVP walkthrough. The demo should show
 - Local: `http://localhost:3000`
 - Vercel: `https://pkm-des.vercel.app`
 
+## Navigation Notes
+
+- On phones and tablets, open the compact portal navigation from the labeled menu control. The navigation starts closed so page content remains immediately visible.
+- The active portal section is shown in the page header and navigation. Grades, Schedule, Balances, and Encode Grades/Schedule are hidden in the normal demonstration unless `NEXT_PUBLIC_ENABLE_STUB_PAGES=true` is configured.
+- Browser-print outputs remain MVP drafts; this presentation polish does not change print behavior or official-output limitations.
+
 ## Demo Accounts
 
 Development credentials depend on the current Supabase Auth or SQLite seed state. Preview credentials must be distributed privately and must not be stored in project documentation.
