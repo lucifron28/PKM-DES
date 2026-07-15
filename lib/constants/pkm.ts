@@ -96,7 +96,14 @@ export const OFFICIAL_RECORD_ERROR_MESSAGES: Record<string, string> = {
   missing: "Please complete all required official record fields.",
   email: "Please enter a valid active email address.",
   invalid: "Please choose valid dropdown values.",
+  birthdate: "Please enter a valid birthdate.",
+  programs_load: "Programs could not be loaded. Please try again.",
+  records_load: "Official student records could not be loaded. Please try again.",
   program: "Selected program was not found.",
   not_found: "Official student record was not found.",
-  save: "Official student record could not be saved. Please check for duplicate email or Student ID Number."
+  record_load: "Official student record could not be loaded. Please try again.",
+  duplicate_email: "An official student record already uses this email address.",
+  duplicate_student_id: "An official student record already uses this Student ID Number.",
+  duplicate_identity: "An official student record with this identity already exists.",
+  save: "Official student record could not be saved. Please try again."
 };

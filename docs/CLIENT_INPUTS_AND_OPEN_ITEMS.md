@@ -54,6 +54,8 @@ Required student profile fields beyond the current MVP:
 - Admission Status
 - Enrollment Status
 
+Official student-record enrollment status is Registrar source metadata in the MVP. It is separate from a student's submitted enrollment request and must not be treated as an approval, rejection, or account update.
+
 Student ID examples:
 
 - `23-00340`
@@ -88,6 +90,7 @@ These items remain needed before implementation can be considered official:
 - Official admitted-applicant/student import file format
 - Final formal program title for the AIS program
 - Exact Student ID validation rule
+- Official student-record bulk import format and validation rules
 - Complete student record/import sample, even if anonymized
 - Email sender/service approval and email templates
 - Official requirements/document checklist used for enrollment approval

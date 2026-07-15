@@ -29,6 +29,21 @@ function optionalGuidedValue(value: FormDataEntryValue | null, options: string[]
   return text && options.includes(text) ? text : null;
 }
 
+function isOptionalGuidedValueValid(value: FormDataEntryValue | null, options: string[]) {
+  const text = optionalValue(value);
+  return !text || options.includes(text);
+}
+
+function isValidIsoDate(value: FormDataEntryValue | null) {
+  const text = optionalValue(value);
+  if (!text) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+
+  const [year, month, day] = text.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 function redirectWithError(code: string, path = "/admin/students"): never {
   redirect(`${path}?error=${code}`);
 }
@@ -55,7 +70,10 @@ function readOfficialRecordInput(formData: FormData) {
   };
 }
 
-function validateOfficialRecordInput(input: ReturnType<typeof readOfficialRecordInput>): string | null {
+function validateOfficialRecordInput(
+  formData: FormData,
+  input: ReturnType<typeof readOfficialRecordInput>
+): string | null {
   const { firstName, lastName, email, programId, yearLevel, studentType, enrollmentStatus } = input;
 
   if (!firstName || !lastName || !email || !programId || !yearLevel || !studentType || !enrollmentStatus) {
@@ -74,7 +92,49 @@ function validateOfficialRecordInput(input: ReturnType<typeof readOfficialRecord
     return "invalid";
   }
 
+  if (
+    !isOptionalGuidedValueValid(formData.get("gender_sex"), GENDER_SEX_OPTIONS) ||
+    !isOptionalGuidedValueValid(formData.get("civil_status"), CIVIL_STATUS_OPTIONS) ||
+    !isOptionalGuidedValueValid(formData.get("admission_status"), ADMISSION_STATUS_OPTIONS)
+  ) {
+    return "invalid";
+  }
+
+  if (!isValidIsoDate(formData.get("birthdate"))) {
+    return "birthdate";
+  }
+
   return null;
+}
+
+async function findDuplicateOfficialRecord(
+  supabase: Awaited<ReturnType<typeof requireRole>>["supabase"],
+  input: ReturnType<typeof readOfficialRecordInput>,
+  recordId?: string
+) {
+  let emailQuery = supabase.from("official_student_records").select("id").eq("email", input.email);
+  let studentIdQuery = input.studentIdNumber
+    ? supabase.from("official_student_records").select("id").eq("student_id_number", input.studentIdNumber)
+    : null;
+
+  if (recordId) {
+    emailQuery = emailQuery.neq("id", recordId);
+    studentIdQuery = studentIdQuery?.neq("id", recordId) ?? null;
+  }
+
+  const [emailResult, studentIdResult] = await Promise.all([
+    emailQuery.maybeSingle(),
+    studentIdQuery ? studentIdQuery.maybeSingle() : Promise.resolve({ data: null, error: null })
+  ]);
+
+  if (emailResult.error || studentIdResult.error) return "save";
+  if (emailResult.data) return "duplicate_email";
+  if (studentIdResult.data) return "duplicate_student_id";
+  return null;
+}
+
+function uniqueConstraintError(error: { code?: string } | null) {
+  return error?.code === "23505";
 }
 
 function buildOfficialRecordPayload(
@@ -110,19 +170,29 @@ export async function addOfficialStudentRecordAction(formData: FormData) {
   const { supabase, profile } = await requireRole("admin");
   const input = readOfficialRecordInput(formData);
 
-  const validationError = validateOfficialRecordInput(input);
+  const validationError = validateOfficialRecordInput(formData, input);
   if (validationError) {
     redirectWithError(validationError);
   }
 
-  const { data: program } = await supabase
+  const { data: program, error: programError } = await supabase
     .from("programs")
     .select("id")
     .eq("id", input.programId)
     .maybeSingle();
 
+  if (programError) {
+    console.error("official_student_records:programs_load");
+    redirectWithError("programs_load");
+  }
+
   if (!program) {
     redirectWithError("program");
+  }
+
+  const duplicateError = await findDuplicateOfficialRecord(supabase, input);
+  if (duplicateError) {
+    redirectWithError(duplicateError);
   }
 
   const { error } = await supabase.from("official_student_records").insert({
@@ -131,7 +201,7 @@ export async function addOfficialStudentRecordAction(formData: FormData) {
   });
 
   if (error) {
-    redirectWithError("save");
+    redirectWithError(uniqueConstraintError(error) ? "duplicate_identity" : "save");
   }
 
   revalidatePath("/admin/students");
@@ -148,22 +218,37 @@ export async function updateOfficialStudentRecordAction(formData: FormData) {
     redirectWithError("missing");
   }
 
-  const validationError = validateOfficialRecordInput(input);
+  const validationError = validateOfficialRecordInput(formData, input);
   if (validationError) {
     redirectWithError(validationError, errorPath);
   }
 
-  const [{ data: program }, { data: existingRecord }] = await Promise.all([
+  const [{ data: program, error: programError }, { data: existingRecord, error: existingRecordError }] = await Promise.all([
     supabase.from("programs").select("id").eq("id", input.programId).maybeSingle(),
     supabase.from("official_student_records").select("id").eq("id", recordId).maybeSingle()
   ]);
+
+  if (existingRecordError) {
+    console.error("official_student_records:records_load");
+    redirectWithError("record_load", "/admin/students");
+  }
 
   if (!existingRecord) {
     redirectWithError("not_found", "/admin/students");
   }
 
+  if (programError) {
+    console.error("official_student_records:programs_load");
+    redirectWithError("programs_load", errorPath);
+  }
+
   if (!program) {
     redirectWithError("program", errorPath);
+  }
+
+  const duplicateError = await findDuplicateOfficialRecord(supabase, input, recordId);
+  if (duplicateError) {
+    redirectWithError(duplicateError, errorPath);
   }
 
   const { error } = await supabase
@@ -172,7 +257,7 @@ export async function updateOfficialStudentRecordAction(formData: FormData) {
     .eq("id", recordId);
 
   if (error) {
-    redirectWithError("save", errorPath);
+    redirectWithError(uniqueConstraintError(error) ? "duplicate_identity" : "save", errorPath);
   }
 
   revalidatePath("/admin/students");

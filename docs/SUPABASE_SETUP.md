@@ -504,16 +504,18 @@ Current MVP behavior:
 3. App validates required fields, email format, dropdown values, and selected program.
 4. App inserts the record through the authenticated Supabase server client under admin-only RLS.
 5. Admin can search and filter official records by name/email/Student ID, program, year level, student type, and enrollment status.
-6. Admin can see derived account-match status for displayed official records.
+6. Admin can see page-scoped account-match status for displayed official records.
 7. Admin can open an existing official record, edit the same validated fields, and update it through admin-only RLS.
 8. Common fields use guided MVP controls: Gender/Sex, Civil Status, Admission Status, Student Type, Year Level, and Enrollment Status.
-9. Saving or updating an official record does not create an enrollment record. The student must claim the account, log in, and submit Online Enrollment before the record appears in Pending Enrollments, Masterlist, or dashboard counts.
+9. Saving or updating an official record does not create or update an Auth account, student account, or enrollment record. The student must claim the account, log in, and submit Online Enrollment before the record appears in Pending Enrollments, Masterlist, or dashboard counts.
+10. The Student ID remains format-flexible until PKM confirms an official validation rule. Bulk import is not implemented.
 
 Account-match display:
 
-- Email match checks student profiles with the same email address.
-- Student ID match checks student records with the same Student ID Number when the official record has one.
-- The display is informational only and does not activate accounts, change records, or create new verification rules.
+- Email match checks student profiles with the same normalized email address.
+- Student ID match checks student records with the same normalized Student ID Number when the official record has one.
+- The list labels the result as an exact match, email-only match, Student-ID-only match, identity conflict, no account, or unavailable lookup. Partial and conflicting identifiers are surfaced for Registrar review and are never repaired automatically.
+- The official-record enrollment-status field is source metadata only. The display does not activate accounts, change records, create enrollment requests, or create new verification rules.
 
 Student account profile display:
 

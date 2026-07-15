@@ -25,12 +25,22 @@ export function OfficialStudentRecordForm({
   return (
     <form action={action} className="grid gap-4 lg:grid-cols-3">
       {record ? <input type="hidden" name="record_id" value={record.id} /> : null}
-      <TextInput label="Student ID Number" name="student_id_number" placeholder="23-00340" defaultValue={record?.student_id_number ?? ""} />
+      <div>
+        <TextInput
+          label="Student ID Number - required for account claim"
+          name="student_id_number"
+          placeholder="23-00340"
+          defaultValue={record?.student_id_number ?? ""}
+        />
+        <p className="mt-1 text-xs text-slateui-muted">
+          Records without a Student ID cannot use the current exact-match account-claim flow.
+        </p>
+      </div>
       <TextInput label="First Name" name="first_name" required defaultValue={record?.first_name ?? ""} />
       <TextInput label="Last Name" name="last_name" required defaultValue={record?.last_name ?? ""} />
       <TextInput label="Active Email Address" name="email" type="email" required defaultValue={record?.email ?? ""} />
-      <SelectInput label="Program" name="program_id" required defaultValue={record?.program_id ?? programs[0]?.id ?? ""}>
-        {programs.length ? null : <option value="">No programs configured</option>}
+      <SelectInput label="Program" name="program_id" required defaultValue={record?.program_id ?? ""}>
+        <option value="" disabled>{programs.length ? "Select program" : "No programs configured"}</option>
         {programs.map((program) => (
           <option key={program.id} value={program.id}>
             {program.name}
@@ -72,11 +82,21 @@ export function OfficialStudentRecordForm({
           <option key={option} value={option}>{option}</option>
         ))}
       </SelectInput>
-      <SelectInput label="Enrollment Status" name="enrollment_status" required defaultValue={record?.enrollment_status ?? "NOT ENROLLED"}>
+      <div>
+        <SelectInput
+          label="Official Record Enrollment Status"
+          name="enrollment_status"
+          required
+          defaultValue={record?.enrollment_status ?? "NOT ENROLLED"}
+        >
         {ENROLLMENT_STATUSES.map((status) => (
           <option key={status} value={status}>{status}</option>
         ))}
-      </SelectInput>
+        </SelectInput>
+        <p className="mt-1 text-xs text-slateui-muted">
+          This Registrar source value does not create, approve, reject, or update an Online Enrollment request.
+        </p>
+      </div>
       <TextArea label="Address" name="address" className="lg:col-span-2" defaultValue={record?.address ?? ""} />
       <TextArea
         label="Previous School Information"

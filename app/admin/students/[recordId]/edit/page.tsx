@@ -21,7 +21,7 @@ export default async function EditOfficialStudentRecordPage({
   const { supabase } = await requireRole("admin");
   const { recordId } = await params;
   const query = (await searchParams) ?? {};
-  const [{ data: programsData }, { data: recordData }] = await Promise.all([
+  const [{ data: programsData, error: programsError }, { data: recordData, error: recordError }] = await Promise.all([
     supabase.from("programs").select("*").order("name"),
     supabase
       .from("official_student_records")
@@ -32,6 +32,28 @@ export default async function EditOfficialStudentRecordPage({
 
   const programs = (programsData as Program[] | null) ?? [];
   const record = (recordData as OfficialStudentRecord | null) ?? null;
+
+  if (programsError) {
+    console.error("official_student_records:programs_load");
+    return (
+      <EmptyState
+        title="Programs could not be loaded."
+        description="This official student record cannot be edited until program information is available. Please try again."
+        action={<ButtonLink href="/admin/students" variant="outline">Back to Student Records</ButtonLink>}
+      />
+    );
+  }
+
+  if (recordError) {
+    console.error("official_student_records:records_load");
+    return (
+      <EmptyState
+        title="Official student record could not be loaded."
+        description="Please try again. No record details are shown until the current information can be loaded."
+        action={<ButtonLink href="/admin/students" variant="outline">Back to Student Records</ButtonLink>}
+      />
+    );
+  }
 
   if (!record) {
     return (
@@ -60,6 +82,9 @@ export default async function EditOfficialStudentRecordPage({
           {OFFICIAL_RECORD_ERROR_MESSAGES[query.error] ?? "Official student record could not be updated."}
         </div>
       ) : null}
+      <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Email and Student ID are account-matching identifiers. Changing them does not update an existing Supabase Auth account or student account automatically. Check the records list afterward for partial matches or identity conflicts.
+      </div>
       <OfficialStudentRecordForm
         action={updateOfficialStudentRecordAction}
         programs={programs}
