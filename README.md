@@ -72,10 +72,9 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Admin dashboard enrollment counts are loaded with a single lightweight status query
 - Admin Enrollment Reports page with program, academic year, year level, semester, review-status filters, reset control, and printed criteria summary
 - Browser-printable enrollment report table for Registrar review
-- Admin approve/reject enrollment actions
-- Approval updates enrollment status to `APPROVED` and student status to `ENROLLED`
-- Rejection updates enrollment status to `REJECTED`, stores optional remarks, and recalculates the student's derived enrollment status
-- Audit log insert for approve/reject actions
+- Atomic admin approve/reject enrollment actions for pending requests only
+- Approval or rejection, the summarized student status, and one audit record commit together; concurrent stale reviews cannot overwrite the first decision
+- Rejection keeps optional free-text remarks; no requirements checklist or document-verification workflow is invented
 - Enrollment masterlist with year-level and semester filters
 - Admin Account page with internal account details and password change
 - MVP draft printable registration form aligned with the supplied registration form sample layout

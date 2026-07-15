@@ -101,6 +101,7 @@ Apply these files in filename order:
 6. `supabase/migrations/20260618000000_enrollment_term_uniqueness.sql`
 7. `supabase/migrations/20260714000000_student_account_claim_integrity.sql`
 8. `supabase/migrations/20260715000000_atomic_student_enrollment_submission.sql`
+9. `supabase/migrations/20260715011914_atomic_admin_enrollment_review.sql`
 
 Remote migrations recorded by Supabase MCP:
 
@@ -478,20 +479,16 @@ Enrollment reports:
 5. App renders status summary counts, a report criteria summary, and a browser-printable enrollment report table.
 6. Official PDF/export generation remains pending until PKM supplies the required report format.
 
-Admin approval:
+Admin review:
 
-1. Admin approves the pending enrollment.
-2. App updates enrollment status to `APPROVED`.
-3. App updates student `enrollment_status` to `ENROLLED`.
-4. App inserts an audit log row.
+1. Admin can review only a submitted `PENDING` request from `/admin/enrollments`; the research MVP does not include an official requirements or document checklist.
+2. The server action calls `public.review_pending_enrollment(...)` with the request ID, decision, and optional free-text rejection remarks. The database derives the active reviewer from `auth.uid()`.
+3. The `SECURITY DEFINER` function verifies the active admin profile, locks the request and related student row, then updates the review decision, recalculates the summarized student status, and writes one audit log row in the same transaction.
+4. An approval stores `APPROVED` with null remarks. A rejection stores `REJECTED` with trimmed optional free-text remarks.
+5. A concurrent or stale second review returns an already-reviewed outcome and cannot overwrite the first decision or add another audit row.
+6. Unexpected RPC failures roll back the full transaction. Rejected same-term requests remain non-resubmittable under the existing enrollment term-unique rule.
 
-Admin rejection:
-
-1. Admin rejects the pending enrollment.
-2. App updates enrollment status to `REJECTED`.
-3. App stores optional remarks.
-4. App recalculates the student's derived `enrollment_status` from all of that student's enrollment records.
-5. App inserts an audit log row.
+Run review RPC validation only against a disposable local or preview database. Do not run concurrency or forced-failure tests against institutional data.
 
 ## Official Student Records
 

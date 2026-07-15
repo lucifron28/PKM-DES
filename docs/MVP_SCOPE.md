@@ -42,7 +42,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Admin dashboard enrollment-status overview.
 - Manual creation, search, filtering, and editing of official student records.
-- Pending enrollment review, approval, rejection, and audit-log writes.
+- Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, and audit row commit atomically; the queue does not implement a document or requirements checklist.
 - Enrollment masterlist and browser-printable report views.
 
 ### Reporting and Printing
@@ -64,6 +64,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - Subject List workbook rows are historical AY 2025-2026, 2nd Semester display-only references, not the active AY 2026-2027 enrollment load. BSAIS curriculum rows are a separate reference; actual subject attachments belong to submitted enrollment records and cannot be selected by students on the Subject List page.
 - The browser cannot choose a student's program, year level, student type, term, status, or subjects. The current term is fixed to AY 2026-2027, 1st Semester until an approved academic-calendar module exists.
 - Transferee and Irregular Student records require Registrar-managed subject assignment. The MVP does not invent transfer-credit, irregular-load, requirement-checklist, or subject-adjustment rules.
+- Registrar review is limited to submitted pending requests. Stale concurrent review attempts cannot overwrite the first decision, and rejected same-term requests remain non-resubmittable under the existing term-unique enrollment rule.
 - Enrollment creation and subject attachment use one database transaction. The student-term unique index remains the concurrent duplicate safeguard.
 - Account claiming for every student type depends on manually encoded official student records; no approved import workflow exists.
 - The FRD describes generated credentials delivered by email, while the MVP uses a self-selected password so the account flow can be tested.
