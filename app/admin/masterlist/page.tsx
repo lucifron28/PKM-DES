@@ -29,14 +29,14 @@ export default async function EnrollmentMasterlistPage({
     console.error(`enrollment_reporting:${result.stage === "programs_load" ? "programs_load" : "records_load"}`);
     return (
       <EmptyState
-        title="Enrollment information could not be loaded."
-        description="Please try again. No masterlist records are shown until the information is available."
+        title="Enrollment Masterlist could not be loaded"
+        description="Please try again. No enrollment records are shown until the current data is available."
       />
     );
   }
 
-  if (!hasCanonicalEnrollmentFilters(params, result.filters)) {
-    const query = serializeEnrollmentFilters(result.filters);
+  if (!hasCanonicalEnrollmentFilters(params, result.filters, result.programOptions)) {
+    const query = serializeEnrollmentFilters(result.filters, result.programOptions);
     redirect(`/admin/masterlist${query ? `?${query}` : ""}`);
   }
 

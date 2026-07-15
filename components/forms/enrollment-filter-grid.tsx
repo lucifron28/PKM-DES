@@ -2,7 +2,7 @@ import { SelectInput, TextInput } from "@/components/ui/field";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { SEMESTERS, YEAR_LEVELS, ACADEMIC_YEAR_OPTIONS } from "@/lib/constants/pkm";
 import { ENROLLMENT_REVIEW_STATUSES } from "@/lib/constants/enrollment";
-import type { ProgramOption, FetchEnrollmentsParams } from "@/lib/enrollment/query";
+import { programFilterValue, type ProgramOption, type FetchEnrollmentsParams } from "@/lib/enrollment/query";
 
 type EnrollmentFilterGridProps = {
   params: FetchEnrollmentsParams;
@@ -34,7 +34,7 @@ export function EnrollmentFilterGrid({
       <SelectInput label="Program" name="program" defaultValue={params.program ?? ""}>
         <option value="">All programs</option>
         {programOptions.map((program) => (
-          <option key={program.id} value={program.code ?? program.id}>
+          <option key={program.id} value={programFilterValue(program)}>
             {program.name}
           </option>
         ))}

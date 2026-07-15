@@ -30,14 +30,14 @@ export default async function EnrollmentReportsPage({
     console.error(`enrollment_reporting:${result.stage === "programs_load" ? "programs_load" : "records_load"}`);
     return (
       <EmptyState
-        title="Enrollment information could not be loaded."
-        description="Please try again. No report totals or records are shown until the information is available."
+        title="Enrollment report could not be loaded"
+        description="Please try again. No report totals or records are shown until the current enrollment data is available."
       />
     );
   }
 
-  if (!hasCanonicalEnrollmentFilters(params, result.filters)) {
-    const query = serializeEnrollmentFilters(result.filters);
+  if (!hasCanonicalEnrollmentFilters(params, result.filters, result.programOptions)) {
+    const query = serializeEnrollmentFilters(result.filters, result.programOptions);
     redirect(`/admin/reports${query ? `?${query}` : ""}`);
   }
 

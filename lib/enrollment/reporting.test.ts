@@ -4,8 +4,10 @@ import {
   countEnrollmentStatuses,
   enrollmentMatchesSearch,
   getEnrollmentReportCriteria,
+  nextEnrollmentReportOffset,
   normalizeEnrollmentFilters,
   normalizeEnrollmentSearch,
+  programFilterValue,
   serializeEnrollmentFilters
 } from "@/lib/enrollment/query";
 import type { EnrollmentReportingRow, ProgramOption } from "@/lib/enrollment/query";
@@ -72,7 +74,34 @@ test("normalizes only supported reporting filters", () => {
     status: "PENDING"
   });
   assert.equal(normalizeEnrollmentSearch(" "), undefined);
+  assert.equal(normalizeEnrollmentSearch("x".repeat(101)), "x".repeat(100));
   assert.deepEqual(normalizeEnrollmentFilters({ program: "unknown", status: "UNKNOWN" }, programs), {});
+});
+
+test("uses the program ID when a stored program code is blank", () => {
+  const blankCodeProgram: ProgramOption = { id: "program-blank", name: "Program Without Code", code: "   " };
+  const filters = normalizeEnrollmentFilters({ program: "program-blank" }, [blankCodeProgram]);
+
+  assert.equal(programFilterValue(blankCodeProgram), "program-blank");
+  assert.deepEqual(filters, { program: "program-blank" });
+  assert.equal(serializeEnrollmentFilters(filters, [blankCodeProgram]), "program=program-blank");
+});
+
+test("advances reporting pagination by actual row counts until a zero-row page", () => {
+  const responses = [100, 100, 25, 0];
+  const offsets: number[] = [];
+  let offset: number | null = 0;
+
+  for (const responseSize of responses) {
+    if (offset === null) {
+      assert.fail("A zero-row page ended pagination before all test responses were consumed.");
+    }
+    offsets.push(offset);
+    offset = nextEnrollmentReportOffset(offset, responseSize);
+  }
+
+  assert.deepEqual(offsets, [0, 100, 200, 225]);
+  assert.equal(offset, null);
 });
 
 test("searches only student identity fields with normalized partial matching", () => {
@@ -98,5 +127,5 @@ test("formats print criteria without raw program identifiers", () => {
     ["Semester", "All"],
     ["Review Status", "All"]
   ]);
-  assert.equal(serializeEnrollmentFilters(filters), "search=Maria&program=BSAIS");
+  assert.equal(serializeEnrollmentFilters(filters, programs), "search=Maria&program=BSAIS");
 });

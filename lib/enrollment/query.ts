@@ -45,6 +45,15 @@ export type EnrollmentReportingResult =
 
 type SearchableEnrollmentRow = Pick<EnrollmentReportingRow, "students">;
 
+export function programFilterValue(program: ProgramOption) {
+  const code = program.code?.trim();
+  return code || program.id;
+}
+
+export function nextEnrollmentReportOffset(offset: number, returnedRowCount: number) {
+  return returnedRowCount === 0 ? null : offset + returnedRowCount;
+}
+
 function firstValue(value: string | string[] | undefined) {
   return typeof value === "string" ? value : undefined;
 }
@@ -64,7 +73,7 @@ export function normalizeEnrollmentFilters(
 ): FetchEnrollmentsParams {
   const programValue = firstValue(input.program);
   const selectedProgram = programValue
-    ? programOptions.find((program) => program.id === programValue || program.code === programValue)
+    ? programOptions.find((program) => program.id === programValue || programFilterValue(program) === programValue)
     : undefined;
   const academicYear = firstValue(input.academic_year);
   const yearLevel = firstValue(input.year_level);
@@ -73,7 +82,7 @@ export function normalizeEnrollmentFilters(
 
   return {
     ...(normalizeEnrollmentSearch(firstValue(input.search)) ? { search: normalizeEnrollmentSearch(firstValue(input.search)) } : {}),
-    ...(selectedProgram ? { program: selectedProgram.code ?? selectedProgram.id } : {}),
+    ...(selectedProgram ? { program: programFilterValue(selectedProgram) } : {}),
     ...(isAllowedValue(academicYear, ACADEMIC_YEAR_OPTIONS) ? { academic_year: academicYear } : {}),
     ...(isAllowedValue(yearLevel, YEAR_LEVELS) ? { year_level: yearLevel } : {}),
     ...(isAllowedValue(semester, SEMESTERS) ? { semester } : {}),
@@ -83,15 +92,16 @@ export function normalizeEnrollmentFilters(
 
 export function selectedProgramForFilters(programOptions: ProgramOption[], filters: FetchEnrollmentsParams) {
   return filters.program
-    ? programOptions.find((program) => program.id === filters.program || program.code === filters.program) ?? null
+    ? programOptions.find((program) => program.id === filters.program || programFilterValue(program) === filters.program) ?? null
     : null;
 }
 
-export function serializeEnrollmentFilters(filters: FetchEnrollmentsParams) {
+export function serializeEnrollmentFilters(filters: FetchEnrollmentsParams, programOptions: ProgramOption[] = []) {
   const params = new URLSearchParams();
 
   FILTER_KEYS.forEach((key) => {
-    const value = filters[key];
+    const selectedProgram = key === "program" ? selectedProgramForFilters(programOptions, filters) : null;
+    const value = selectedProgram ? programFilterValue(selectedProgram) : filters[key];
     if (value) {
       params.set(key, value);
     }
@@ -102,7 +112,8 @@ export function serializeEnrollmentFilters(filters: FetchEnrollmentsParams) {
 
 export function hasCanonicalEnrollmentFilters(
   input: Record<string, string | string[] | undefined>,
-  filters: FetchEnrollmentsParams
+  filters: FetchEnrollmentsParams,
+  programOptions: ProgramOption[] = []
 ) {
   const received = new URLSearchParams();
   Object.entries(input).forEach(([key, value]) => {
@@ -113,7 +124,7 @@ export function hasCanonicalEnrollmentFilters(
     }
   });
 
-  return received.toString() === serializeEnrollmentFilters(filters);
+  return received.toString() === serializeEnrollmentFilters(filters, programOptions);
 }
 
 function normalizeSearchValue(value: string | null | undefined) {
@@ -151,8 +162,9 @@ export function countEnrollmentStatuses(rows: Array<Pick<EnrollmentReportingRow,
 }
 
 export function getEnrollmentReportCriteria(filters: FetchEnrollmentsParams, selectedProgram: ProgramOption | null) {
+  const programValue = selectedProgram ? programFilterValue(selectedProgram) : null;
   const programLabel = selectedProgram
-    ? `${selectedProgram.name}${selectedProgram.code ? ` (${selectedProgram.code})` : ""}`
+    ? `${selectedProgram.name}${programValue !== selectedProgram.id ? ` (${programValue})` : ""}`
     : "All";
 
   return [
@@ -215,7 +227,7 @@ export async function fetchEnrollmentFilterData(
   const selectedProgram = selectedProgramForFilters(programOptions, filters);
   const completeRows: EnrollmentReportingRow[] = [];
 
-  for (let offset = 0; ; offset += REPORT_PAGE_SIZE) {
+  for (let offset: number | null = 0; offset !== null; ) {
     const baseQuery = supabase
       .from("enrollments")
       .select("*, students(*, profiles(*)), programs(*)")
@@ -230,10 +242,7 @@ export async function fetchEnrollmentFilterData(
 
     const pageRows = (data ?? []) as EnrollmentReportingRow[];
     completeRows.push(...pageRows);
-
-    if (pageRows.length < REPORT_PAGE_SIZE) {
-      break;
-    }
+    offset = nextEnrollmentReportOffset(offset, pageRows.length);
   }
 
   return {
