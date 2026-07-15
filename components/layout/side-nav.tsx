@@ -31,12 +31,20 @@ const icons: Record<NavigationIcon, typeof BookOpen> = {
   subjects: BookOpen
 };
 
-export function SideNav({ items }: { items: NavigationItem[] }) {
+export function SideNav({
+  items,
+  label,
+  onNavigate
+}: {
+  items: NavigationItem[];
+  label: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
   return (
-    <nav className="space-y-1">
+    <nav className="space-y-1" aria-label={label}>
       {items.map((item) => {
         const Icon = icons[item.icon];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -46,13 +54,15 @@ export function SideNav({ items }: { items: NavigationItem[] }) {
             key={item.href}
             href={item.href}
             prefetch
+            aria-current={active ? "page" : undefined}
+            onClick={onNavigate}
             onFocus={() => router.prefetch(item.href)}
             onMouseEnter={() => router.prefetch(item.href)}
             className={cn(
-              "flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition",
+              "flex min-h-11 items-center gap-3 border-l-4 px-3 py-2 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-offset-2",
               active
-                ? "bg-primary-800 text-white"
-                : "text-slateui-secondary hover:bg-primary-50 hover:text-primary-800"
+                ? "border-secondary-600 bg-primary-800 text-white"
+                : "border-transparent text-slateui-secondary hover:bg-primary-50 hover:text-primary-800"
             )}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />

@@ -18,10 +18,10 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-slateui-background">
       <PublicHeader />
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <section className="mb-8 rounded-lg bg-primary-800 px-6 py-10 text-white">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <section className="mb-8 rounded-lg bg-primary-800 px-5 py-8 text-white sm:px-6 sm:py-10">
           <Badge tone="brand">{PKM_IDENTITY.tagline}</Badge>
-          <h1 className="mt-5 text-4xl font-bold tracking-normal">{PKM_IDENTITY.name}</h1>
+          <h1 className="mt-5 text-3xl font-bold tracking-normal sm:text-4xl">{PKM_IDENTITY.name}</h1>
           <div className="mt-6 grid gap-3 text-primary-50 md:grid-cols-2">
             <p className="flex items-start gap-2">
               <MapPin className="mt-1 h-4 w-4 shrink-0 text-secondary-500" aria-hidden="true" />

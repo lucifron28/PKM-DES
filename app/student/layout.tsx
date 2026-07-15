@@ -10,9 +10,11 @@ export default async function StudentLayout({ children }: { children: ReactNode 
 
   return (
     <AppShell
-      title="Student Portal"
+      portalLabel="Student Portal"
       subtitle="Digital Enrollment System"
       navigation={studentNavigation}
+      userName={[profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Student User"}
+      userRole="Student"
     >
       <StudentPortalProvider value={{ profile, student }}>{children}</StudentPortalProvider>
     </AppShell>

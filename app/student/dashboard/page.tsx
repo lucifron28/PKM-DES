@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { useStudentPortal } from "@/components/student/student-portal-provider";
 import { formatName } from "@/lib/utils/format";
+import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 export default function StudentDashboardPage() {
   const { profile, student } = useStudentPortal();
@@ -19,7 +20,7 @@ export default function StudentDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slateui-text">Welcome, {formatName(profile.first_name, profile.last_name)}!</h2>
+        <h2 className="text-xl font-bold text-slateui-text sm:text-2xl">Welcome, {formatName(profile.first_name, profile.last_name)}!</h2>
         <p className="mt-1 text-sm text-slateui-muted">Your enrollment pages remain accessible regardless of current enrollment status.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
@@ -48,33 +49,32 @@ export default function StudentDashboardPage() {
         <Card>
           <CardHeader title="Student Information" />
           <dl className="grid gap-3 text-sm">
-            <div className="flex justify-between gap-4 border-b border-slateui-border pb-3">
+            <div className="grid gap-1 border-b border-slateui-border pb-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:gap-4">
               <dt className="font-medium text-slateui-muted">Student ID</dt>
-              <dd className="text-right font-semibold text-slateui-text">{student.student_id_number ?? "Not provided"}</dd>
+              <dd className="break-words font-semibold text-slateui-text sm:text-right">{student.student_id_number ?? "Not provided"}</dd>
             </div>
-            <div className="flex justify-between gap-4 border-b border-slateui-border pb-3">
+            <div className="grid gap-1 border-b border-slateui-border pb-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:gap-4">
               <dt className="font-medium text-slateui-muted">Program</dt>
-              <dd className="text-right font-semibold text-slateui-text">{student.programs?.name ?? "Not available"}</dd>
+              <dd className="break-words font-semibold text-slateui-text sm:text-right">{student.programs?.name ?? "Not available"}</dd>
             </div>
-            <div className="flex justify-between gap-4 border-b border-slateui-border pb-3">
+            <div className="grid gap-1 border-b border-slateui-border pb-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:gap-4">
               <dt className="font-medium text-slateui-muted">Year Level</dt>
-              <dd className="text-right font-semibold text-slateui-text">{student.year_level}</dd>
+              <dd className="font-semibold text-slateui-text sm:text-right">{student.year_level}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="grid gap-1 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:gap-4">
               <dt className="font-medium text-slateui-muted">Email Address</dt>
-              <dd className="text-right font-semibold text-slateui-text">{profile.email}</dd>
+              <dd className="break-all font-semibold text-slateui-text sm:text-right">{profile.email}</dd>
             </div>
           </dl>
         </Card>
         <Card>
           <CardHeader title="Quick Actions" />
           <div className="grid gap-3 sm:grid-cols-2">
-            <ButtonLink href="/student/subjects" variant="outline">Subject List</ButtonLink>
-            <ButtonLink href="/student/enrollment">Online Enrollment</ButtonLink>
-            <ButtonLink href="/student/grades" variant="outline">Grades</ButtonLink>
-            <ButtonLink href="/student/schedule" variant="outline">Class Schedule</ButtonLink>
-            <ButtonLink href="/student/balances" variant="outline">Balances</ButtonLink>
-            <ButtonLink href="/student/account" variant="secondary">Account</ButtonLink>
+            <ButtonLink href="/student/enrollment" className="w-full">Online Enrollment</ButtonLink>
+            <ButtonLink href="/student/enrollment-status" variant="outline" className="w-full">Enrollment Status</ButtonLink>
+            <ButtonLink href="/student/subjects" variant="outline" className="w-full">Subject List</ButtonLink>
+            <ButtonLink href="/student/account" variant="secondary" className="w-full">Account</ButtonLink>
+            {ENABLE_STUB_PAGES ? <><ButtonLink href="/student/grades" variant="outline" className="w-full">Grades</ButtonLink><ButtonLink href="/student/schedule" variant="outline" className="w-full">Class Schedule</ButtonLink><ButtonLink href="/student/balances" variant="outline" className="w-full">Balances</ButtonLink></> : null}
           </div>
         </Card>
       </div>
