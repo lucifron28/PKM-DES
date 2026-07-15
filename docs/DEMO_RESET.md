@@ -12,7 +12,7 @@ Set these values in the terminal environment used to run the command. Do not com
 - `DEMO_RESET_CONFIRM=RESET_PKM_DES_DEMO`
 - `DEMO_REGISTRAR_EMAIL` is optional and must be supplied privately when reviewed records should reference an existing admin profile.
 
-The reset script uses the service-role key only in this explicitly invoked development command. It never prints the key, password, token, or session data.
+The reset script uses the service-role key only in this explicitly invoked development command. It never prints the key, password, token, or session data. For the complete reset-to-presentation sequence, use the canonical order in [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md).
 
 ## Dry Run
 

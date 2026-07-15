@@ -17,7 +17,7 @@ Use this as the short script for a PKM-DES MVP walkthrough. The demo should show
 
 Development credentials depend on the current Supabase Auth or SQLite seed state. Preview credentials must be distributed privately and must not be stored in project documentation.
 
-For a Supabase client-preview walkthrough, complete the private preparation and verification sequence in [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md) after the guarded demo reset. Do not use the reset bootstrap password as a presenter credential.
+For a Supabase client-preview walkthrough, follow the canonical preparation order in [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md). Do not use the reset bootstrap password as a presenter credential.
 
 | Role | Email | Password |
 | --- | --- | --- |

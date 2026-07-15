@@ -18,33 +18,88 @@ It is for authorized presenters using a confirmed safe Supabase preview project.
 
 ## Required Local Environment
 
-Copy the placeholders from `.env.example` into an ignored local environment file. The preview tooling requires:
+Copy placeholders from `.env.example` into an ignored local environment file. All real values remain there only; they must never be committed, captured, or pasted into general chat.
+
+### Shared Supabase Configuration
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL=<preview-project-url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<preview-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<preview-service-role-key>
+```
+
+### Guarded Demo Reset
+
+```text
+DEMO_STUDENT_PASSWORD=<bootstrap-password>
+DEMO_RESET_CONFIRM=RESET_PKM_DES_DEMO
+DEMO_REGISTRAR_EMAIL=<optional-provided-privately>
+```
+
+`DEMO_STUDENT_PASSWORD` is a bootstrap/reset password only. Do not hand it to presenters as a final preview password. `DEMO_RESET_CONFIRM=RESET_PKM_DES_DEMO` is required by both the reset dry run and the applied reset. `DEMO_REGISTRAR_EMAIL` is optional and only links reviewed fictional records to an existing internal admin profile.
+
+### Preview Credential Preparation
+
+```text
 PREVIEW_EXPECTED_SUPABASE_HOST=<preview-project-ref>.supabase.co
 PREVIEW_REGISTRAR_EMAIL=<provided privately>
 PREVIEW_REGISTRAR_PASSWORD=<provided privately>
 ```
 
-For an intentional password update, also set:
+### Apply-Only Confirmation
 
 ```text
 PREVIEW_CREDENTIALS_CONFIRM=PREPARE_PKM_DES_PREVIEW_CREDENTIALS
 ```
 
-`PREVIEW_CREDENTIALS_CONFIRM` is required only with `--apply`.
+Set `PREVIEW_CREDENTIALS_CONFIRM` only for an intentional `--apply` operation. Remove or clear it afterward when practical.
+
+## Canonical Presentation Preparation Order
+
+Run this sequence in order on a dedicated preview or test Supabase project:
+
+1. Configure the ignored local environment with every value above.
+2. Inspect the guarded reset plan:
+
+   ```bash
+   npm run demo:reset -- --dry-run
+   ```
+
+3. Apply the guarded reset:
+
+   ```bash
+   npm run demo:reset
+   ```
+
+4. Verify the fictional demonstration dataset:
+
+   ```bash
+   npm run demo:verify
+   ```
+
+5. Run the non-mutating preview-credential dry run:
+
+   ```bash
+   npm run preview:credentials:prepare
+   ```
+
+6. Set the apply-only confirmation, then prepare the private credential set:
+
+   ```bash
+   npm run preview:credentials:prepare -- --apply
+   ```
+
+7. Verify prepared identities and credentials:
+
+   ```bash
+   npm run preview:credentials:verify
+   ```
+
+8. Hand off only the required entries through an approved private channel.
 
 ## Required Demo State
 
-Run the guarded demo reset and verification only on a dedicated preview/test project before preparing credentials:
-
-```bash
-npm run demo:reset
-npm run demo:verify
-```
+The canonical sequence above establishes the required fictional state before credentials are prepared. It must run only on a dedicated preview/test project.
 
 The prepare command stops before changing any student password unless it confirms all of the following:
 
@@ -87,11 +142,15 @@ npm run preview:credentials:verify
 
 Verification requires the Registrar email and password in the manifest to exactly match the local Registrar environment credentials (email is normalized; password characters are preserved). It also checks every student account, demo state, Student ID, and the claim-only email, Student ID, student type, live-claim password presence, and pre-claim state against the committed fictional demo records. It signs in the Registrar/Admin and each fictional student separately, checks role and active status, verifies the student identity pair, confirms the claim-only record has no Auth user, profile, student, or enrollment associated with its reserved Student ID, signs out every test session, and scans tracked files for prepared secret values. It does not update passwords, profiles, records, or enrollment data.
 
+## Reset Invalidation
+
+Running `npm run demo:reset` after preview credentials have been prepared makes the local credential manifest stale. The reset may restore the bootstrap student password. Delete or privately archive obsolete local manifests as appropriate, then rerun preview preparation and verification before presenting. Never assume an older manifest remains valid after a reset.
+
 ## Private Handoff and Cleanup
 
 1. Share only the needed manifest entries through an approved private channel.
-2. Do not paste credentials into slides, documents, tickets, PRs, chat, or screenshots.
+2. Do not place the plaintext temporary manifest or its contents in Git or GitHub; commits, branches, pull requests, reviews, or issues; ChatGPT or other general chat messages; screenshots or terminal captures; public slides or shared documents; Vercel environment variables, deployment logs, or preview pages; or public cloud storage.
 3. After the presentation, remove the local manifest and rotate/reset the fictional preview passwords as appropriate for the preview project.
 4. Run `git status --short` and confirm that `.preview/` is not tracked.
 
-The pre-existing Registrar/Admin account is verification-only. This workflow never creates it, changes its password, or treats it as a public demo identity.
+The plaintext temporary manifest may be privately distributed only to authorized presenters through an approved private channel. The pre-existing Registrar/Admin account is verification-only. This workflow never creates it, changes its password, or treats it as a public demo identity.
