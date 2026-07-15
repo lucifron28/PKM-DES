@@ -75,6 +75,8 @@ Both `.preview/preview-credentials.local.json` and `.preview/preview-credentials
 
 If any step fails after one or more student passwords were changed, the command stops with a nonzero exit code and writes only the successfully changed credentials to `.preview/preview-credentials.partial.local.json`. It then invalidates the complete manifest so verification cannot use a stale credential set. Resolve the failure privately, then intentionally rerun with `--overwrite` only when replacing the local recovery manifest is appropriate. If no password was changed, no recovery manifest is written.
 
+A partial recovery manifest blocks normal verification. If both manifest files exist, the complete file is treated as potentially stale and verification refuses to sign in. The verifier never deletes either file. Successful recovery reports only the approved relative recovery path, `.preview/preview-credentials.partial.local.json`; resolve the recovery state and rerun preparation intentionally.
+
 After complete success, the command removes a stale partial manifest only after the complete manifest is stored safely.
 
 Verify the private manifest before presenting:
@@ -83,7 +85,7 @@ Verify the private manifest before presenting:
 npm run preview:credentials:verify
 ```
 
-Verification requires the Registrar email and password in the manifest to exactly match the local Registrar environment credentials (email is normalized; password characters are preserved). It signs in the Registrar/Admin and each fictional student separately, checks role and active status, verifies the student identity pair, confirms the claim-only record has no Auth user, profile, student, or enrollment associated with its reserved Student ID, signs out every test session, and scans tracked files for prepared secret values. It does not update passwords, profiles, records, or enrollment data.
+Verification requires the Registrar email and password in the manifest to exactly match the local Registrar environment credentials (email is normalized; password characters are preserved). It also checks every student account, demo state, Student ID, and the claim-only email, Student ID, student type, live-claim password presence, and pre-claim state against the committed fictional demo records. It signs in the Registrar/Admin and each fictional student separately, checks role and active status, verifies the student identity pair, confirms the claim-only record has no Auth user, profile, student, or enrollment associated with its reserved Student ID, signs out every test session, and scans tracked files for prepared secret values. It does not update passwords, profiles, records, or enrollment data.
 
 ## Private Handoff and Cleanup
 

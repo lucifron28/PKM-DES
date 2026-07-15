@@ -4,7 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 import { createClient } from "@supabase/supabase-js";
-import { ACCOUNT_DEMO_RECORDS, CLAIM_ONLY_DEMO_RECORD } from "../demo/demo-records.mjs";
+import { ACCOUNT_DEMO_RECORDS, CLAIM_ONLY_DEMO_RECORD, DEMO_STUDENT_TYPE } from "../demo/demo-records.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -13,6 +13,16 @@ export const MANIFEST_SCHEMA_VERSION = 1;
 export const COMPLETE_MANIFEST_FILE = "preview-credentials.local.json";
 export const PARTIAL_MANIFEST_FILE = "preview-credentials.partial.local.json";
 export const ROTATABLE_KEYS = Object.freeze(["pending", "approved", "rejected"]);
+
+export class PreviewRecoveryError extends Error {
+  constructor(code, { recoveryManifestPath = null } = {}) {
+    super(code);
+    this.name = "PreviewRecoveryError";
+    this.code = code;
+    this.recoveryManifestWritten = Boolean(recoveryManifestPath);
+    this.recoveryManifestPath = recoveryManifestPath;
+  }
+}
 
 export function normalizeEmail(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -206,6 +216,9 @@ export function validateCredentialManifest(manifest, { allowPartial = false } = 
     if (!keysAreExact || typeof manifest.claimOnly.email !== "string" || typeof manifest.claimOnly.studentIdNumber !== "string" || typeof manifest.claimOnly.passwordForLiveClaim !== "string" || manifest.claimOnly.activeBeforeClaim !== false) {
       throw new Error("Credential manifest is missing required preview identities.");
     }
+    assertCompleteManifestIdentityAgreement(manifest);
+  } else {
+    assertPartialManifestIdentityAgreement(manifest);
   }
 
   return manifest;
@@ -261,6 +274,41 @@ export function createPartialManifest({ targetHost, registrarEmail, registrarPas
   };
 }
 
+export function assertCompleteManifestIdentityAgreement(manifest) {
+  for (const record of ACCOUNT_DEMO_RECORDS) {
+    const account = manifest.accounts.find((candidate) => candidate.key === record.key);
+    if (!account || account.email !== record.email || account.studentIdNumber !== record.studentIdNumber || account.demoState !== record.reviewStatus) {
+      throw new Error("preview_credential_manifest_identity_mismatch");
+    }
+  }
+  if (
+    manifest.claimOnly.email !== CLAIM_ONLY_DEMO_RECORD.email ||
+    manifest.claimOnly.studentIdNumber !== CLAIM_ONLY_DEMO_RECORD.studentIdNumber ||
+    manifest.claimOnly.studentType !== DEMO_STUDENT_TYPE ||
+    manifest.claimOnly.activeBeforeClaim !== false ||
+    typeof manifest.claimOnly.passwordForLiveClaim !== "string" ||
+    !manifest.claimOnly.passwordForLiveClaim.trim() ||
+    typeof manifest.claimOnly.instruction !== "string" ||
+    !manifest.claimOnly.instruction.trim()
+  ) {
+    throw new Error("claim_only_manifest_mismatch");
+  }
+}
+
+export function assertPartialManifestIdentityAgreement(manifest) {
+  const includedKeys = manifest.accounts.filter((account) => account.key !== "registrar").map((account) => account.key);
+  if (includedKeys.length !== manifest.completedStudentKeys.length || includedKeys.some((key) => !manifest.completedStudentKeys.includes(key))) {
+    throw new Error("preview_credential_recovery_manifest_mismatch");
+  }
+  for (const key of includedKeys) {
+    const record = ACCOUNT_DEMO_RECORDS.find((candidate) => candidate.key === key);
+    const account = manifest.accounts.find((candidate) => candidate.key === key);
+    if (!record || account.email !== record.email || account.studentIdNumber !== record.studentIdNumber || account.demoState !== record.reviewStatus) {
+      throw new Error("preview_credential_recovery_manifest_mismatch");
+    }
+  }
+}
+
 async function commandSucceeds(command, args, options) {
   try {
     await execFileAsync(command, args, options);
@@ -282,6 +330,23 @@ export async function assertManifestGitSafety({ repositoryRoot, manifestPath }) 
   }
 
   return outputPath;
+}
+
+export async function inspectPreviewManifestState({ repositoryRoot, fsApi = fs, assertGitSafety = assertManifestGitSafety }) {
+  const paths = getManifestPaths(repositoryRoot);
+  await assertGitSafety({ repositoryRoot, manifestPath: paths.complete });
+  await assertGitSafety({ repositoryRoot, manifestPath: paths.partial });
+  let directory;
+  try {
+    directory = await fsApi.lstat(paths.previewDirectory);
+  } catch (error) {
+    if (error.code === "ENOENT") return { state: "none", paths };
+    throw error;
+  }
+  if (directory.isSymbolicLink?.() || !directory.isDirectory?.()) throw new Error("credential_manifest_storage_not_directory");
+  const complete = Boolean(await inspectManifestDestination(paths.complete, fsApi));
+  const partial = Boolean(await inspectManifestDestination(paths.partial, fsApi));
+  return { state: complete && partial ? "conflict" : complete ? "complete" : partial ? "partial" : "none", paths };
 }
 
 async function assertSafePreviewDirectory(previewDirectory, fsApi = fs) {
@@ -389,15 +454,21 @@ export async function rotatePreviewPasswords({ accounts, updatePassword, createC
     await removePartial();
     return { kind: "complete", successfulUpdates };
   } catch (error) {
+    const failureCode = typeof error?.code === "string" && /^[a-z0-9_]+$/.test(error.code) ? error.code : "preview_credential_preparation_failed";
     if (successfulUpdates.length) {
       try {
         await writePartial(createPartial(successfulUpdates));
+      } catch {
+        throw new PreviewRecoveryError("credential_recovery_write_failed");
+      }
+      try {
         await removeComplete();
       } catch {
-        throw new Error("credential_recovery_write_failed");
+        throw new PreviewRecoveryError("credential_recovery_complete_invalidation_failed", { recoveryManifestPath: ".preview/preview-credentials.partial.local.json" });
       }
+      throw new PreviewRecoveryError(failureCode, { recoveryManifestPath: ".preview/preview-credentials.partial.local.json" });
     }
-    throw error;
+    throw new PreviewRecoveryError(failureCode);
   }
 }
 

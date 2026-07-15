@@ -11,6 +11,7 @@ import {
   createSupabaseClients,
   normalizeEmail,
   preflightManifestStorage,
+  PreviewRecoveryError,
   readPreviewConfiguration,
   redactedPlanSummary,
   removePrivateManifest,
@@ -23,7 +24,9 @@ const apply = process.argv.includes("--apply");
 const overwrite = process.argv.includes("--overwrite");
 
 function stop(stage) {
-  throw new Error(stage);
+  const error = new Error(stage);
+  error.code = stage;
+  throw error;
 }
 
 async function getExactRows(query, stage) {
@@ -223,6 +226,13 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(`Preview credential preparation stopped: ${error.message}`);
+  const code = error instanceof PreviewRecoveryError ? error.code : (typeof error?.message === "string" && /^[a-z0-9_]+$/.test(error.message) ? error.message : "preview_credential_preparation_failed");
+  console.error(`Preview credential preparation stopped: ${code}`);
+  if (error instanceof PreviewRecoveryError && error.recoveryManifestPath) {
+    console.error(`Recovery manifest: ${error.recoveryManifestPath}`);
+    if (error.code === "credential_recovery_complete_invalidation_failed") {
+      console.error("Verification will refuse to proceed while partial recovery is active.");
+    }
+  }
   process.exitCode = 1;
 });

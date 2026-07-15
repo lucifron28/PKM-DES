@@ -2,12 +2,12 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { ACCOUNT_DEMO_RECORDS, CLAIM_ONLY_DEMO_RECORD } from "../demo/demo-records.mjs";
 import {
-  assertManifestGitSafety,
   assertClaimOnlyReady,
+  assertCompleteManifestIdentityAgreement,
   assertRegistrarManifestAgreement,
   buildCredentialLeakScanEntries,
   createSupabaseClients,
-  getManifestPaths,
+  inspectPreviewManifestState,
   normalizeEmail,
   readPreviewConfiguration,
   readPrivateManifest,
@@ -16,8 +16,11 @@ import {
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-function stop(stage) {
-  throw new Error(stage);
+function stop(stage, metadata = {}) {
+  const error = new Error(stage);
+  error.code = stage;
+  Object.assign(error, metadata);
+  throw error;
 }
 
 function accountByKey(manifest, key) {
@@ -105,10 +108,18 @@ async function verifyClaimOnlyReadiness(admin) {
 
 async function main() {
   const configuration = readPreviewConfiguration();
-  const paths = getManifestPaths(repositoryRoot);
-  await assertManifestGitSafety({ repositoryRoot, manifestPath: paths.complete });
+  const manifestState = await inspectPreviewManifestState({ repositoryRoot });
+  if (manifestState.state === "none") stop("preview_credential_manifest_missing");
+  if (manifestState.state === "partial") stop("preview_credential_recovery_state_active", { recoveryManifestPath: ".preview/preview-credentials.partial.local.json" });
+  if (manifestState.state === "conflict") stop("preview_credential_recovery_state_active", { recoveryManifestPath: ".preview/preview-credentials.partial.local.json", completeManifestPath: ".preview/preview-credentials.local.json" });
+  const paths = manifestState.paths;
   const manifest = await readPrivateManifest({ repositoryRoot, manifestPath: paths.complete });
   if (manifest.targetHost !== configuration.targetHost) stop("credential_manifest_target_mismatch");
+  try {
+    assertCompleteManifestIdentityAgreement(manifest);
+  } catch (error) {
+    stop(error.message === "claim_only_manifest_mismatch" ? "claim_only_manifest_mismatch" : "preview_credential_manifest_identity_mismatch");
+  }
 
   const leakFindings = await scanTrackedFilesForSecrets({
     repositoryRoot,
@@ -136,6 +147,12 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(`Preview credential verification stopped: ${error.message}`);
+  const code = typeof error?.code === "string" && /^[a-z0-9_]+$/.test(error.code) ? error.code : "preview_credential_verification_failed";
+  console.error(`Preview credential verification stopped: ${code}`);
+  if (error.recoveryManifestPath) {
+    console.error(`Recovery manifest: ${error.recoveryManifestPath}`);
+    if (error.completeManifestPath) console.error(`Complete manifest: ${error.completeManifestPath}`);
+    console.error("Resolve the recovery state and rerun preparation intentionally.");
+  }
   process.exitCode = 1;
 });
