@@ -29,6 +29,7 @@ This document records client-provided answers received after reviewing the FRD g
 - Enrollment is rejectable when the student's data does not match official records or is incorrect.
 - Rejection remarks should be free-text only.
 - Rejected enrollment should not be resubmitted for the same academic year and semester.
+- The official requirements and document checklist remains an outstanding client input; the MVP does not invent document verification steps.
 
 ### Enrollment Subjects and Classification
 

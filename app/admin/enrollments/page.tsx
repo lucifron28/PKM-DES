@@ -1,9 +1,8 @@
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TextArea } from "@/components/ui/field";
-import { approveEnrollmentAction, rejectEnrollmentAction } from "./actions";
+import { EnrollmentReviewControls } from "@/components/admin/enrollment-review-controls";
 import { requireRole } from "@/lib/auth/session";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { Enrollment, Profile, Student } from "@/types/database";
@@ -19,7 +18,7 @@ export default async function PendingEnrollmentsPage({
 }) {
   const { supabase } = await requireRole("admin");
   const params = (await searchParams) ?? {};
-  const { data } = await supabase
+  const { data, error: enrollmentsError } = await supabase
     .from("enrollments")
     .select("*, students(*, profiles(*)), programs(*)")
     .eq("status", "PENDING")
@@ -27,12 +26,24 @@ export default async function PendingEnrollmentsPage({
 
   const enrollments = (data as EnrollmentRow[] | null) ?? [];
 
+  if (enrollmentsError) {
+    console.error("pending_enrollments:load");
+    return (
+      <Card>
+        <CardHeader title="Pending Enrollments" description="Submitted Online Enrollment requests awaiting Registrar review." />
+        <EmptyState
+          title="Pending enrollments could not be loaded"
+          description="Please try again. No enrollment decisions can be made until the current requests are available."
+        />
+      </Card>
+    );
+  }
+
   const errorMessages: Record<string, string> = {
-    missing_id: "Enrollment ID is missing.",
-    student_not_found: "Student record was not found.",
-    approve_failed: "Enrollment could not be approved.",
-    reject_failed: "Enrollment could not be rejected.",
-    status_update_failed: "Student enrollment status could not be updated."
+    not_found: "Enrollment request is not available. Refresh the pending list.",
+    already_reviewed: "This enrollment request has already been reviewed. Refresh the pending list.",
+    invalid_request: "Enrollment request could not be reviewed. Please try again.",
+    review_failed: "Enrollment request could not be reviewed. Please try again."
   };
 
   const successMessages: Record<string, string> = {
@@ -42,7 +53,10 @@ export default async function PendingEnrollmentsPage({
 
   return (
     <Card>
-      <CardHeader title="Pending Enrollments" description="Approve or reject submitted enrollment requests." />
+      <CardHeader
+        title="Pending Enrollments"
+        description="This queue contains submitted Online Enrollment requests awaiting Registrar review. The research MVP does not yet include the official document and requirements checklist."
+      />
       {params.success ? (
         <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
           {successMessages[params.success] ?? "Action completed successfully."}
@@ -70,7 +84,7 @@ export default async function PendingEnrollmentsPage({
                   "Status",
                   "Actions"
                 ].map((column) => (
-                  <th key={column} className="whitespace-nowrap px-4 py-3 font-semibold">
+                  <th key={column} scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">
                     {column}
                   </th>
                 ))}
@@ -100,7 +114,7 @@ export default async function PendingEnrollmentsPage({
                     <td className="whitespace-nowrap px-4 py-3">
                       <Badge tone={enrollmentBadgeTone(enrollment.status)}>{enrollment.status}</Badge>
                     </td>
-                    <td className="min-w-[280px] px-4 py-3">
+                    <td className="min-w-[280px] whitespace-normal px-4 py-3">
                       <div className="space-y-3">
                         <ButtonLink
                           href={`/admin/enrollments/${enrollment.id}/registration`}
@@ -109,15 +123,7 @@ export default async function PendingEnrollmentsPage({
                         >
                           View/Print Form
                         </ButtonLink>
-                        <form action={approveEnrollmentAction}>
-                          <input type="hidden" name="enrollment_id" value={enrollment.id} />
-                          <Button type="submit" className="w-full">Approve</Button>
-                        </form>
-                        <form action={rejectEnrollmentAction} className="space-y-2">
-                          <input type="hidden" name="enrollment_id" value={enrollment.id} />
-                          <TextArea label="Remarks" name="remarks" placeholder="Optional remarks" />
-                          <Button type="submit" variant="danger" className="w-full">Reject</Button>
-                        </form>
+                        <EnrollmentReviewControls enrollmentId={enrollment.id} />
                       </div>
                     </td>
                   </tr>
