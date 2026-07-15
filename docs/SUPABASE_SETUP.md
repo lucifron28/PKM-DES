@@ -473,11 +473,12 @@ Printable registration form:
 Enrollment reports:
 
 1. Admin opens `/admin/reports`.
-2. App reads enrollment records, student profiles, and programs through existing admin RLS policies.
-3. Admin can filter by program, academic year, year level, semester, and review status.
-4. Admin can reset filters back to the full report.
-5. App renders status summary counts, a report criteria summary, and a browser-printable enrollment report table.
-6. Official PDF/export generation remains pending until PKM supplies the required report format.
+2. App loads programs, enrollment records, student profiles, and program details through existing admin RLS policies.
+3. The page canonicalizes supported program, academic year, year level, semester, review-status, and student identity search criteria before using them in the query or printed report.
+4. App reads every matching submitted enrollment record in deterministic pages before applying the in-memory student identity search and calculating totals.
+5. Admin can reset filters back to the full report.
+6. App renders status summary counts, a human-readable criteria summary, and a browser-printable enrollment report table. Query failures show an unavailable state rather than zero totals or an empty report.
+7. Official PDF/export generation remains pending until PKM supplies the required report format.
 
 Admin review:
 

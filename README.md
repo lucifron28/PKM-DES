@@ -69,13 +69,13 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - One atomic database submission creates a `PENDING` enrollment and its complete matching `enrollment_subjects` set, while the unique student-term index handles concurrent duplicates safely
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
 - Admin dashboard with pending, approved, rejected, and total enrollment record counts
-- Admin dashboard enrollment counts are loaded with a single lightweight status query
-- Admin Enrollment Reports page with program, academic year, year level, semester, review-status filters, reset control, and printed criteria summary
+- Admin dashboard enrollment counts are loaded with a lightweight status query and show unavailable rather than zero when that query fails
+- Admin Enrollment Reports page with canonical program, academic year, year level, semester, review-status, and student identity search filters; complete result counts; reset control; and printed human-readable criteria summary
 - Browser-printable enrollment report table for Registrar review
 - Atomic admin approve/reject enrollment actions for pending requests only
 - Approval or rejection, the summarized student status, and one audit record commit together; concurrent stale reviews cannot overwrite the first decision
 - Rejection keeps optional free-text remarks; no requirements checklist or document-verification workflow is invented
-- Enrollment masterlist with year-level and semester filters
+- Enrollment masterlist across pending, approved, and rejected submitted requests, with program, academic year, year level, semester, review-status, and student identity search filters
 - Admin Account page with internal account details and password change
 - MVP draft printable registration form aligned with the supplied registration form sample layout
 - Printable registration form displays student details, classification markers, attached subjects, total units, fee/payment placeholders, signature labels, and data privacy authorization text

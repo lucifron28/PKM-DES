@@ -47,7 +47,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 ### Reporting and Printing
 
-- Browser-printable enrollment reports and masterlist output.
+- Browser-printable enrollment reports and masterlist output based on complete, canonically filtered submitted enrollment records. Query failures show an unavailable state instead of a misleading empty report or zero dashboard count.
 - Browser-printable draft registration form populated from an enrollment request and attached subjects.
 
 ### Authentication and Access Control
