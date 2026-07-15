@@ -28,7 +28,9 @@ begin
     return;
   end if;
 
-  if p_enrollment_id is null or p_decision not in ('APPROVED', 'REJECTED') then
+  if p_enrollment_id is null
+    or p_decision is null
+    or p_decision not in ('APPROVED', 'REJECTED') then
     return query select 'invalid_request'::text, null::uuid, null::text, null::text;
     return;
   end if;
