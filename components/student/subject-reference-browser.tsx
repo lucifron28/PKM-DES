@@ -129,6 +129,16 @@ export function SubjectReferenceBrowser({
           </div>
         </dl>
 
+        {programCode === "BSAIS" ? (
+          <aside className="mt-5 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+            <p className="font-semibold">Source note</p>
+            <p className="mt-1 font-medium">Historical workbook source note</p>
+            <p className="mt-1">
+              The supplied course-offering workbook contains duplicate BSAIS blocks and reports six 4th Year units, but no visible 4th Year BSAIS course rows were available in the supplied sheet. No missing offering rows were invented.
+            </p>
+          </aside>
+        ) : null}
+
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="w-full sm:max-w-xs">
             <SelectInput
@@ -186,13 +196,6 @@ export function SubjectReferenceBrowser({
             description="Full BSAIS curriculum reference derived from the client-provided Subjects document. These curriculum rows support the research-MVP BSAIS subject seed. They are not proof that you are currently enrolled in every listed subject."
             action={<Badge tone="brand">{curriculumSubjects.length} curriculum subjects</Badge>}
           />
-
-          <aside className="rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-            <p className="font-semibold">Source note</p>
-            <p className="mt-1">
-              The workbook contains duplicate BSAIS blocks and reports six 4th Year units, but no visible 4th Year BSAIS course rows were available in the supplied sheet. No missing rows were invented.
-            </p>
-          </aside>
 
           <div className="mt-6">
             {!curriculumGroups.length ? (
