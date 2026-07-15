@@ -3,6 +3,7 @@ import path from "node:path";
 import { ACCOUNT_DEMO_RECORDS, CLAIM_ONLY_DEMO_RECORD } from "../demo/demo-records.mjs";
 import {
   COMPLETE_MANIFEST_FILE,
+  assertClaimOnlyReady,
   assertApplyConfirmation,
   createCompleteManifest,
   createPartialManifest,
@@ -120,7 +121,11 @@ async function verifyClaimOnlyRecord(admin, authMatches) {
       admin.from("enrollments").select("id, students!inner(student_id_number)").eq("students.student_id_number", CLAIM_ONLY_DEMO_RECORD.studentIdNumber),
       "claim_enrollment_lookup_failed")
   ]);
-  if (profiles.length !== 0 || students.length !== 0 || enrollments.length !== 0) stop("claim_record_has_account");
+  try {
+    assertClaimOnlyReady({ officialRecords, authUsers: authMatches.get(normalizeEmail(CLAIM_ONLY_DEMO_RECORD.email)) ?? [], profiles, students, enrollments });
+  } catch {
+    stop("claim_only_readiness_failed");
+  }
 }
 
 async function verifyRegistrarSignIn(createAnonClient, configuration, expectedAuthUser) {

@@ -161,8 +161,13 @@ function assertExactKeys(value, allowedKeys) {
 function assertManifestAccount(account, expectedKey) {
   const isRegistrar = expectedKey === "registrar";
   assertExactKeys(account, isRegistrar ? ["key", "role", "email", "password"] : ["key", "role", "demoState", "email", "studentIdNumber", "password"]);
-  if (account.key !== expectedKey || !account.role || !account.email || !account.password) throw new Error("Credential manifest is missing a required account.");
-  if (!isRegistrar && !account.studentIdNumber) throw new Error("Credential manifest is missing a required student identifier.");
+  if ([account.key, account.role, account.email, account.password].some((value) => typeof value !== "string" || !value)) {
+    throw new Error("Credential manifest is missing a required account.");
+  }
+  if (account.key !== expectedKey || account.role !== (isRegistrar ? "Registrar/Admin" : "Student")) throw new Error("Credential manifest contains an invalid account.");
+  if (!isRegistrar && (typeof account.studentIdNumber !== "string" || !account.studentIdNumber || typeof account.demoState !== "string")) {
+    throw new Error("Credential manifest is missing a required student identifier.");
+  }
 }
 
 export function validateCredentialManifest(manifest, { allowPartial = false } = {}) {
@@ -179,13 +184,14 @@ export function validateCredentialManifest(manifest, { allowPartial = false } = 
       ? ["schemaVersion", "partial", "generatedAt", "targetHost", "warning", "completedStudentKeys", "accounts"]
       : ["schemaVersion", "generatedAt", "targetHost", "warning", "accounts", "claimOnly"]
   );
-  const accountKeys = manifest.accounts?.map((account) => account.key) ?? [];
+  if (!Array.isArray(manifest.accounts)) throw new Error("Credential manifest has an unsupported schema.");
+  const accountKeys = manifest.accounts.map((account) => account.key);
   if (new Set(accountKeys).size !== accountKeys.length) {
     throw new Error("Credential manifest contains duplicate account keys.");
   }
 
   const completedStudentKeys = partial ? manifest.completedStudentKeys : ROTATABLE_KEYS;
-  if (!Array.isArray(completedStudentKeys) || new Set(completedStudentKeys).size !== completedStudentKeys.length || completedStudentKeys.some((key) => !ROTATABLE_KEYS.includes(key))) {
+  if (!Array.isArray(completedStudentKeys) || (partial && completedStudentKeys.length === 0) || new Set(completedStudentKeys).size !== completedStudentKeys.length || completedStudentKeys.some((key) => !ROTATABLE_KEYS.includes(key))) {
     throw new Error("Credential manifest contains invalid student account keys.");
   }
   const requiredKeys = ["registrar", ...completedStudentKeys];
@@ -197,7 +203,7 @@ export function validateCredentialManifest(manifest, { allowPartial = false } = 
 
   if (!partial) {
     assertExactKeys(manifest.claimOnly, ["email", "studentIdNumber", "studentType", "passwordForLiveClaim", "activeBeforeClaim", "instruction"]);
-    if (!keysAreExact || !manifest.claimOnly.email || !manifest.claimOnly.studentIdNumber || !manifest.claimOnly.passwordForLiveClaim) {
+    if (!keysAreExact || typeof manifest.claimOnly.email !== "string" || typeof manifest.claimOnly.studentIdNumber !== "string" || typeof manifest.claimOnly.passwordForLiveClaim !== "string" || manifest.claimOnly.activeBeforeClaim !== false) {
       throw new Error("Credential manifest is missing required preview identities.");
     }
   }
@@ -286,14 +292,49 @@ async function assertSafePreviewDirectory(previewDirectory, fsApi = fs) {
   }
 }
 
+function assertRegularManifestDestination(stat) {
+  if (stat.isSymbolicLink?.() || !stat.isFile?.()) throw new Error("credential_manifest_destination_not_regular");
+}
+
 async function inspectManifestDestination(destination, fsApi = fs) {
   try {
     const stat = await fsApi.lstat(destination);
-    if (stat.isSymbolicLink()) throw new Error("Credential manifest path cannot be a symbolic link.");
-    return true;
+    assertRegularManifestDestination(stat);
+    return stat;
   } catch (error) {
     if (error.code === "ENOENT") return false;
     throw error;
+  }
+}
+
+async function atomicReplaceFile({ destination, contents, fsApi = fs, temporaryPath }) {
+  try {
+    await fsApi.writeFile(temporaryPath, contents, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    await fsApi.chmod(temporaryPath, 0o600).catch(() => undefined);
+    await fsApi.rename(temporaryPath, destination);
+    await fsApi.chmod(destination, 0o600).catch(() => undefined);
+  } finally {
+    await fsApi.rm(temporaryPath, { force: true }).catch(() => undefined);
+  }
+}
+
+async function probeManifestStorage({ previewDirectory, overwriteExisting, fsApi = fs }) {
+  const suffix = randomBytes(12).toString("hex");
+  const destination = path.join(previewDirectory, `.preview-credentials-probe-${suffix}.destination`);
+  const temporary = path.join(previewDirectory, `.preview-credentials-probe-${suffix}.temporary`);
+  try {
+    if (overwriteExisting) await fsApi.writeFile(destination, "preview-credential-existing-probe\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+    await atomicReplaceFile({
+      destination,
+      contents: "preview-credential-replacement-probe\n",
+      fsApi,
+      temporaryPath: temporary
+    });
+    const contents = await fsApi.readFile(destination, "utf8");
+    if (contents !== "preview-credential-replacement-probe\n") throw new Error("credential_manifest_storage_probe_failed");
+  } finally {
+    await fsApi.rm(temporary, { force: true }).catch(() => undefined);
+    await fsApi.rm(destination, { force: true }).catch(() => undefined);
   }
 }
 
@@ -302,21 +343,13 @@ export async function preflightManifestStorage({ repositoryRoot, overwrite = fal
   await assertGitSafety({ repositoryRoot, manifestPath: paths.complete });
   await assertGitSafety({ repositoryRoot, manifestPath: paths.partial });
   await assertSafePreviewDirectory(paths.previewDirectory, fsApi);
-  const completeExists = await inspectManifestDestination(paths.complete, fsApi);
-  const partialExists = await inspectManifestDestination(paths.partial, fsApi);
+  const completeExists = Boolean(await inspectManifestDestination(paths.complete, fsApi));
+  const partialExists = Boolean(await inspectManifestDestination(paths.partial, fsApi));
   if (!overwrite && (completeExists || partialExists)) {
     throw new Error("A credential manifest already exists. Use --overwrite only when intentionally replacing it.");
   }
 
-  const probe = path.join(paths.previewDirectory, `.preview-credentials-probe-${randomBytes(12).toString("hex")}.tmp`);
-  try {
-    await fsApi.writeFile(probe, "preview-credential-storage-probe\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
-    const renamedProbe = `${probe}.renamed`;
-    await fsApi.rename(probe, renamedProbe);
-    await fsApi.rm(renamedProbe, { force: true });
-  } finally {
-    await fsApi.rm(probe, { force: true }).catch(() => undefined);
-  }
+  await probeManifestStorage({ previewDirectory: paths.previewDirectory, overwriteExisting: overwrite && (completeExists || partialExists), fsApi });
   return { paths, completeExists, partialExists };
 }
 
@@ -327,21 +360,14 @@ export async function writePrivateManifest({ repositoryRoot, manifestPath, manif
 
   try {
     const existing = await fsApi.lstat(outputPath);
-    if (existing.isSymbolicLink()) throw new Error("Credential manifest path cannot be a symbolic link.");
+    assertRegularManifestDestination(existing);
     if (!overwrite) throw new Error("A credential manifest already exists. Use --overwrite only when intentionally replacing it.");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
 
   const temporaryPath = path.join(previewDirectory, `.preview-credentials-${randomBytes(12).toString("hex")}.tmp`);
-  try {
-    await fsApi.writeFile(temporaryPath, `${JSON.stringify(manifest, null, 2)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
-    await fsApi.chmod(temporaryPath, 0o600).catch(() => undefined);
-    await fsApi.rename(temporaryPath, outputPath);
-    await fsApi.chmod(outputPath, 0o600).catch(() => undefined);
-  } finally {
-    await fsApi.rm(temporaryPath, { force: true }).catch(() => undefined);
-  }
+  await atomicReplaceFile({ destination: outputPath, contents: `${JSON.stringify(manifest, null, 2)}\n`, fsApi, temporaryPath });
 
   return outputPath;
 }
@@ -377,6 +403,7 @@ export async function rotatePreviewPasswords({ accounts, updatePassword, createC
 
 export async function readPrivateManifest({ repositoryRoot, manifestPath }) {
   const outputPath = await assertManifestGitSafety({ repositoryRoot, manifestPath });
+  await inspectManifestDestination(outputPath);
   let parsed;
   try {
     parsed = JSON.parse(await fs.readFile(outputPath, "utf8"));
@@ -384,6 +411,22 @@ export async function readPrivateManifest({ repositoryRoot, manifestPath }) {
     throw new Error("Credential manifest could not be read.");
   }
   return validateCredentialManifest(parsed);
+}
+
+export function assertClaimOnlyReady({ officialRecords, authUsers, profiles, students, enrollments }) {
+  const record = officialRecords?.[0];
+  if (
+    !Array.isArray(officialRecords) ||
+    officialRecords.length !== 1 ||
+    normalizeEmail(record.email) !== normalizeEmail(CLAIM_ONLY_DEMO_RECORD.email) ||
+    record.student_id_number !== CLAIM_ONLY_DEMO_RECORD.studentIdNumber ||
+    !Array.isArray(authUsers) || authUsers.length !== 0 ||
+    !Array.isArray(profiles) || profiles.length !== 0 ||
+    !Array.isArray(students) || students.length !== 0 ||
+    !Array.isArray(enrollments) || enrollments.length !== 0
+  ) {
+    throw new Error("claim_only_readiness_failed");
+  }
 }
 
 export async function getTrackedFiles(repositoryRoot) {

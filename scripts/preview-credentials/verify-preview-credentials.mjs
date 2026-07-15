@@ -3,6 +3,7 @@ import path from "node:path";
 import { ACCOUNT_DEMO_RECORDS, CLAIM_ONLY_DEMO_RECORD } from "../demo/demo-records.mjs";
 import {
   assertManifestGitSafety,
+  assertClaimOnlyReady,
   assertRegistrarManifestAgreement,
   buildCredentialLeakScanEntries,
   createSupabaseClients,
@@ -74,7 +75,7 @@ async function findAuthUserByEmail(admin, email) {
 }
 
 async function verifyClaimOnlyReadiness(admin) {
-  const [authUsers, profileResponse, studentResponse, officialResponse] = await Promise.all([
+  const [authUsers, profileResponse, studentResponse, officialResponse, enrollmentResponse] = await Promise.all([
     findAuthUserByEmail(admin, CLAIM_ONLY_DEMO_RECORD.email),
     admin.from("profiles").select("id").eq("email", CLAIM_ONLY_DEMO_RECORD.email),
     admin.from("students").select("id").eq("student_id_number", CLAIM_ONLY_DEMO_RECORD.studentIdNumber),
@@ -82,18 +83,22 @@ async function verifyClaimOnlyReadiness(admin) {
       .from("official_student_records")
       .select("id, email, student_id_number")
       .eq("email", CLAIM_ONLY_DEMO_RECORD.email)
-      .eq("student_id_number", CLAIM_ONLY_DEMO_RECORD.studentIdNumber)
+      .eq("student_id_number", CLAIM_ONLY_DEMO_RECORD.studentIdNumber),
+    admin
+      .from("enrollments")
+      .select("id, students!inner(student_id_number)")
+      .eq("students.student_id_number", CLAIM_ONLY_DEMO_RECORD.studentIdNumber)
   ]);
-  if (profileResponse.error || studentResponse.error || officialResponse.error) stop("claim_only_readiness_lookup_failed");
-  const officialRecords = officialResponse.data ?? [];
-  if (
-    authUsers.length !== 0 ||
-    (profileResponse.data ?? []).length !== 0 ||
-    (studentResponse.data ?? []).length !== 0 ||
-    officialRecords.length !== 1 ||
-    normalizeEmail(officialRecords[0].email) !== normalizeEmail(CLAIM_ONLY_DEMO_RECORD.email) ||
-    officialRecords[0].student_id_number !== CLAIM_ONLY_DEMO_RECORD.studentIdNumber
-  ) {
+  if (profileResponse.error || studentResponse.error || officialResponse.error || enrollmentResponse.error) stop("claim_only_readiness_lookup_failed");
+  try {
+    assertClaimOnlyReady({
+      officialRecords: officialResponse.data ?? [],
+      authUsers,
+      profiles: profileResponse.data ?? [],
+      students: studentResponse.data ?? [],
+      enrollments: enrollmentResponse.data ?? []
+    });
+  } catch {
     stop("claim_only_readiness_failed");
   }
 }

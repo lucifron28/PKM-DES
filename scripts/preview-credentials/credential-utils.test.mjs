@@ -8,6 +8,7 @@ import {
   COMPLETE_MANIFEST_FILE,
   PARTIAL_MANIFEST_FILE,
   assertRegistrarManifestAgreement,
+  assertClaimOnlyReady,
   buildCredentialLeakScanEntries,
   createCompleteManifest,
   createPasswordPlan,
@@ -87,6 +88,7 @@ test("existing complete or partial manifests stop storage preflight before mutat
   await fs.rm(paths.complete);
   await fs.writeFile(paths.partial, "old");
   await assert.rejects(preflightManifestStorage({ repositoryRoot: root, assertGitSafety: safeGitSafety }));
+  await assert.doesNotReject(preflightManifestStorage({ repositoryRoot: root, overwrite: true, assertGitSafety: safeGitSafety }));
   await fs.rm(root, { recursive: true, force: true });
 });
 
@@ -115,9 +117,27 @@ test("unsafe symlink destinations stop storage preflight and overwrite permits r
   await fs.rm(root, { recursive: true, force: true });
 });
 
+test("non-regular destinations and replacement failures stop before an update callback can begin", async () => {
+  const root = await temporaryRepository();
+  const paths = getManifestPaths(root);
+  await fs.mkdir(paths.previewDirectory, { recursive: true });
+  await fs.mkdir(paths.complete);
+  let updated = false;
+  await assert.rejects(preflightManifestStorage({ repositoryRoot: root, overwrite: true, assertGitSafety: safeGitSafety }));
+  assert.equal(updated, false);
+  await fs.rm(paths.complete, { recursive: true });
+  await fs.writeFile(paths.complete, "preserve-me");
+  const replacementFailureFs = { ...fs, rename: async () => { throw new Error("replacement unavailable"); } };
+  await assert.rejects(preflightManifestStorage({ repositoryRoot: root, overwrite: true, fsApi: replacementFailureFs, assertGitSafety: safeGitSafety }));
+  assert.equal(await fs.readFile(paths.complete, "utf8"), "preserve-me");
+  assert.equal(updated, false);
+  await fs.rm(root, { recursive: true, force: true });
+});
+
 test("rotation failures write only completed recovery credentials", async () => {
   const accounts = plan().accounts;
   const partials = [];
+  let removedComplete = false;
   await assert.rejects(rotatePreviewPasswords({
     accounts,
     updatePassword: async (account) => {
@@ -127,10 +147,11 @@ test("rotation failures write only completed recovery credentials", async () => 
     writeComplete: async () => {},
     createPartial: (successful) => successful.map((item) => item.record.key),
     writePartial: async (partial) => partials.push(partial),
-    removeComplete: async () => {},
+    removeComplete: async () => { removedComplete = true; },
     removePartial: async () => {}
   }));
   assert.deepEqual(partials, [["pending"]]);
+  assert.equal(removedComplete, true);
 });
 
 test("complete-manifest failure recovers every rotated student, while pre-update failure creates no recovery", async () => {
@@ -157,6 +178,23 @@ test("complete-manifest failure recovers every rotated student, while pre-update
   assert.deepEqual(noRecovery, []);
 });
 
+test("complete-manifest write failure after all updates writes full recovery and invalidates stale output", async () => {
+  const partials = [];
+  let removedComplete = false;
+  await assert.rejects(rotatePreviewPasswords({
+    accounts: plan().accounts,
+    updatePassword: async () => {},
+    createComplete: (successful) => successful,
+    writeComplete: async () => { throw new Error("complete write failed"); },
+    createPartial: (successful) => successful.map((item) => item.record.key),
+    writePartial: async (partial) => partials.push(partial),
+    removeComplete: async () => { removedComplete = true; },
+    removePartial: async () => {}
+  }));
+  assert.deepEqual(partials, [["pending", "approved", "rejected"]]);
+  assert.equal(removedComplete, true);
+});
+
 test("complete success stores a complete set and removes stale partial output", async () => {
   const writes = [];
   let removedPartial = false;
@@ -179,6 +217,9 @@ test("strict manifest schema rejects unknown identity, token, key, and password 
   for (const field of ["userId", "user_id", "profileId", "profile_id", "authUserId", "auth_user_id", "studentRowId", "student_row_id", "enrollmentId", "enrollment_id", "accessToken", "refreshToken", "serviceRoleKey", "anonKey", "accountClaimSecret", "databasePassword", "database_password", "vercelToken"]) {
     assert.throws(() => validateCredentialManifest({ ...manifest, [field]: "blocked" }));
   }
+  assert.throws(() => validateCredentialManifest({ ...manifest, accounts: "not-an-array" }));
+  assert.throws(() => validateCredentialManifest({ ...manifest, accounts: [{ ...manifest.accounts[0], role: "Student" }, ...manifest.accounts.slice(1)] }));
+  assert.throws(() => validateCredentialManifest({ ...manifest, claimOnly: { ...manifest.claimOnly, activeBeforeClaim: true } }));
 });
 
 test("leak scan entries keep environment and manifest registrar passwords distinct", () => {
@@ -203,6 +244,20 @@ test("Registrar environment and manifest passwords must agree exactly", () => {
     manifestRegistrar: registrar,
     configuration: { registrarEmail: "registrar.private@example.test", registrarPassword: "registrar-password-with-spaces" }
   }));
+});
+
+test("claim-only readiness requires one official record and no account or enrollment state", () => {
+  const ready = {
+    officialRecords: [{ email: CLAIM_ONLY_DEMO_RECORD.email, student_id_number: CLAIM_ONLY_DEMO_RECORD.studentIdNumber }],
+    authUsers: [], profiles: [], students: [], enrollments: []
+  };
+  assert.doesNotThrow(() => assertClaimOnlyReady(ready));
+  for (const collision of [
+    { authUsers: [{}] }, { profiles: [{}] }, { students: [{}] }, { enrollments: [{}] },
+    { officialRecords: [] }, { officialRecords: [ready.officialRecords[0], ready.officialRecords[0]] }
+  ]) {
+    assert.throws(() => assertClaimOnlyReady({ ...ready, ...collision }));
+  }
 });
 
 test("approved paths remain limited to the two ignored manifest names", () => {
