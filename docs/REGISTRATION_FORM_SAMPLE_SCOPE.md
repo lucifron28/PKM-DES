@@ -27,7 +27,9 @@ The sample references BTVTED 4G and `2ND/2025-2026`. These are not added as offi
 
 ## Current MVP Treatment
 
-PKM-DES continues to populate the registration form from existing enrollment records and attached subjects.
+PKM-DES continues to populate the draft registration form from existing enrollment records and attached subjects. Attached subjects are sorted deterministically for display and the total is calculated from the displayed rows. Student browser printing is available only for the latest approved enrollment request; Registrar/Admin preview remains available for pending, approved, and rejected requests.
+
+The browser-print layout targets readable A4 portrait output. Larger subject loads may continue onto an additional page instead of shrinking the entire document. Query failures are shown as unavailable states, not as missing enrollment records.
 
 Fields not yet supported by the MVP remain blank or clearly labeled as placeholders:
 
@@ -37,6 +39,7 @@ Fields not yet supported by the MVP remain blank or clearly labeled as placehold
 - Scholarship details
 - Official receipt number, date, and payment amount
 - Final official COR/PDF generation
+- Approved official print or export format
 
 ## Future Inputs Needed
 

@@ -41,7 +41,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 12. Log back in as Registrar/Admin.
 13. Open Pending Enrollments and approve or reject the submitted request.
 14. Show the updated Admin Dashboard counts and Enrollment Masterlist.
-15. Open View/Print Form and use browser print preview for the MVP draft registration form based on the supplied sample workbook layout.
+15. Open View/Print Form and use browser print preview for the approved fictional record's MVP draft registration form. Pending and rejected records remain available for Registrar review, but student printing is limited to the latest approved request.
 
 ## What To Say About Counts
 
@@ -53,7 +53,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 
 ## Placeholder Talking Points
 
-- The registration form follows the supplied sample workbook layout, but it is still a browser-print MVP draft until PKM confirms the final official COR template.
+- The registration form follows the supplied sample workbook layout, but it is still a browser-print MVP draft until PKM confirms the final official COR template. It uses deterministic attached-subject ordering, does not calculate fees or payments, and may continue onto another page for a larger subject load.
 - Fee, scholarship, payment, section, and schedule values remain placeholders unless official encoded data exists.
 - Grades, Class Schedule, Balances, Student Records expansion, and Encode Grades/Schedule are placeholder pages.
 - Generated-password email delivery is not implemented yet.

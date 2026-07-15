@@ -10,11 +10,21 @@ export default async function AdminRegistrationFormPage({
   const { supabase } = await requireRole("admin");
   const { enrollmentId } = await params;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("enrollments")
     .select("*, students(*, profiles(*)), programs(*), enrollment_subjects(id, subjects(*))")
     .eq("id", enrollmentId)
     .maybeSingle();
+
+  if (error) {
+    console.error("registration_form:admin_enrollment_load");
+    return (
+      <EmptyState
+        title="Registration form could not be loaded"
+        description="Please try again. No registration form is shown until the selected enrollment data is available."
+      />
+    );
+  }
 
   const enrollment = data as PrintableEnrollment | null;
 

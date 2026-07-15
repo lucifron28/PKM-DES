@@ -48,7 +48,7 @@ The demonstration does not validate real admission requirements, financial oblig
 ### Reporting and Printing
 
 - Browser-printable enrollment reports and masterlist output based on complete, canonically filtered submitted enrollment records. Query failures show an unavailable state instead of a misleading empty report or zero dashboard count.
-- Browser-printable draft registration form populated from an enrollment request and attached subjects.
+- Browser-printable draft registration form populated from an enrollment request and deterministically ordered attached subjects. Student printing is available only for the latest approved request; Registrar/Admin may preview any review status.
 
 ### Authentication and Access Control
 
@@ -83,7 +83,7 @@ The following routes show proposed system scope but are not operational modules:
 - Balances
 - Encode Grades/Schedule
 
-The draft registration form also contains non-operational placeholders for schedule values, section, fees, scholarship, payment details, and signature/clearance completion.
+The draft registration form also contains non-operational placeholders for schedule values, section, address, fees, scholarship, payment details, and signature/clearance completion. It targets readable A4 browser printing; a larger subject load may continue onto an additional page rather than produce an official PDF.
 
 ## 6. Explicit MVP Non-Goals
 

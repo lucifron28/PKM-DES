@@ -77,9 +77,9 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Rejection keeps optional free-text remarks; no requirements checklist or document-verification workflow is invented
 - Enrollment masterlist across pending, approved, and rejected submitted requests, with program, academic year, year level, semester, review-status, and student identity search filters
 - Admin Account page with internal account details and password change
-- MVP draft printable registration form aligned with the supplied registration form sample layout
-- Printable registration form displays student details, classification markers, attached subjects, total units, fee/payment placeholders, signature labels, and data privacy authorization text
-- Admin view/print access for individual enrollment registration forms
+- MVP draft printable registration form aligned with the supplied registration form sample layout and readable A4 browser printing
+- Printable registration form displays deterministic attached-subject rows, total units, classification markers, review status, fee/payment placeholders, signature labels, and data privacy authorization text
+- Students can print only their latest approved request; Registrar/Admin can preview individual enrollment forms for every review status
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
 - Official student records list displays page-scoped account-match status for Registrar review; its source enrollment status never creates or changes an online enrollment request
 - Faster student tab navigation through a student portal context and lighter placeholder routes
@@ -265,7 +265,7 @@ Student:
 - Rejected enrollment records cannot be resubmitted for the same academic year and semester.
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
 - Enrollment status becomes PENDING.
-- Student can open and browser-print the MVP draft registration form after enrollment submission.
+- Student can open and browser-print the MVP draft registration form only after the latest request is approved.
 - Draft registration form follows the supplied sample layout and displays attached subjects, total units, fee/payment placeholders, signature labels, and Registrar review context.
 - Grades page shows empty state when no grades exist.
 - Schedule page shows empty state when no schedule exists.
