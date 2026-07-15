@@ -304,7 +304,7 @@ export default async function StudentRecordsPage({
               <option key={studentType} value={studentType}>{studentType}</option>
             ))}
           </SelectInput>
-          <SelectInput label="Enrollment" name="enrollment_status" defaultValue={filters.enrollmentStatus}>
+          <SelectInput label="Official Record Status" name="enrollment_status" defaultValue={filters.enrollmentStatus}>
             <option value="">All statuses</option>
             {ENROLLMENT_STATUSES.map((status) => (
               <option key={status} value={status}>{status}</option>
@@ -316,7 +316,7 @@ export default async function StudentRecordsPage({
         {records.length ? (
           <>
             <SimpleTable
-              columns={["Student name", "Student ID", "Email", "Program", "Year Level", "Type", "Enrollment", "Account", "Updated", "Action"]}
+              columns={["Student name", "Student ID", "Email", "Program", "Year Level", "Type", "Official Record Status", "Account", "Updated", "Action"]}
               rows={records.map((record) => {
                 const accountMatch = accountMatchByRecordId.get(record.id) ?? {
                   state: "unavailable",

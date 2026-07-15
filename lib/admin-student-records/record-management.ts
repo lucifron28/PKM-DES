@@ -31,19 +31,25 @@ export function normalizeOfficialRecordSearch(value: string | null | undefined) 
   return String(value ?? "").trim().slice(0, 100);
 }
 
-function escapePostgrestLikeValue(value: string) {
+export function escapeLikeLiteral(value: string) {
   return value
     .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/[,.()]/g, "\\$&")
-    .replace(/[%_*]/g, "\\$&");
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+}
+
+export function escapePostgrestQuotedValue(value: string) {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
 }
 
 export function buildOfficialRecordSearchFilter(value: string | null | undefined) {
   const search = normalizeOfficialRecordSearch(value);
   if (!search) return null;
 
-  const pattern = `*${escapePostgrestLikeValue(search)}*`;
+  const escapedSearch = escapePostgrestQuotedValue(escapeLikeLiteral(search));
+  const pattern = `*${escapedSearch}*`;
   return ["first_name", "last_name", "email", "student_id_number"]
     .map((field) => `${field}.ilike."${pattern}"`)
     .join(",");
