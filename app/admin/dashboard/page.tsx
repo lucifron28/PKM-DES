@@ -3,59 +3,49 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth/session";
+import { countEnrollmentStatuses } from "@/lib/enrollment/query";
 import type { EnrollmentReviewStatus } from "@/types/database";
-
-function countStatuses(records: Array<{ status: EnrollmentReviewStatus }>) {
-  return records.reduce(
-    (counts, record) => {
-      counts.total += 1;
-      counts[record.status] += 1;
-      return counts;
-    },
-    {
-      APPROVED: 0,
-      PENDING: 0,
-      REJECTED: 0,
-      total: 0
-    }
-  );
-}
 
 export default async function AdminDashboardPage() {
   const { supabase } = await requireRole("admin");
-  const { data: enrollmentStatuses } = await supabase
+  const { data: enrollmentStatuses, error: enrollmentStatusesError } = await supabase
     .from("enrollments")
     .select("status")
     .returns<Array<{ status: EnrollmentReviewStatus }>>();
-  const statusCounts = countStatuses(enrollmentStatuses ?? []);
+
+  if (enrollmentStatusesError) {
+    console.error("enrollment_reporting:dashboard_counts");
+  }
+
+  const statusCounts = enrollmentStatusesError ? null : countEnrollmentStatuses(enrollmentStatuses ?? []);
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-4">
         <StatCard
           label="Pending Enrollments"
-          value={statusCounts.PENDING}
+          value={statusCounts?.PENDING ?? "Unavailable"}
           helper="Requests awaiting administrative review."
           icon={<ListChecks className="h-5 w-5" />}
           tone="warning"
         />
         <StatCard
           label="Approved Enrollments"
-          value={statusCounts.APPROVED}
+          value={statusCounts?.APPROVED ?? "Unavailable"}
           helper="Enrollment records approved by the Registrar."
           icon={<ClipboardCheck className="h-5 w-5" />}
           tone="success"
         />
         <StatCard
           label="Rejected Enrollments"
-          value={statusCounts.REJECTED}
+          value={statusCounts?.REJECTED ?? "Unavailable"}
           helper="Reviewed records that were not approved."
           icon={<XCircle className="h-5 w-5" />}
           tone="danger"
         />
         <StatCard
           label="Enrollment Records"
-          value={statusCounts.total}
+          value={statusCounts?.total ?? "Unavailable"}
           helper="Submitted enrollment records."
           icon={<FileText className="h-5 w-5" />}
           tone="info"
@@ -84,7 +74,11 @@ export default async function AdminDashboardPage() {
       </Card>
       <Card>
         <CardHeader title="Enrollment Status Overview" />
-        {statusCounts.total === 0 ? (
+        {statusCounts === null ? (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Enrollment counts could not be loaded. Please try again.
+          </div>
+        ) : statusCounts.total === 0 ? (
           <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
             Dashboard counts include submitted enrollment records only. Official Student Records appear here after a student claims an account and submits Online Enrollment.
           </div>
@@ -92,19 +86,19 @@ export default async function AdminDashboardPage() {
         <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-md bg-amber-50 p-4 text-amber-900">
             <p className="font-semibold">Pending</p>
-            <p className="mt-1 text-2xl font-bold">{statusCounts.PENDING}</p>
+            <p className="mt-1 text-2xl font-bold">{statusCounts?.PENDING ?? "Unavailable"}</p>
           </div>
           <div className="rounded-md bg-green-50 p-4 text-green-800">
             <p className="font-semibold">Approved</p>
-            <p className="mt-1 text-2xl font-bold">{statusCounts.APPROVED}</p>
+            <p className="mt-1 text-2xl font-bold">{statusCounts?.APPROVED ?? "Unavailable"}</p>
           </div>
           <div className="rounded-md bg-red-50 p-4 text-red-800">
             <p className="font-semibold">Rejected</p>
-            <p className="mt-1 text-2xl font-bold">{statusCounts.REJECTED}</p>
+            <p className="mt-1 text-2xl font-bold">{statusCounts?.REJECTED ?? "Unavailable"}</p>
           </div>
           <div className="rounded-md bg-sky-50 p-4 text-sky-900">
             <p className="font-semibold">Total Records</p>
-            <p className="mt-1 text-2xl font-bold">{statusCounts.total}</p>
+            <p className="mt-1 text-2xl font-bold">{statusCounts?.total ?? "Unavailable"}</p>
           </div>
         </div>
       </Card>

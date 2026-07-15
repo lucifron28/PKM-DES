@@ -28,6 +28,7 @@ export function EnrollmentFilterGrid({
         name="search"
         placeholder="Name or ID"
         defaultValue={params.search ?? ""}
+        maxLength={100}
       />
 
       <SelectInput label="Program" name="program" defaultValue={params.program ?? ""}>
@@ -77,7 +78,7 @@ export function EnrollmentFilterGrid({
         ))}
       </SelectInput>
 
-      <Button type="submit">Apply {resetHref ? "" : "Filters"}</Button>
+      <Button type="submit">Apply Filters</Button>
 
       {resetHref && (
         <ButtonLink href={resetHref} variant="outline">
