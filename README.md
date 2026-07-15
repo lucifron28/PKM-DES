@@ -84,6 +84,8 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Official student records list displays page-scoped account-match status for Registrar review; its source enrollment status never creates or changes an online enrollment request
 - Faster student tab navigation through a student portal context and lighter placeholder routes
 - Sidebar links prefetch on hover/focus, with student/admin loading shells for slower server-rendered routes
+- Responsive public and authenticated navigation with a keyboard-accessible skip link, current-section heading, active-route indication, and compact mobile portal menu
+- Disabled Grades, Schedule, Balances, and Encode Grades/Schedule links remain hidden unless `NEXT_PUBLIC_ENABLE_STUB_PAGES=true`
 
 ## 6. Placeholder Features
 

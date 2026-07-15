@@ -55,6 +55,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - Supabase Auth sessions.
 - Active-account and student/admin role checks in server-side route access.
 - Row Level Security policies are present for the current database-backed MVP flows. The research MVP has not undergone production security certification or penetration testing.
+- Responsive public and authenticated navigation, current-section identification, and keyboard-accessible skip navigation support the presentation workflow. No backend capability is added by these interface improvements.
 
 ## 4. Partial or Demonstration-Only Capabilities
 

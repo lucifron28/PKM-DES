@@ -18,7 +18,7 @@ export default async function CreateAccountPage({
   return (
     <div className="min-h-screen bg-slateui-background">
       <PublicHeader />
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+      <main id="main-content" className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <Card>
           <CardHeader
             title="Create Student Account"

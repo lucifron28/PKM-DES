@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-slateui-background text-slateui-text antialiased">{children}</body>
+      <body className="bg-slateui-background text-slateui-text antialiased"><a href="#main-content" className="skip-link">Skip to main content</a>{children}</body>
     </html>
   );
 }

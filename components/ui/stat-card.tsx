@@ -24,11 +24,11 @@ export function StatCard({
   }[tone];
 
   return (
-    <Card className="p-5">
+    <Card className="min-w-0 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-medium text-slateui-muted">{label}</p>
-          <div className="mt-2 text-2xl font-bold text-slateui-text">{value}</div>
+          <div className="mt-2 break-words text-2xl font-bold text-slateui-text">{value}</div>
           {helper ? <p className="mt-2 text-sm text-slateui-muted">{helper}</p> : null}
         </div>
         {icon ? (

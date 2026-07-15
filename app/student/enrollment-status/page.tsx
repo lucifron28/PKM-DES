@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
 import { formatDate } from "@/lib/utils/format";
 import type { Enrollment, EnrollmentStatus } from "@/types/database";
+import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 type LatestEnrollment = Pick<
   Enrollment,
@@ -41,6 +42,12 @@ export default async function EnrollmentStatusPage() {
 
   const latestEnrollment = (data as LatestEnrollment | null) ?? null;
   const status = getDisplayedStatus(latestEnrollment, student.enrollment_status);
+
+  const actions = status === "ENROLLED"
+    ? [["/student/cor", "Print Draft Registration Form", "secondary"], ["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]]
+    : status === "NOT ENROLLED"
+      ? [["/student/enrollment", "Online Enrollment", "primary"], ["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]]
+      : [["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]];
 
   return (
     <Card>
@@ -89,10 +96,8 @@ export default async function EnrollmentStatusPage() {
         )}
       </div>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <ButtonLink href="/student/cor" variant="secondary">Print Registration Form</ButtonLink>
-        <ButtonLink href="/student/grades" variant="outline">View Grades</ButtonLink>
-        <ButtonLink href="/student/schedule" variant="outline">View Class Schedule</ButtonLink>
-        <ButtonLink href="/student/balances" variant="outline">View Balances</ButtonLink>
+        {actions.map(([href, label, variant]) => <ButtonLink key={href} href={href} variant={variant as "primary" | "secondary" | "outline"} className="w-full">{label}</ButtonLink>)}
+        {ENABLE_STUB_PAGES ? <><ButtonLink href="/student/grades" variant="outline" className="w-full">View Grades</ButtonLink><ButtonLink href="/student/schedule" variant="outline" className="w-full">View Class Schedule</ButtonLink><ButtonLink href="/student/balances" variant="outline" className="w-full">View Balances</ButtonLink></> : null}
       </div>
     </Card>
   );

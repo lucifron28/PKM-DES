@@ -12,7 +12,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slateui-background">
       <PublicHeader />
-      <main className="mx-auto flex max-w-7xl items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <main id="main-content" className="mx-auto flex max-w-7xl items-center justify-center px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <Card className="w-full max-w-md">
           <CardHeader
             title="Login"

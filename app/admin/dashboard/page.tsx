@@ -5,6 +5,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth/session";
 import { countEnrollmentStatuses } from "@/lib/enrollment/query";
 import type { EnrollmentReviewStatus } from "@/types/database";
+import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 export default async function AdminDashboardPage() {
   const { supabase } = await requireRole("admin");
@@ -52,7 +53,7 @@ export default async function AdminDashboardPage() {
         />
       </div>
       <Card>
-        <CardHeader title="Admin Controls" description="Monitor and review enrollment records." />
+        <CardHeader title="Registrar Workflow" description="Follow the submitted enrollment process from source record to review and reporting." />
         <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
           <p className="font-semibold">Demo path</p>
           <p className="mt-1">
@@ -61,15 +62,11 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <ButtonLink href="/admin/enrollments">View Pending Enrollments</ButtonLink>
-          <ButtonLink href="/admin/enrollments" variant="outline">
-            <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-            Approve Enrollment
-          </ButtonLink>
-          <ButtonLink href="/admin/enrollments" variant="outline">Reject Enrollment</ButtonLink>
-          <ButtonLink href="/admin/masterlist?status=APPROVED" variant="secondary">View Enrolled Students</ButtonLink>
-          <ButtonLink href="/admin/reports" variant="outline">Enrollment Reports</ButtonLink>
-          <ButtonLink href="/admin/encode" variant="outline">Encode Grades/Schedule</ButtonLink>
+          <ButtonLink href="/admin/students" className="w-full">Student Records</ButtonLink>
+          <ButtonLink href="/admin/enrollments" variant="outline" className="w-full"><ClipboardCheck className="h-4 w-4" aria-hidden="true" />Pending Enrollments</ButtonLink>
+          <ButtonLink href="/admin/masterlist" variant="secondary" className="w-full">Enrollment Masterlist</ButtonLink>
+          <ButtonLink href="/admin/reports" variant="outline" className="w-full">Enrollment Reports</ButtonLink>
+          {ENABLE_STUB_PAGES ? <ButtonLink href="/admin/encode" variant="outline" className="w-full">Encode Grades/Schedule</ButtonLink> : null}
         </div>
       </Card>
       <Card>
