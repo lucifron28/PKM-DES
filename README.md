@@ -59,8 +59,9 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Student dashboard with student information, enrollment status, and quick actions
 - Student Account page displays core account data and matching Registrar-managed official profile details when available
 - Signed-in students can change their password from the Account page
-- Subject List grouped into separate tables by year level and semester, with a working year-level filter
-- Subject List includes source-labeled workbook-derived course offerings for several programs for SY 2025-2026, 2nd Semester
+- Subject List separates historical workbook course-offering references from the BSAIS curriculum reference, with one working year-level filter
+- Historical workbook offerings are display-only AY 2025-2026, 2nd Semester references and are not the active AY 2026-2027 enrollment load
+- Students cannot select subjects from the Subject List; actual attached subjects come from the submitted enrollment record and Registrar review
 - Online enrollment uses the authenticated student's recorded program, year level, student type, and Student ID; the browser submits only the certification checkbox
 - Automatic standard-load submission is limited to eligible BSAIS students for the client-confirmed MVP term: AY 2026-2027, 1st Semester
 - The server action supplies `CURRENT_ENROLLMENT_TERM` to the RPC, which validates it against the database-approved term; a mismatch creates no enrollment
@@ -253,7 +254,8 @@ Student:
 - Student account page displays confirmed official profile fields when a matching official record exists.
 - Student can change password from the Account page after entering the current password.
 - Student can view subject list.
-- Student can view source-labeled workbook-derived course offerings for the student's program where configured for SY 2025-2026, 2nd Semester.
+- Student can view source-labeled historical workbook offerings for the student's actual program where configured for SY 2025-2026, 2nd Semester.
+- Student can distinguish historical course-offering references, the BSAIS curriculum reference, and actual enrollment subjects.
 - Subject list displays separate tables by year level and semester.
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
@@ -313,9 +315,9 @@ Security:
 - Grades, schedule, balances, student records, and encode workflows are placeholders.
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
-- Subject List uses tracked source-derived constants for display and the Supabase `subjects` table for enrollment attachment.
+- Subject List uses tracked source-derived constants for historical and curriculum references; actual enrollment attachments continue to use the Supabase `subjects` table.
 - The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
-- Workbook-derived offerings are display-only term references; they do not replace database curriculum subjects used by enrollment.
+- Workbook-derived offerings are historical, display-only AY 2025-2026, 2nd Semester references; they are not the active AY 2026-2027 enrollment load and do not replace database curriculum subjects used by enrollment.
 - The source workbook contains duplicate BSAIS blocks and a 4th Year BSAIS total with no visible 4th Year BSAIS course rows.
 - Enrollment submission attaches matching BSAIS subjects from the database until PKM supplies approved curriculum and term-enrollment rules for other programs.
 - Client has confirmed First Semester AY 2026-2027 as the current MVP enrollment term, but the app still needs a full academic calendar configuration before additional terms are opened.
