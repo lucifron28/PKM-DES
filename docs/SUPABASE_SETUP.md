@@ -15,6 +15,8 @@ The public URL and anon/publishable keys are safe for browser use. The service-r
 
 For Vercel deployment, keep `DATABASE_PROVIDER=supabase`. SQLite is local-development only and is documented separately in `docs/SQLITE_DEVELOPMENT.md`.
 
+For the temporary fictional-data client-preview deployment boundary and Vercel runtime guidance, see [CLIENT_PREVIEW_DEPLOYMENT.md](./CLIENT_PREVIEW_DEPLOYMENT.md).
+
 Before a production or Vercel deployment, run:
 
 ```bash
