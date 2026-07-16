@@ -389,6 +389,10 @@ Official student records:
 
 ## Auth and Login Setup
 
+### Private Preview Credentials
+
+For an authorized research-demo preview, use the guarded local workflow in [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md). It prepares unique passwords only for the allowlisted fictional student accounts, verifies the existing Registrar/Admin account without modifying it, and writes the credential manifest only under ignored `.preview/`. It is not a production account-provisioning process.
+
 ### Student Login
 
 For the MVP Create Student Account page to work:

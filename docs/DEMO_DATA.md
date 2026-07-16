@@ -8,6 +8,8 @@ The fictional records in `scripts/demo/demo-records.mjs` make the PKM-DES resear
 
 - Every committed identity is fictional.
 - `example.com` addresses are reserved fictional values, not active preview credentials.
+
+After resetting a dedicated Supabase preview project, use [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md) to prepare private, unique fictional student passwords. The reset password is bootstrap-only and must not be used as a presentation credential.
 - Passwords are supplied through environment variables and are never committed.
 - Active Registrar credentials are distributed privately.
 - Do not run the scripts against a real institutional database containing live student information.
