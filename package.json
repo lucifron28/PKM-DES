@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/check-vercel-env.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check:production-env": "node scripts/check-production-env.mjs",
+    "test:deployment-env": "node --test scripts/deployment/*.test.mjs",
     "db:sqlite:init": "node scripts/sqlite/init-dev-db.mjs",
     "demo:reset": "node scripts/demo/reset-demo-data.mjs",
     "demo:verify": "node scripts/demo/verify-demo-data.mjs",
