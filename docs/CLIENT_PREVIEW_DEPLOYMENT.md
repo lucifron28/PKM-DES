@@ -23,6 +23,16 @@ NEXT_PUBLIC_ENABLE_STUB_PAGES=
 
 When intentionally configured, the existing term variables are `NEXT_PUBLIC_CURRENT_ACADEMIC_YEAR` and `NEXT_PUBLIC_CURRENT_SEMESTER`. They use the application’s current supported values and must be coordinated with the database enrollment rule. No new term variables are introduced here.
 
+## Prebuild Troubleshooting
+
+The Vercel prebuild check reports only a sanitized stage and, where applicable, a variable name. Verify values privately in the authorized Vercel scope; never paste a value into a pull request, issue, chat, screenshot, or deployment comment.
+
+- `required_runtime_variable_missing`: confirm the named runtime variable exists in the authorized scope.
+- `local_operator_variable_present`: remove the named local-only variable from the authorized Vercel scope.
+- `invalid_database_provider`: set `DATABASE_PROVIDER` to `supabase` in the authorized scope.
+- `invalid_supabase_url`: verify the value privately without copying it into logs or documentation.
+- `stub_pages_must_be_disabled`: omit `NEXT_PUBLIC_ENABLE_STUB_PAGES` or use the application's documented disabled value.
+
 ## Local Operator Variables
 
 Keep these values only in an ignored local environment file:
