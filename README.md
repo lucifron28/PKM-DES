@@ -129,6 +129,8 @@ Fictional presentation data and the guarded reset procedure are documented in [d
 
 Private preview credential preparation, verification, and handoff are documented in [docs/PREVIEW_CREDENTIALS.md](./docs/PREVIEW_CREDENTIALS.md). Active preview credentials are never committed or included in project documentation.
 
+Temporary fictional-data client-preview deployment safeguards and runbook are documented in [docs/CLIENT_PREVIEW_DEPLOYMENT.md](./docs/CLIENT_PREVIEW_DEPLOYMENT.md).
+
 Registration form sample scope notes are in [docs/REGISTRATION_FORM_SAMPLE_SCOPE.md](./docs/REGISTRATION_FORM_SAMPLE_SCOPE.md).
 
 Short setup:

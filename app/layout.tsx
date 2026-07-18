@@ -9,7 +9,14 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`
   },
   description:
-    "Web-based enrollment and student information system for Pambayang Kolehiyo ng Mauban."
+    "Web-based enrollment and student information system for Pambayang Kolehiyo ng Mauban.",
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nosnippet: true,
+    noimageindex: true
+  }
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

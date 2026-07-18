@@ -2,6 +2,8 @@
 
 Use this as the short script for a PKM-DES MVP walkthrough. The demo should show the real implemented path and clearly label placeholders.
 
+Before a hosted client preview, follow [CLIENT_PREVIEW_DEPLOYMENT.md](./CLIENT_PREVIEW_DEPLOYMENT.md). This runbook does not authorize deployment or credential sharing.
+
 ## Demo URL
 
 - Local: `http://localhost:3000`

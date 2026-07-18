@@ -4,6 +4,8 @@
 
 This local-only workflow prepares unique passwords for the three fictional student accounts used in the PKM-DES research MVP demo. It also verifies the existing internal Registrar/Admin account without creating, changing, or exposing that account.
 
+For the hosted temporary-preview boundary, deployment order, and cleanup procedure, see [CLIENT_PREVIEW_DEPLOYMENT.md](./CLIENT_PREVIEW_DEPLOYMENT.md).
+
 It is for authorized presenters using a confirmed safe Supabase preview project. It is not an institutional account-provisioning process, email-delivery workflow, or production credential-management system.
 
 ## Safety Boundary
