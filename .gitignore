@@ -33,3 +33,9 @@ data/sqlite/*.sqlite-*
 .vercel
 .agents/
 graphify-out/
+
+# Playwright smoke test output
+test-results/
+playwright-report/
+.playwright/
+.env.smoke.local
