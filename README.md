@@ -125,6 +125,8 @@ Development sample accounts are in [docs/SAMPLE_ACCOUNTS.md](./docs/SAMPLE_ACCOU
 
 Demo walkthrough instructions are in [docs/DEMO_RUNBOOK.md](./docs/DEMO_RUNBOOK.md).
 
+The automated browser smoke tests are documented in [docs/DEMO_WORKFLOW_SMOKE_TESTS.md](./docs/DEMO_WORKFLOW_SMOKE_TESTS.md).
+
 Fictional presentation data and the guarded reset procedure are documented in [docs/DEMO_DATA.md](./docs/DEMO_DATA.md) and [docs/DEMO_RESET.md](./docs/DEMO_RESET.md).
 
 Private preview credential preparation, verification, and handoff are documented in [docs/PREVIEW_CREDENTIALS.md](./docs/PREVIEW_CREDENTIALS.md). Active preview credentials are never committed or included in project documentation.

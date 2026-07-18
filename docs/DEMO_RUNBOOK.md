@@ -65,7 +65,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 
 ## Quick Smoke Test
 
-Before the demo:
+Before the demo, perform these normal non-mutating pre-demo checks:
 
 ```bash
 npm run typecheck
@@ -82,3 +82,8 @@ Then verify:
 - Student enrollment submission creates a pending enrollment.
 - Admin dashboard counts update after submission and approval/rejection.
 - Registration form print preview hides sidebar/navigation, keeps the draft disclaimer visible, and shows the sample-style fields, subject table, fee placeholders, and signature labels.
+
+### Optional Guarded Browser Workflow
+
+If you have a separately authorized disposable smoke project configured, you can run the automated Playwright smoke suite. See [DEMO_WORKFLOW_SMOKE_TESTS.md](./DEMO_WORKFLOW_SMOKE_TESTS.md) for setup and cleanup instructions. 
+**Do not run this on a client preview deployment or production database.**

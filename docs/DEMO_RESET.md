@@ -42,6 +42,9 @@ npm run demo:verify
 
 Verification is read-only. It checks the claim-only record, all demo Auth identities, three account-backed enrollment states, exact subject attachments, current-term uniqueness, and expected dashboard counts. Dashboard totals require the database to contain only the three fictional enrollment records; additional enrollment records cause verification to fail because the presentation state cannot be guaranteed.
 
+### Automated Smoke Tests
+If you maintain a disposable smoke test project, you can run the automated browser test suite after verifying the reset. See [DEMO_WORKFLOW_SMOKE_TESTS.md](./DEMO_WORKFLOW_SMOKE_TESTS.md) for setup.
+
 ## Expected Record Counts
 
 - Official student records: 4 fictional records
