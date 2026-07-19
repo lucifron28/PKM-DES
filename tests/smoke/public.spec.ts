@@ -10,22 +10,26 @@ test.describe('Public Read-Only Pages', () => {
       expect(robotsTag).toContain('noindex');
       expect(robotsTag).toContain('nofollow');
       expect(robotsTag).toContain('noarchive');
-      
-      expect(headers['x-content-type-options']).toBeDefined();
-      expect(headers['x-frame-options']).toBeDefined();
-      expect(headers['referrer-policy']).toBeDefined();
-      expect(headers['permissions-policy']).toBeDefined();
+
+      expect(headers['x-content-type-options']).toBe('nosniff');
+      expect(headers['x-frame-options']).toBe('DENY');
+      expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+
+      const permissionsPolicy = headers['permissions-policy'] || '';
+      expect(permissionsPolicy).toContain('camera=()');
+      expect(permissionsPolicy).toContain('microphone=()');
+      expect(permissionsPolicy).toContain('geolocation=()');
     }
-    
+
     // Smoke check content
     await expect(page.getByRole('heading', { name: /Welcome to Pambayang Kolehiyo ng Mauban!/i })).toBeVisible();
-    
+
     // Check for exposed secrets or generic framework errors
     const bodyText = await page.innerText('body');
     if (bodyText.includes('NEXT_PUBLIC_SUPABASE_URL')) {
       throw new Error('smoke_secret_rendered: NEXT_PUBLIC_SUPABASE_URL');
     }
-    
+
     // Check for specific application errors instead of generic 'Error' text
     await expect(page.locator('text=Application error')).not.toBeVisible();
     await expect(page.locator('text=configuration could not be loaded')).not.toBeVisible();
@@ -59,7 +63,7 @@ test.describe('Public Read-Only Pages', () => {
     expect(response).toBeTruthy();
     if (response) {
       const text = await response.text();
-      expect(text).toContain('User-agent: *');
+      expect(text.toLowerCase()).toContain('user-agent: *');
       expect(text).toContain('Disallow: /');
     }
   });

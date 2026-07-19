@@ -1,4 +1,5 @@
 export const DEMO_PROGRAM_CODE = "BSAIS";
+export const DEMO_PROGRAM_NAME = "Accounting Information System";
 export const DEMO_YEAR_LEVEL = "1st Year";
 export const DEMO_STUDENT_TYPE = "Incoming 1st Year Student";
 export const DEMO_RESET_CONFIRMATION = "RESET_PKM_DES_DEMO";

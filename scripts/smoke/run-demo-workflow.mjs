@@ -1,7 +1,5 @@
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-import { validateSmokeEnv, formatSmokeEnvironmentError } from './smoke-env-utils.mjs';
+import { checkPreconditions } from './workflow-preconditions.mjs';
+import { formatSmokeEnvironmentError } from './smoke-env-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,23 +17,14 @@ function runCommand(command, args, env) {
 function main() {
   const env = process.env;
   try {
-    validateSmokeEnv(env);
+    checkPreconditions(env);
   } catch (err) {
     console.error(`Smoke environment validation failed at stage: ${formatSmokeEnvironmentError(err)}`);
     console.error('Please ensure you are using a separately authorized disposable smoke project and have set SMOKE_WORKFLOW_CONFIRM=RUN_PKM_DES_DISPOSABLE_SMOKE.');
     process.exit(1);
   }
 
-  console.log('Smoke environment validation passed. Running canonical demo verifier...');
-
-  const verifierStatus = runCommand('node', ['scripts/demo/verify-demo-data.mjs'], env);
-  if (verifierStatus !== 0) {
-    console.error('Canonical demo verification failed. Aborting smoke test.');
-    console.error('Please run the demo reset script against your disposable project before running the mutating workflow.');
-    process.exit(1);
-  }
-
-  console.log('Demo verifier passed. Starting Playwright smoke workflow...');
+  console.log('Preconditions check passed. Starting Playwright smoke workflow...');
 
   const playwrightStatus = runCommand('npx', [
     'playwright',

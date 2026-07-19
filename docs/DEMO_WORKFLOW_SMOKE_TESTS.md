@@ -1,7 +1,6 @@
 # Demo Workflow Smoke Tests
 
-This repository includes a Playwright-based browser smoke test suite for the PKM-DES demonstration workflow. 
-
+This repository includes a Playwright-based browser smoke test suite for the PKM-DES demonstration workflow.
 ## Purpose
 These browser smoke tests verify the core demonstration path:
 - Two-stage account claiming (find official record, then create account)
@@ -23,7 +22,7 @@ The full serial workflow test mutates Auth and database state. It must **only** 
 The workflow operates strictly using canonical fictional data (e.g., `pkm.demo.claim@example.com`).
 
 ## Local-Only Application URL
-The suite strictly enforces a local-only loopback application URL (`http://localhost:3000` or `127.0.0.1`). It will reject any remote target (including Vercel or production deployments). 
+The suite strictly enforces a local-only loopback application URL (`http://localhost:3000` or `127.0.0.1`). It will reject any remote target (including Vercel or production deployments).
 
 **Security Guard:** Direct Playwright invocation of the workflow remains guarded. The workflow specification explicitly validates the complete environment before attempting to start, guaranteeing it only runs against the validated `SMOKE_BASE_URL`.
 
@@ -40,7 +39,7 @@ The suite strictly enforces a local-only loopback application URL (`http://local
 If the browser test fails midway, failure stages are sanitized (e.g. `Smoke workflow failed after stage: enrollment_submitted`), ensuring no environment variables or credentials are leaked.
 - The orchestrator will not hide the failure.
 - Form values, cookies, and credentials are never printed. Password values never appear in selectors or output.
-- To recover, you must run the guarded demo reset (`npm run demo:reset`) against your disposable project before retrying. 
+- To recover, you must run the guarded demo reset (`npm run demo:reset`) against your disposable project before retrying.
 
 ## Secret-Handling Rules
 - Never commit `.env.smoke.local`.

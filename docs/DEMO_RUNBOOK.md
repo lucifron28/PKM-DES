@@ -85,5 +85,5 @@ Then verify:
 
 ### Optional Guarded Browser Workflow
 
-If you have a separately authorized disposable smoke project configured, you can run the automated Playwright smoke suite. See [DEMO_WORKFLOW_SMOKE_TESTS.md](./DEMO_WORKFLOW_SMOKE_TESTS.md) for setup and cleanup instructions. 
+If you have a separately authorized disposable smoke project configured, you can run the automated Playwright smoke suite. See [DEMO_WORKFLOW_SMOKE_TESTS.md](./DEMO_WORKFLOW_SMOKE_TESTS.md) for setup and cleanup instructions.
 **Do not run this on a client preview deployment or production database.**
