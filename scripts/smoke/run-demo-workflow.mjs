@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { validateSmokeEnv } from './smoke-env-utils.mjs';
+import { validateSmokeEnv, formatSmokeEnvironmentError } from './smoke-env-utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,10 +18,10 @@ function runCommand(command, args, env) {
 
 function main() {
   const env = process.env;
-  const validation = validateSmokeEnv(env);
-
-  if (!validation.ok) {
-    console.error(`Smoke environment validation failed at stage: ${validation.error}`);
+  try {
+    validateSmokeEnv(env);
+  } catch (err) {
+    console.error(`Smoke environment validation failed at stage: ${formatSmokeEnvironmentError(err)}`);
     console.error('Please ensure you are using a separately authorized disposable smoke project and have set SMOKE_WORKFLOW_CONFIRM=RUN_PKM_DES_DISPOSABLE_SMOKE.');
     process.exit(1);
   }

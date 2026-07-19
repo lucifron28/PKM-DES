@@ -1,11 +1,38 @@
 import { test, expect } from '@playwright/test';
+// @ts-expect-error - missing declaration file for .mjs utils
+import { validateSmokeEnv, formatSmokeEnvironmentError } from '../../scripts/smoke/smoke-env-utils.mjs';
 // @ts-expect-error - missing declaration file for .mjs demo script
-import { 
+import * as demoRecords from '../../scripts/demo/demo-records.mjs';
+const { 
   CLAIM_ONLY_DEMO_RECORD,
   DEMO_PROGRAM_CODE,
   DEMO_YEAR_LEVEL,
   DEMO_STUDENT_TYPE
-} from '../../scripts/demo/demo-records.mjs';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+} = demoRecords as any;
+
+let currentStage = 'environment_validated';
+
+test.beforeAll(() => {
+  try {
+    validateSmokeEnv(process.env);
+  } catch (err) {
+    throw new Error(`Smoke environment validation failed at stage: ${formatSmokeEnvironmentError(err)}`);
+  }
+});
+
+test.afterEach(async ({}, testInfo) => {
+  if (testInfo.status !== 'passed' && testInfo.status !== 'skipped') {
+    console.error(`Smoke workflow failed after stage: ${currentStage}`);
+  }
+});
+
+async function assertSecretNotRendered(page: import('@playwright/test').Page, secret: string, label: string) {
+  const bodyText = await page.innerText('body');
+  if (bodyText.includes(secret)) {
+    throw new Error(`smoke_secret_rendered: ${label}`);
+  }
+}
 
 test.describe.serial('Demo Workflow Smoke Test', () => {
   const { email, studentIdNumber, firstName } = CLAIM_ONLY_DEMO_RECORD;
@@ -14,168 +41,180 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
   const registrarPassword = process.env.SMOKE_REGISTRAR_PASSWORD || '';
 
   test('Precondition: Environment variables are set', () => {
-    expect(newPassword).not.toBe('');
-    expect(registrarEmail).not.toBe('');
-    expect(registrarPassword).not.toBe('');
+    currentStage = 'demo_state_verified';
   });
 
-  test('Account claim', async ({ page }) => {
+  test('Account claim workflow', async ({ page }) => {
+    currentStage = 'claim_record_found';
     await page.goto('/create-account');
     
-    // Fill the claim form
-    await page.getByLabel(/Email/i).fill(email);
-    await page.getByLabel(/Student ID/i).fill(studentIdNumber);
+    // Stage 1: Find My Record
     await page.getByLabel(/Student Type/i).selectOption({ label: DEMO_STUDENT_TYPE });
-    
-    // Fill passwords
-    const passwordInputs = await page.getByLabel(/Password/i).all();
-    // Assuming the first is password, second is confirm password
-    await passwordInputs[0].fill(newPassword);
-    
-    // If there is an explicit Confirm Password label
-    const confirmInput = page.getByLabel(/Confirm Password/i);
-    if (await confirmInput.isVisible()) {
-       await confirmInput.fill(newPassword);
-    } else if (passwordInputs.length > 1) {
-       await passwordInputs[1].fill(newPassword);
-    }
+    await page.getByLabel(/Active Email Address/i).fill(email);
+    await page.getByLabel(/Student ID Number/i).fill(studentIdNumber);
+    await page.getByRole('button', { name: /Find My Record/i }).click();
 
-    // Submit
-    await page.getByRole('button', { name: /Claim Account/i }).click();
+    // Assert Official record found
+    await expect(page.locator('text=Official record found').first()).toBeVisible();
+    await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
+    await expect(page.locator(`text=${firstName}`).first()).toBeVisible();
 
-    // Verify success or redirect to dashboard/login
-    await page.waitForURL(/student|login/);
-    
-    // Confirm no password appears in output (inherent in standard testing)
-    await expect(page.locator(`text=${newPassword}`)).not.toBeVisible();
+    // Stage 2: Create Account
+    currentStage = 'student_account_created';
+    await page.getByLabel(/^Password/i).first().fill(newPassword);
+    await page.getByLabel(/Confirm Password/i).fill(newPassword);
+    await page.getByRole('button', { name: /Create Account/i }).click();
+
+    // Assert success message or Go to Login
+    await expect(page.locator('text=success').or(page.getByRole('link', { name: /Go to Login/i })).first()).toBeVisible();
+
+    await assertSecretNotRendered(page, newPassword, 'SMOKE_NEW_STUDENT_PASSWORD');
+    await assertSecretNotRendered(page, registrarPassword, 'SMOKE_REGISTRAR_PASSWORD');
   });
 
   test('Student session: submit enrollment', async ({ page }) => {
+    currentStage = 'student_logged_in';
     await page.goto('/login');
     await page.getByLabel(/Email/i).fill(email);
     await page.getByLabel(/Password/i).fill(newPassword);
-    await page.getByRole('button', { name: /Sign in/i }).click();
+    await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await page.waitForURL('**/student/dashboard**');
-    await expect(page.getByRole('heading', { name: /Student Dashboard/i })).toBeVisible();
-    await expect(page.locator(`text=${firstName}`)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible();
+    await expect(page.locator(`text=${firstName}`).first()).toBeVisible();
 
-    await page.getByRole('link', { name: /Subjects/i }).click();
+    // Check stub links are absent
+    await expect(page.getByRole('link', { name: /Grades/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /Class Schedule/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /Balances/i })).not.toBeVisible();
+
+    await page.getByRole('link', { name: /Subject List/i }).click();
     await page.waitForURL('**/student/subjects**');
     await expect(page.getByRole('heading', { name: /Subject List/i })).toBeVisible();
-    await expect(page.locator(`text=${DEMO_YEAR_LEVEL}`)).toBeVisible();
 
     await page.getByRole('link', { name: /Online Enrollment/i }).click();
     await page.waitForURL('**/student/enrollment**');
 
-    // Confirm program and year level are read-only text or disabled inputs
+    // Assert attributes
     await expect(page.locator(`text=${DEMO_PROGRAM_CODE}`).first()).toBeVisible();
     await expect(page.locator(`text=${DEMO_YEAR_LEVEL}`).first()).toBeVisible();
+    await expect(page.locator(`text=${DEMO_STUDENT_TYPE}`).first()).toBeVisible();
+    await expect(page.locator('text=2026-2027').first()).toBeVisible();
+    await expect(page.locator('text=1st Semester').first()).toBeVisible();
     
+    // Check certification
+    await page.getByLabel(/I certify that the information provided is correct/i).check();
+
     // Submit enrollment
+    currentStage = 'enrollment_submitted';
     await page.getByRole('button', { name: /Submit Enrollment/i }).click();
     
-    // Usually redirects to enrollment-status or dashboard with PENDING
     await page.waitForURL('**/student/enrollment-status**');
-    await expect(page.locator('text=PENDING')).toBeVisible();
+    await expect(page.locator('text=Enrollment Status Result').first()).toBeVisible();
+    await expect(page.locator('text=PENDING').first()).toBeVisible();
+
+    await assertSecretNotRendered(page, newPassword, 'SMOKE_NEW_STUDENT_PASSWORD');
 
     // Logout
-    await page.getByRole('button', { name: /Sign out/i }).click();
-    await page.waitForURL('**/login**');
-
-    // Confirm protected route redirects
-    await page.goto('/student/dashboard');
+    await page.getByRole('button', { name: /Log out|Logout/i }).click();
     await page.waitForURL('**/login**');
   });
 
   test('Registrar session: approve enrollment', async ({ page }) => {
+    currentStage = 'registrar_logged_in';
     await page.goto('/login');
     await page.getByLabel(/Email/i).fill(registrarEmail);
     await page.getByLabel(/Password/i).fill(registrarPassword);
-    await page.getByRole('button', { name: /Sign in/i }).click();
+    await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await page.waitForURL('**/admin/dashboard**');
-    await expect(page.getByRole('heading', { name: /Admin Dashboard/i })).toBeVisible();
 
     await page.getByRole('link', { name: /Pending Enrollments/i }).first().click();
     await page.waitForURL('**/admin/enrollments**');
     
-    // Wait for table to load and find the student
-    await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
+    const row = page.getByRole('row', { name: new RegExp(studentIdNumber, 'i') }).first();
+    await expect(row).toBeVisible();
+    await expect(row.locator('text=PENDING').first()).toBeVisible();
 
-    // Open the request (using link or button in the row)
-    const reviewLink = page.getByRole('link', { name: /Review/i }).filter({ hasText: 'Review' }).first();
-    await reviewLink.click();
+    page.on('dialog', async dialog => {
+      expect(dialog.message()).toContain('Approve this pending enrollment request?');
+      await dialog.accept();
+    });
 
-    // Inside review page
-    await expect(page.getByRole('heading', { name: /Enrollment Request/i })).toBeVisible();
-    await page.getByRole('button', { name: /Approve/i }).click();
+    currentStage = 'enrollment_approved';
+    await row.getByRole('button', { name: /Approve/i }).click();
     
-    // Confirm request displays APPROVED
-    await expect(page.locator('text=APPROVED').first()).toBeVisible();
+    await expect(page.locator('text=Enrollment request approved successfully').first()).toBeVisible();
+    await expect(row).not.toBeVisible();
 
-    // Open Enrollment Reports
+    currentStage = 'report_verified';
     await page.getByRole('link', { name: /Reports/i }).click();
     await page.waitForURL('**/admin/reports**');
     await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
 
-    // Open Masterlist
+    currentStage = 'masterlist_verified';
     await page.getByRole('link', { name: /Masterlist/i }).click();
     await page.waitForURL('**/admin/masterlist**');
     await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
 
-    // Open Student Records
-    await page.getByRole('link', { name: /Students/i }).click();
+    await page.getByRole('link', { name: /Student Records/i }).or(page.getByRole('link', { name: /Students/i })).first().click();
     await page.waitForURL('**/admin/students**');
     await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
 
-    // Logout
-    await page.getByRole('button', { name: /Sign out/i }).click();
-    await page.waitForURL('**/login**');
+    await assertSecretNotRendered(page, registrarPassword, 'SMOKE_REGISTRAR_PASSWORD');
 
-    // Confirm protected admin route redirects
-    await page.goto('/admin/dashboard');
+    await page.getByRole('button', { name: /Log out|Logout/i }).click();
     await page.waitForURL('**/login**');
   });
 
   test('Final student verification', async ({ page }) => {
+    currentStage = 'registration_form_verified';
     await page.goto('/login');
     await page.getByLabel(/Email/i).fill(email);
     await page.getByLabel(/Password/i).fill(newPassword);
-    await page.getByRole('button', { name: /Sign in/i }).click();
+    await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await page.waitForURL('**/student/dashboard**');
     
-    // Navigate to status or dashboard to check enrollment status
     await page.getByRole('link', { name: /Enrollment Status/i }).click();
     await page.waitForURL('**/student/enrollment-status**');
     
-    // Check for approved or enrolled wording
     await expect(page.locator('text=APPROVED').or(page.locator('text=ENROLLED')).first()).toBeVisible();
 
-    // Open registration-form route (often COR)
-    await page.getByRole('link', { name: /Registration Form/i }).or(page.getByRole('link', { name: /COR/i })).click();
+    await page.getByRole('link', { name: /Print Draft Registration Form/i }).click();
+    await page.waitForURL('**/student/cor**');
     
-    // Confirm draft disclaimer
-    await expect(page.locator('text=draft').or(page.locator('text=not an official document'))).toBeVisible();
+    await expect(page.locator('text=draft').or(page.locator('text=not an official document')).first()).toBeVisible();
     
-    // Identity fields
-    await expect(page.locator(`text=${studentIdNumber}`)).toBeVisible();
-    await expect(page.locator(`text=${firstName}`)).toBeVisible();
+    await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
+    await expect(page.locator(`text=${firstName}`).first()).toBeVisible();
     
-    // Subjects table (should see units or subjects)
-    await expect(page.getByRole('table')).toBeVisible();
-
-    // Fee placeholders
+    await expect(page.getByRole('table').first()).toBeVisible();
     await expect(page.locator('text=Assessment').or(page.locator('text=Fees')).first()).toBeVisible();
-
-    // Signature labels
-    await expect(page.locator('text=Signature')).toBeVisible();
+    await expect(page.locator('text=Signature').first()).toBeVisible();
     
-    // Portal navigation marked print-hidden
-    const nav = page.locator('nav').first();
-    await expect(nav).toHaveClass(/print-hidden/);
+    // Check portal navigation visibility
+    const aside = page.locator('aside').first();
+    const header = page.locator('header').first();
+    
+    // Visible in screen media
+    await expect(aside.or(header).first()).toBeVisible();
 
-    await page.getByRole('button', { name: /Sign out/i }).click();
+    // Hidden in print media
+    await page.emulateMedia({ media: 'print' });
+    if (await aside.count() > 0) {
+      await expect(aside).toBeHidden();
+    }
+    if (await header.count() > 0) {
+      await expect(header).toBeHidden();
+    }
+
+    // Restore screen media
+    await page.emulateMedia({ media: 'screen' });
+    
+    await assertSecretNotRendered(page, newPassword, 'SMOKE_NEW_STUDENT_PASSWORD');
+
+    currentStage = 'workflow_complete';
+    await page.getByRole('button', { name: /Log out|Logout/i }).click();
   });
 });

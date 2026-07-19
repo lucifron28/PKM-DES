@@ -4,9 +4,9 @@ This repository includes a Playwright-based browser smoke test suite for the PKM
 
 ## Purpose
 These browser smoke tests verify the core demonstration path:
-- Account claiming
-- Student enrollment submission
-- Registrar approval
+- Two-stage account claiming (find official record, then create account)
+- Student enrollment submission (including the certification checkbox requirement)
+- Inline Registrar approval with browser confirmation
 - Reporting and Masterlist updates
 - Registration form generation
 
@@ -17,42 +17,30 @@ The full serial workflow test mutates Auth and database state. It must **only** 
 
 - It **does not** run against the public Vercel deployment.
 - It **is not** enabled in CI.
-- The full workflow cannot be run unless a separately authorized disposable project is supplied.
+- The mutating suite was **not** run during development without an authorized disposable project.
 
 ## Fictional-Data-Only Boundary
 The workflow operates strictly using canonical fictional data (e.g., `pkm.demo.claim@example.com`).
 
 ## Local-Only Application URL
-The suite strictly enforces a local-only loopback application URL (`http://localhost:3000` or `127.0.0.1`). It will reject any remote target (including Vercel or production deployments).
+The suite strictly enforces a local-only loopback application URL (`http://localhost:3000` or `127.0.0.1`). It will reject any remote target (including Vercel or production deployments). 
+
+**Security Guard:** Direct Playwright invocation of the workflow remains guarded. The workflow specification explicitly validates the complete environment before attempting to start, guaranteeing it only runs against the validated `SMOKE_BASE_URL`.
 
 ## Setup Order
-1. Ensure your local application is running on port 3000.
-2. Create `.env.smoke.local` with the following variables (do not commit this file):
-   - `SMOKE_BASE_URL` (must be a local URL)
-   - `SMOKE_EXPECTED_SUPABASE_HOST`
-   - `SMOKE_WORKFLOW_CONFIRM=RUN_PKM_DES_DISPOSABLE_SMOKE`
-   - `SMOKE_REGISTRAR_EMAIL`
-   - `SMOKE_REGISTRAR_PASSWORD`
-   - `SMOKE_NEW_STUDENT_PASSWORD`
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `ACCOUNT_CLAIM_SECRET`
-   - `DATABASE_PROVIDER=supabase`
+1. Ensure your local application is running locally.
+2. Create `.env.smoke.local` with the required variables (do not commit this file).
 3. Run the tests (see Commands below).
 
 ## Suites
-- **Public Read-Only Suite:** Checks public pages, security headers, and basic redirects. Does not mutate state.
+- **Public Read-Only Suite:** Checks public pages, security headers, and basic redirects. This public suite may run independently against a safe local app without database changes.
 - **Mutating Serial Suite:** Checks the full lifecycle of an enrollment request. Must be run serially with 1 worker against a disposable database.
 
-## Expected State Transitions
-The test assumes the claim-only demo identity has no account initially, claims the account, submits an enrollment (PENDING), and then the Registrar approves it (APPROVED). 
-
 ## Cleanup and Recovery After Partial Failure
-If the browser test fails halfway, the database and Auth state may be partially mutated.
+If the browser test fails midway, failure stages are sanitized (e.g. `Smoke workflow failed after stage: enrollment_submitted`), ensuring no environment variables or credentials are leaked.
 - The orchestrator will not hide the failure.
-- Form values, cookies, and credentials are never printed.
-- To recover, you must run the guarded demo reset (`npm run demo:reset`) against your disposable project before retrying.
+- Form values, cookies, and credentials are never printed. Password values never appear in selectors or output.
+- To recover, you must run the guarded demo reset (`npm run demo:reset`) against your disposable project before retrying. 
 
 ## Secret-Handling Rules
 - Never commit `.env.smoke.local`.
@@ -66,12 +54,12 @@ Run the environment guard tests:
 npm run test:smoke-env
 ```
 
-Run the public read-only suite:
+Run the public read-only suite (requires a safe local application):
 ```bash
 npm run test:smoke:public
 ```
 
-Run the guarded serial workflow suite:
+Run the guarded serial workflow suite (requires a separately authorized disposable fictional-data Supabase project):
 ```bash
 npm run test:smoke:workflow
 ```
