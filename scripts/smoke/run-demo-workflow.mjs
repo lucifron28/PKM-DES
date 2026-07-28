@@ -1,3 +1,7 @@
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import fs from 'node:fs';
 import { checkPreconditions } from './workflow-preconditions.mjs';
 import { formatSmokeEnvironmentError } from './smoke-env-utils.mjs';
 
@@ -26,11 +30,18 @@ function main() {
 
   console.log('Preconditions check passed. Starting Playwright smoke workflow...');
 
-  const playwrightStatus = runCommand('npx', [
-    'playwright',
-    'test',
-    'tests/smoke/demo-workflow.spec.ts'
-  ], env);
+  const playwrightCli = path.resolve(projectRoot, 'node_modules/@playwright/test/cli.js');
+  const useLocalCli = fs.existsSync(playwrightCli);
+
+  const command = useLocalCli
+    ? process.execPath
+    : (process.platform === 'win32' ? 'npx.cmd' : 'npx');
+
+  const args = useLocalCli
+    ? [playwrightCli, 'test', 'tests/smoke/demo-workflow.spec.ts']
+    : ['playwright', 'test', 'tests/smoke/demo-workflow.spec.ts'];
+
+  const playwrightStatus = runCommand(command, args, env);
 
   if (playwrightStatus !== 0) {
     console.error('Smoke workflow failed or was interrupted.');

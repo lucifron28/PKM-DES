@@ -9,7 +9,7 @@ import { maskDisplayName, maskEmail, maskStudentId } from '../../lib/account-cla
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const demoRecordsAny = demoRecords as any;
-const {
+const { 
   CLAIM_ONLY_DEMO_RECORD,
   DEMO_YEAR_LEVEL,
   DEMO_STUDENT_TYPE,
@@ -54,37 +54,37 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
 
   test('Account claim workflow', async ({ page }) => {
     await page.goto('/create-account');
-
+    
     // Stage 1: Find My Record
-    await page.getByLabel(/Student Type/i).selectOption({ label: DEMO_STUDENT_TYPE });
-    await page.getByLabel(/Active Email Address/i).fill(email);
-    await page.getByLabel(/Student ID Number/i).fill(studentIdNumber);
-    await page.getByRole('button', { name: /Find My Record/i }).click();
+    await page.getByLabel('Student Type').selectOption({ label: DEMO_STUDENT_TYPE });
+    await page.getByLabel('Active Email Address').fill(email);
+    await page.getByLabel('Student ID Number').fill(studentIdNumber);
+    await page.getByRole('button', { name: 'Find My Record', exact: true }).click();
 
     // Assert Official record found
-    await expect(page.locator('text=Official record found').first()).toBeVisible();
+    await expect(page.getByText('Official record found')).toBeVisible();
 
     // Verify masked details
     const expectedMaskedName = maskDisplayName(firstName, lastName);
     const expectedMaskedEmail = maskEmail(email);
     const expectedMaskedId = maskStudentId(studentIdNumber);
 
-    await expect(page.locator(`text=${expectedMaskedName}`).first()).toBeVisible();
-    await expect(page.locator(`text=${expectedMaskedEmail}`).first()).toBeVisible();
-    await expect(page.locator(`text=${expectedMaskedId}`).first()).toBeVisible();
-    await expect(page.locator(`text=${DEMO_PROGRAM_NAME}`).first()).toBeVisible();
-    await expect(page.locator(`text=${DEMO_YEAR_LEVEL}`).first()).toBeVisible();
-    await expect(page.locator(`text=${DEMO_STUDENT_TYPE}`).first()).toBeVisible();
+    await expect(page.getByText(expectedMaskedName)).toBeVisible();
+    await expect(page.getByText(expectedMaskedEmail)).toBeVisible();
+    await expect(page.getByText(expectedMaskedId)).toBeVisible();
+    await expect(page.getByText(DEMO_PROGRAM_NAME)).toBeVisible();
+    await expect(page.getByText(DEMO_YEAR_LEVEL)).toBeVisible();
+    await expect(page.getByText(DEMO_STUDENT_TYPE)).toBeVisible();
 
     currentStage = 'claim_record_found';
 
     // Stage 2: Create Account
-    await page.getByLabel(/^Password/i).first().fill(newPassword);
-    await page.getByLabel(/Confirm Password/i).fill(newPassword);
-    await page.getByRole('button', { name: /Create Account/i }).click();
+    await page.getByLabel('Password', { exact: true }).fill(newPassword);
+    await page.getByLabel('Confirm Password', { exact: true }).fill(newPassword);
+    await page.getByRole('button', { name: 'Create Account', exact: true }).click();
 
     // Assert success message or Go to Login
-    await expect(page.locator('text=success').or(page.getByRole('link', { name: /Go to Login/i })).first()).toBeVisible();
+    await expect(page.getByText('Student Account Created').or(page.getByRole('link', { name: 'Go to Login', exact: true }))).toBeVisible();
 
     currentStage = 'student_account_created';
 
@@ -94,160 +94,164 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
 
   test('Student session: submit enrollment', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/Email/i).fill(email);
-    await page.getByLabel(/Password/i).fill(newPassword);
+    await page.getByLabel('Email Address').fill(email);
+    await page.getByLabel('Password').fill(newPassword);
     await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await page.waitForURL('**/student/dashboard**');
-    await expect(page.getByRole('heading', { name: /Dashboard/i })).toBeVisible();
-    await expect(page.locator(`text=${firstName}`).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: `Welcome, ${firstName} ${lastName}!`, exact: true }).or(page.getByRole('heading', { name: /Welcome,/ }))).toBeVisible();
+    await expect(page.getByText(firstName)).toBeVisible();
 
     // Check stub links are absent
-    await expect(page.getByRole('link', { name: /Grades/i })).not.toBeVisible();
-    await expect(page.getByRole('link', { name: /Class Schedule/i })).not.toBeVisible();
-    await expect(page.getByRole('link', { name: /Balances/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: 'Grades', exact: true })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: 'Class Schedule', exact: true })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: 'Balances', exact: true })).not.toBeVisible();
 
     currentStage = 'student_logged_in';
 
-    await page.getByRole('link', { name: /Subject List/i }).click();
-    await page.waitForURL('**/student/subjects**');
-    await expect(page.getByRole('heading', { name: /Subject List/i })).toBeVisible();
+    const studentNav = page.getByRole('navigation', { name: 'Student Portal navigation' });
 
-    await page.getByRole('link', { name: /Online Enrollment/i }).click();
+    await studentNav.getByRole('link', { name: 'Subject List', exact: true }).click();
+    await page.waitForURL('**/student/subjects**');
+    await expect(page.getByRole('heading', { name: 'Subject List', exact: true })).toBeVisible();
+
+    await studentNav.getByRole('link', { name: 'Online Enrollment', exact: true }).click();
     await page.waitForURL('**/student/enrollment**');
 
     // Assert attributes
-    await expect(page.locator('text=Program').first()).toBeVisible();
-    await expect(page.locator(`text=${DEMO_PROGRAM_NAME}`).first()).toBeVisible();
-    await expect(page.locator('text=Year Level').first()).toBeVisible();
-    await expect(page.locator(`text=${DEMO_YEAR_LEVEL}`).first()).toBeVisible();
-    await expect(page.locator('text=Student Type').first()).toBeVisible();
-    await expect(page.locator(`text=${DEMO_STUDENT_TYPE}`).first()).toBeVisible();
-    await expect(page.locator('text=Current Academic Year').first()).toBeVisible();
-    await expect(page.locator(`text=${academicYear}`).first()).toBeVisible();
-    await expect(page.locator('text=Current Semester').first()).toBeVisible();
-    await expect(page.locator(`text=${semester}`).first()).toBeVisible();
-
+    await expect(page.getByText('Program')).toBeVisible();
+    await expect(page.getByText(DEMO_PROGRAM_NAME)).toBeVisible();
+    await expect(page.getByText('Year Level')).toBeVisible();
+    await expect(page.getByText(DEMO_YEAR_LEVEL)).toBeVisible();
+    await expect(page.getByText('Student Type')).toBeVisible();
+    await expect(page.getByText(DEMO_STUDENT_TYPE)).toBeVisible();
+    await expect(page.getByText('Current Academic Year')).toBeVisible();
+    await expect(page.getByText(academicYear)).toBeVisible();
+    await expect(page.getByText('Current Semester')).toBeVisible();
+    await expect(page.getByText(semester)).toBeVisible();
+    
     // Check certification
-    await page.getByLabel(/I certify that the information provided is correct/i).check();
+    await page.getByLabel('I certify that the information provided is correct').check();
 
     // Submit enrollment
-    await page.getByRole('button', { name: /Submit Enrollment/i }).click();
+    await page.getByRole('button', { name: 'Submit Enrollment', exact: true }).click();
 
     await page.waitForURL('**/student/enrollment-status**');
-    await expect(page.locator('text=Enrollment Status Result').first()).toBeVisible();
-    await expect(page.locator('text=PENDING').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Enrollment Status Result', exact: true })).toBeVisible();
+    await expect(page.getByText('PENDING')).toBeVisible();
 
     currentStage = 'enrollment_submitted';
 
     await assertSecretNotRendered(page, newPassword, 'SMOKE_NEW_STUDENT_PASSWORD');
 
     // Logout
-    await page.getByRole('button', { name: /Log out|Logout/i }).click();
+    await page.getByRole('button', { name: 'Log out', exact: true }).click();
     await page.waitForURL('**/login**');
   });
 
   test('Registrar session: approve enrollment', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/Email/i).fill(registrarEmail);
-    await page.getByLabel(/Password/i).fill(registrarPassword);
+    await page.getByLabel('Email Address').fill(registrarEmail);
+    await page.getByLabel('Password').fill(registrarPassword);
     await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await page.waitForURL('**/admin/dashboard**');
 
     currentStage = 'registrar_logged_in';
 
-    await page.getByRole('link', { name: /Pending Enrollments/i }).first().click();
+    const adminNav = page.getByRole('navigation', { name: 'Admin Portal navigation' });
+
+    await adminNav.getByRole('link', { name: 'Pending Enrollments', exact: true }).click();
     await page.waitForURL('**/admin/enrollments**');
 
-    const row = page.getByRole('row', { name: new RegExp(studentIdNumber, 'i') }).first();
+    const row = page.getByRole('row', { name: new RegExp(studentIdNumber, 'i') });
     await expect(row).toBeVisible();
-    await expect(row.locator('text=PENDING').first()).toBeVisible();
+    await expect(row.getByText('PENDING')).toBeVisible();
 
     page.on('dialog', async dialog => {
       expect(dialog.message()).toContain('Approve this pending enrollment request?');
       await dialog.accept();
     });
 
-    await row.getByRole('button', { name: /Approve/i }).click();
+    await row.getByRole('button', { name: 'Approve', exact: true }).click();
 
-    await expect(page.locator('text=Enrollment request approved successfully').first()).toBeVisible();
+    await expect(page.getByText('Enrollment request approved successfully')).toBeVisible();
     await expect(row).not.toBeVisible();
 
     currentStage = 'enrollment_approved';
 
-    await page.getByRole('link', { name: /Reports/i }).click();
+    await adminNav.getByRole('link', { name: 'Enrollment Reports', exact: true }).click();
     await page.waitForURL('**/admin/reports**');
-    await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
+    await expect(page.getByText(studentIdNumber)).toBeVisible();
 
     currentStage = 'report_verified';
 
-    await page.getByRole('link', { name: /Masterlist/i }).click();
+    await adminNav.getByRole('link', { name: 'Enrollment Masterlist', exact: true }).click();
     await page.waitForURL('**/admin/masterlist**');
-    await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
+    await expect(page.getByText(studentIdNumber)).toBeVisible();
 
     currentStage = 'masterlist_verified';
 
-    await page.getByRole('link', { name: /Student Records/i }).or(page.getByRole('link', { name: /Students/i })).first().click();
+    await adminNav.getByRole('link', { name: 'Student Records', exact: true }).click();
     await page.waitForURL('**/admin/students**');
-    await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
+    await expect(page.getByText(studentIdNumber)).toBeVisible();
 
     currentStage = 'student_record_verified';
 
     await assertSecretNotRendered(page, registrarPassword, 'SMOKE_REGISTRAR_PASSWORD');
 
-    await page.getByRole('button', { name: /Log out|Logout/i }).click();
+    await page.getByRole('button', { name: 'Log out', exact: true }).click();
     await page.waitForURL('**/login**');
   });
 
   test('Final student verification', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/Email/i).fill(email);
-    await page.getByLabel(/Password/i).fill(newPassword);
+    await page.getByLabel('Email Address').fill(email);
+    await page.getByLabel('Password').fill(newPassword);
     await page.getByRole('button', { name: 'Login', exact: true }).click();
 
     await page.waitForURL('**/student/dashboard**');
 
-    await page.getByRole('link', { name: /Enrollment Status/i }).click();
+    await page.getByRole('link', { name: 'Enrollment Status', exact: true }).click();
     await page.waitForURL('**/student/enrollment-status**');
 
-    await expect(page.locator('text=APPROVED').or(page.locator('text=ENROLLED')).first()).toBeVisible();
+    await expect(page.getByText('APPROVED').or(page.getByText('ENROLLED'))).toBeVisible();
 
-    await page.getByRole('link', { name: /Print Draft Registration Form/i }).click();
+    await page.getByRole('link', { name: 'Print Draft Registration Form', exact: true }).click();
     await page.waitForURL('**/student/cor**');
 
     // Assert COR Draft details
-    await expect(page.locator('text=Draft Registration Form').first()).toBeVisible();
-    await expect(page.locator('text=Draft - Not Official COR').first()).toBeVisible();
-    await expect(page.locator('text=Student Number').first()).toBeVisible();
-    await expect(page.locator('text=Student Name').first()).toBeVisible();
-    await expect(page.locator('text=Subject Load').first()).toBeVisible();
+    await expect(page.getByText('Draft Registration Form')).toBeVisible();
+    await expect(page.getByText('Draft - Not Official COR')).toBeVisible();
+    await expect(page.getByText('Student Number')).toBeVisible();
+    await expect(page.getByText('Student Name')).toBeVisible();
+    await expect(page.getByText('Subject Load')).toBeVisible();
 
-    await expect(page.locator(`text=${studentIdNumber}`).first()).toBeVisible();
-    await expect(page.locator(`text=${firstName}`).first()).toBeVisible();
+    await expect(page.getByText(studentIdNumber)).toBeVisible();
+    await expect(page.getByText(firstName)).toBeVisible();
 
-    await expect(page.getByRole('table').first()).toBeVisible();
-    await expect(page.locator('text=Assessment of Tuition and Other School Fees').first()).toBeVisible();
-    await expect(page.locator('text=Tuition Fee').first()).toBeVisible();
-    await expect(page.locator('text=Other School Fees').first()).toBeVisible();
-    await expect(page.locator('text=Scholarship').first()).toBeVisible();
-    await expect(page.locator('text=Total Assessment').first()).toBeVisible();
+    await expect(page.getByRole('table')).toBeVisible();
+    await expect(page.getByText('Assessment of Tuition and Other School Fees')).toBeVisible();
+    await expect(page.getByText('Tuition Fee')).toBeVisible();
+    await expect(page.getByText('Other School Fees')).toBeVisible();
+    await expect(page.getByText('Scholarship')).toBeVisible();
+    await expect(page.getByText('Total Assessment')).toBeVisible();
 
     // Clearance signature lines group
-    const signatureSection = page.locator('[aria-label="Clearance signature lines"]').or(page.getByRole('region', { name: 'Clearance signature lines' })).first();
+    const signatureSection = page.locator('[aria-label="Clearance signature lines"]').or(page.getByRole('region', { name: 'Clearance signature lines' }));
     await expect(signatureSection).toBeVisible();
-    await expect(signatureSection.locator('text=Dean')).toBeVisible();
-    await expect(signatureSection.locator('text=Librarian')).toBeVisible();
-    await expect(signatureSection.locator('text=Nurse')).toBeVisible();
-    await expect(signatureSection.locator('text=Accountant')).toBeVisible();
-    await expect(signatureSection.locator('text=Registrar')).toBeVisible();
+    await expect(signatureSection.getByText('Dean')).toBeVisible();
+    await expect(signatureSection.getByText('Librarian')).toBeVisible();
+    await expect(signatureSection.getByText('Nurse')).toBeVisible();
+    await expect(signatureSection.getByText('Accountant')).toBeVisible();
+    await expect(signatureSection.getByText('Registrar')).toBeVisible();
 
     // Check portal navigation visibility
-    const aside = page.locator('aside').first();
-    const header = page.locator('header').first();
+    const aside = page.locator('aside');
+    const header = page.locator('header');
 
     // Visible in screen media
-    await expect(aside.or(header).first()).toBeVisible();
+    await expect(aside.or(header)).toBeVisible();
 
     // Hidden in print media
     await page.emulateMedia({ media: 'print' });
@@ -265,7 +269,7 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
 
     currentStage = 'registration_form_verified';
 
-    await page.getByRole('button', { name: /Log out|Logout/i }).click();
+    await page.getByRole('button', { name: 'Log out', exact: true }).click();
 
     currentStage = 'workflow_complete';
   });
