@@ -1,0 +1,49 @@
+@startuml pkm-des-component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Component Diagram for PKM-DES
+
+Container_Boundary(webapp, "PKM-DES Next.js App") {
+    Component(pages, "App Router Pages", "Next.js (app/)", "Handles routing, layout, and rendering")
+    Component(react_components, "React Components", "React (components/)", "UI presentation layer (forms, tables, print layouts)")
+    Component(server_actions, "Server Actions", "Next.js (app/**/actions.ts)", "Handles form submissions and atomic mutations")
+    
+    Component(auth_layer, "Auth/Session Layer", "TypeScript (lib/auth/)", "Validates session and role-based access")
+    Component(domain_logic, "Enrollment Domain Logic", "TypeScript (lib/enrollment/)", "Rules for subject load, term evaluation, account matching")
+    Component(reporting_print, "Reporting & Print Modules", "TypeScript (components/print/, lib/admin-student-records/)", "Generates masterlists, reports, and browser-print Draft Registration Forms")
+    
+    Component(supabase_client, "Supabase Clients", "TypeScript (lib/supabase/)", "Server and Browser clients for interacting with Supabase")
+
+    Rel(pages, react_components, "Uses")
+    Rel(react_components, server_actions, "Submits to")
+    Rel(server_actions, auth_layer, "Enforces access via")
+    Rel(server_actions, domain_logic, "Applies business rules via")
+    Rel(server_actions, supabase_client, "Uses")
+    Rel(pages, supabase_client, "Uses for Server Components")
+    Rel(pages, reporting_print, "Uses for rendering printables")
+}
+
+Container_Boundary(supabase_backend, "Supabase Backend") {
+    Component(auth_service, "Supabase Auth", "Go/Gotrue", "Manages users and sessions")
+    Component(postgres_db, "PostgreSQL Database", "SQL", "Relational storage")
+    Component(rls_policies, "Row Level Security", "SQL Policies", "Restricts table access based on JWT")
+    Component(db_functions, "PostgreSQL Functions & RPCs", "PL/pgSQL", "Atomic transactions for enrollments/account creation")
+    Component(db_triggers, "Database Triggers", "PL/pgSQL", "Syncs Auth users to Profiles")
+    
+    Rel(supabase_client, auth_service, "Authenticates")
+    Rel(supabase_client, postgres_db, "Queries/Mutates")
+    Rel(auth_service, db_triggers, "Fires on user.created")
+    Rel(supabase_client, db_functions, "Calls RPCs")
+    Rel(postgres_db, rls_policies, "Enforced by")
+}
+
+note right of pages
+  Source: app/student/, app/admin/
+  Note: Grades, Class Schedule, Balances, digital clearance, email delivery, or official COR generation are deferred/not implemented.
+end note
+
+note right of postgres_db
+  Source: supabase/migrations/
+end note
+
+@enduml

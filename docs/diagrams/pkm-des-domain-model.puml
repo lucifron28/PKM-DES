@@ -1,0 +1,108 @@
+@startuml pkm-des-domain-model
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+hide empty members
+
+title Domain Model for PKM-DES (Database Schema)
+
+entity "profiles" as profiles {
+  * id : uuid [PK]
+  * role : UserRole (student|admin)
+  * first_name : text
+  * last_name : text
+  * email : text
+  * account_status : AccountStatus
+  --
+  Links 1:1 with Supabase Auth auth.users
+}
+
+entity "programs" as programs {
+  * id : uuid [PK]
+  * name : text
+  code : text
+}
+
+entity "students" as students {
+  * id : uuid [PK]
+  * profile_id : uuid [FK -> profiles.id]
+  student_id_number : text
+  * program_id : uuid [FK -> programs.id]
+  * year_level : YearLevel
+  * student_type : StudentType
+  * enrollment_status : EnrollmentStatus
+}
+
+entity "subjects" as subjects {
+  * id : uuid [PK]
+  * program_id : uuid [FK -> programs.id]
+  * course_code : text
+  * course_description : text
+  * units : integer
+  * year_level : YearLevel
+  * semester : Semester
+}
+
+entity "enrollments" as enrollments {
+  * id : uuid [PK]
+  * student_id : uuid [FK -> students.id]
+  * program_id : uuid [FK -> programs.id]
+  * year_level : YearLevel
+  * academic_year : text
+  * semester : Semester
+  * status : EnrollmentReviewStatus
+  * submitted_at : timestamptz
+  reviewed_at : timestamptz
+  reviewed_by : uuid [FK -> profiles.id]
+  remarks : text
+}
+
+entity "enrollment_subjects" as enrollment_subjects {
+  * id : uuid [PK]
+  * enrollment_id : uuid [FK -> enrollments.id]
+  * subject_id : uuid [FK -> subjects.id]
+}
+
+entity "official_student_records" as official_student_records {
+  * id : uuid [PK]
+  student_id_number : text
+  * first_name : text
+  * last_name : text
+  * email : text
+  * program_id : uuid [FK -> programs.id]
+  * year_level : YearLevel
+  * student_type : StudentType
+  * enrollment_status : EnrollmentStatus
+  --
+  Source of truth for account claiming.
+}
+
+entity "audit_logs" as audit_logs {
+  * id : uuid [PK]
+  * action : text
+  * entity_type : text
+  * entity_id : uuid
+  * actor_id : uuid
+  * details : jsonb
+  * created_at : timestamptz
+}
+
+profiles "1" -- "0..1" students : has
+programs "1" -- "0..*" students : belongs to
+programs "1" -- "0..*" subjects : contains
+students "1" -- "0..*" enrollments : creates
+enrollments "1" -- "0..*" enrollment_subjects : includes
+subjects "1" -- "0..*" enrollment_subjects : included in
+programs "1" -- "0..*" official_student_records : defines
+profiles "1" -- "0..*" enrollments : reviews (admin)
+
+note bottom of enrollments
+  Unique index ensures one PENDING/APPROVED
+  enrollment per student per term.
+  (academic_year, semester, student_id)
+end note
+
+note right of official_student_records
+  Source: supabase/migrations/
+  Used during account claim sequence.
+end note
+
+@enduml

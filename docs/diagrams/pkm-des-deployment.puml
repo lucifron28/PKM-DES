@@ -1,0 +1,42 @@
+@startuml pkm-des-deployment
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+title Deployment Diagram for PKM-DES (Client Preview)
+
+Deployment_Node(client, "User Device") {
+    Deployment_Node(browser, "Web Browser") {
+        Container(spa, "Browser Client", "React / JavaScript", "Executes client-side interactivity")
+    }
+}
+
+Deployment_Node(vercel_cloud, "Vercel Cloud") {
+    Deployment_Node(vercel_project, "Temporary Client Preview Boundary", "Fictional Demo Data Only") {
+        Container(nextjs, "Vercel-hosted Next.js Application", "Node.js / Edge", "Serves pages, Server Actions, Server Components")
+        
+        node "Environment Variables" as env {
+            artifact "NEXT_PUBLIC_SUPABASE_URL"
+            artifact "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+        }
+    }
+}
+
+Deployment_Node(supabase_cloud, "Supabase Cloud") {
+    Deployment_Node(supabase_project, "Supabase Project") {
+        Container(supabase_auth, "Supabase Auth", "Go", "Identity and tokens")
+        Container(supabase_db, "Supabase PostgreSQL", "PostgreSQL 15", "Schema, data, RLS, functions")
+    }
+}
+
+Rel(browser, nextjs, "HTTPS requests", "HTTPS")
+Rel(spa, supabase_auth, "Authenticates", "HTTPS / JSON")
+Rel(spa, supabase_db, "Queries (RLS restricted)", "PostgREST")
+Rel(nextjs, supabase_auth, "Validates sessions", "HTTPS / JSON")
+Rel(nextjs, supabase_db, "Server Actions / Queries", "PostgREST")
+
+note right of vercel_project
+  This Vercel deployment acts as a temporary
+  client preview and uses fictional data.
+  Not a production deployment.
+end note
+
+@enduml
