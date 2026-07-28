@@ -82,6 +82,29 @@ The examples were given with names, but the likely ID pattern is the two-digit y
 - Balances/payment details are handled by the Finance Office.
 - Digital clearance/signature order: Dean, Librarian, Nurse, Accountant, Registrar.
 
+
+### Provisional Email Decisions
+
+These are provisional implementation boundaries. They do not constitute formal institutional policy.
+- Use Resend through a server-only adapter.
+- Use a one-time password-setup or recovery link.
+- Never email or log a plaintext password.
+- Keep email delivery disabled by default; actual delivery requires explicit server configuration.
+- Preserve generic responses to avoid email/account enumeration.
+- Preserve existing official-record claim and duplicate-account protections.
+- Failed delivery must not leave an active usable account without a completed setup flow.
+- Support safe resend with cooldown or idempotency protection.
+
+### Provisional Health Record Update Decisions
+
+These are provisional implementation boundaries. They do not constitute formal institutional policy.
+- Applies to Incoming 1st Year Student records identified as female from the Registrar-managed official record.
+- Never infer sex from a name.
+- The physical form remains with PKM Health Services.
+- PKM-DES stores requirement status only. Do not store medical conditions, medications, allergies, menstrual information, scans, or detailed medical notes.
+- The Registrar records whether Health Services verified the paper form (a separate Health Services user role is deferred).
+- Enrollment submission may remain PENDING, but final approval is blocked until all applicable required items are VERIFIED.
+
 ## Still Missing or Needs Client Files
 
 These items remain needed before implementation can be considered official:
