@@ -24,7 +24,7 @@ The workflow operates strictly using canonical fictional data (e.g., `pkm.demo.c
 ## Local-Only Application URL
 The suite strictly enforces a local-only loopback application URL (`http://localhost:3000` or `127.0.0.1`). It will reject any remote target (including Vercel or production deployments).
 
-**Security Guard:** Direct Playwright invocation of the workflow remains guarded. The workflow specification explicitly validates the complete environment before attempting to start, guaranteeing it only runs against the validated `SMOKE_BASE_URL`.
+**Security Guard & Cross-Platform Execution:** The explicit runner (`scripts/smoke/run-demo-workflow.mjs`) is cross-platform and validates all environment and demo preconditions before invoking Playwright via the local repository CLI. Direct Playwright invocation (`npx playwright test tests/smoke/demo-workflow.spec.ts`) also remains independently guarded in its `beforeAll` hook. Neither runner will instantiate Playwright or start browser navigation when preconditions fail.
 
 ## Setup Order
 1. Ensure your local application is running locally.
