@@ -1,0 +1,32 @@
+@startuml pkm-des-system-context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title System Context Diagram for PKM-DES
+
+Person(student, "Student", "A university student claiming an account or managing their enrollment.")
+Person(admin, "Registrar / Admin", "University staff managing student records and enrollments.")
+
+System_Boundary(vercel_preview, "Vercel Client Preview (Temporary)") {
+    System(pkm_des, "PKM-DES Next.js App", "Next.js application providing portals for students and admins.")
+}
+
+System_Ext(supabase_auth, "Supabase Auth", "Identity and access management.")
+System_Ext(supabase_db, "Supabase PostgreSQL", "Primary database with RLS policies and atomic RPCs.")
+
+Rel(student, pkm_des, "Claims account, submits enrollment, views status")
+Rel(admin, pkm_des, "Reviews enrollments, views masterlists and reports")
+
+Rel_R(pkm_des, supabase_auth, "Authenticates users, creates accounts", "HTTPS")
+Rel_D(pkm_des, supabase_db, "Reads/writes domain data via Server Actions", "PostgREST / pg_hba.conf")
+Rel_U(supabase_auth, supabase_db, "Triggers profile creation on signup", "Internal PostgreSQL triggers")
+
+note right of pkm_des
+  Source: app/
+  lib/auth/
+end note
+
+note right of supabase_db
+  Source: supabase/migrations/
+end note
+
+@enduml

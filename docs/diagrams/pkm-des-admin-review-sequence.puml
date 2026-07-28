@@ -1,0 +1,33 @@
+@startuml pkm-des-admin-review-sequence
+autonumber
+actor "Registrar / Admin" as Admin
+participant "Browser" as Browser
+participant "Server Action" as Action
+participant "Supabase Client" as Supabase
+database "PostgreSQL" as DB
+
+Admin -> Browser : Views pending enrollments
+Browser -> Supabase : Queries enrollments (status=PENDING)
+Supabase -> DB : Select
+DB --> Supabase : Results
+Supabase --> Browser : Displays Table
+
+Admin -> Browser : Clicks "Approve" (or "Reject")
+Browser -> Action : reviewEnrollmentAction(id, decision, remarks)
+Action -> Supabase : RPC review_enrollment(id, decision, reviewer_id, remarks)
+
+Supabase -> DB : Executes atomic RPC
+DB -> DB : Selects enrollment FOR UPDATE (Stale concurrent review protection)
+alt if status is not PENDING
+    DB --> Supabase : Error (Already reviewed)
+else
+    DB -> DB : Updates enrollment status to APPROVED/REJECTED
+    DB -> DB : Updates student enrollment_status to ENROLLED (if approved)
+    DB -> DB : Inserts into audit_logs
+    DB --> Supabase : Success
+end
+
+Supabase --> Action : Result
+Action --> Browser : Success / Revalidate Table
+
+@enduml

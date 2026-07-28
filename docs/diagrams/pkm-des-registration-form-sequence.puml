@@ -1,0 +1,26 @@
+@startuml pkm-des-registration-form-sequence
+autonumber
+actor "User (Student/Admin)" as User
+participant "Browser" as Browser
+participant "Next.js Page" as Page
+participant "Supabase Client" as Supabase
+participant "Print Component" as PrintComp
+database "PostgreSQL" as DB
+
+User -> Browser : Navigates to Draft Registration Form
+Browser -> Page : GET /student/cor or /admin/.../registration
+Page -> Supabase : Queries enrollments (status=APPROVED)
+Supabase -> DB : Select enrollment\nJOIN students, profiles, programs,\nenrollment_subjects, subjects
+
+note right of DB: RLS enforces access rules:\nAdmin sees all,\nStudent sees only their own.
+
+DB --> Supabase : Structured Data
+Supabase --> Page : Enrollment Record with Attached Subjects
+
+Page -> Page : Validates data and maps to presentation
+Page -> PrintComp : Renders <RegistrationForm />
+PrintComp --> Browser : HTML/CSS
+Browser -> User : Displays Browser-Print Draft Registration Form
+User -> Browser : Uses browser print dialog (Ctrl+P / Cmd+P)
+
+@enduml

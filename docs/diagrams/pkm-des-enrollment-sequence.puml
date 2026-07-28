@@ -1,0 +1,33 @@
+@startuml pkm-des-enrollment-sequence
+autonumber
+actor "Authenticated Student" as Student
+participant "Browser" as Browser
+participant "Server Action" as Action
+participant "Domain Logic" as Logic
+participant "Supabase Client" as Supabase
+database "PostgreSQL" as DB
+
+Student -> Browser : Clicks "Submit Enrollment"
+Browser -> Action : submitEnrollmentAction()
+Action -> Supabase : Get current Session & Profile
+Supabase --> Action : Student ID
+Action -> Supabase : Query student details & program
+Supabase --> Action : Student details (Year Level, Program, Type)
+
+Action -> Logic : evaluateStandardLoadEligibility(context)
+note right of Logic: Uses fixed enrollment term config
+Logic --> Action : "eligible"
+
+Action -> Supabase : RPC submit_standard_enrollment(...)
+note right of Supabase: Passes derived student details,\nfixed term, subject matching.
+
+Supabase -> DB : Executes atomic RPC
+DB -> DB : Checks unique student-term index (Duplicate protection)
+DB -> DB : Inserts PENDING enrollment
+DB -> DB : Inserts enrollment_subjects for matching subjects
+DB --> Supabase : Success
+Supabase --> Action : Enrollment ID
+
+Action --> Browser : Redirect to Enrollment Status Page
+
+@enduml

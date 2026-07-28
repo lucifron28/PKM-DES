@@ -1,0 +1,40 @@
+@startuml pkm-des-account-claim-sequence
+autonumber
+actor Student
+participant "Browser" as Browser
+participant "Next.js App" as App
+participant "Server Action" as Action
+participant "Supabase Client" as Supabase
+participant "Supabase Auth" as Auth
+database "PostgreSQL" as DB
+
+Student -> Browser : Enters Claim Details (ID, Email, Type)
+Browser -> App : Finds Official Record
+App -> Supabase : Queries official_student_records
+Supabase -> DB : Select
+DB --> Supabase : Returns Record
+Supabase --> App : Record Data
+App --> Browser : Displays Masked Record
+
+Student -> Browser : Submits New Password
+Browser -> Action : createStudentAccountAction(payload, signedProof)
+Action -> Action : Verifies Signed Claim Proof (HMAC)
+Action -> Supabase : Checks for duplicate account
+Supabase -> DB : Queries students / profiles
+DB --> Supabase : Returns null (No duplicate)
+
+Action -> Auth : signUp(email, password)
+Auth -> Auth : Creates auth.users row
+Auth --> Action : Session & User ID
+note right of Auth: Cleanup on failure happens if\nDB steps below fail.
+
+Action -> Supabase : RPC create_student_account(user_id, role, name, email...)
+Supabase -> DB : Executes atomic RPC
+DB -> DB : Inserts into profiles
+DB -> DB : Inserts into students
+DB --> Supabase : Success
+Supabase --> Action : Result
+
+Action --> Browser : Success / Redirect to Login
+
+@enduml
