@@ -87,7 +87,7 @@ The MVP uses Supabase password login. Public account claiming uses the existing 
 18. Share the stable authorized URL and necessary credentials through separate private channels.
 19. Record client feedback without credentials or private identities.
 
-Detailed automated workflow smoke tests belong to the later `test/demo-workflow-smoke-tests` branch and are not implemented here.
+The automated workflow smoke tests are implemented in [DEMO_WORKFLOW_SMOKE_TESTS.md](./DEMO_WORKFLOW_SMOKE_TESTS.md). Ensure you run the mutating workflow only against a separately authorized disposable project, never against the Vercel deployment.
 
 ## Manual Preview Checklist
 

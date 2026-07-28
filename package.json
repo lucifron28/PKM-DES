@@ -11,6 +11,9 @@
     "typecheck": "tsc --noEmit",
     "check:production-env": "node scripts/check-production-env.mjs",
     "test:deployment-env": "node --test scripts/deployment/*.test.mjs",
+    "test:smoke-env": "node --test scripts/smoke/*.test.mjs",
+    "test:smoke:public": "playwright test tests/smoke/public.spec.ts",
+    "test:smoke:workflow": "node --env-file-if-exists=.env.smoke.local scripts/smoke/run-demo-workflow.mjs",
     "db:sqlite:init": "node scripts/sqlite/init-dev-db.mjs",
     "demo:reset": "node scripts/demo/reset-demo-data.mjs",
     "demo:verify": "node scripts/demo/verify-demo-data.mjs",
@@ -37,6 +40,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
