@@ -70,7 +70,7 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
     const expectedMaskedEmail = maskEmail(email);
     const expectedMaskedId = maskStudentId(studentIdNumber);
 
-    const recordCard = page.locator('main').locator('div').filter({ has: page.getByText('Official record found') });
+    const recordCard = page.locator('form').filter({ has: page.getByText('Official record found') });
     await expect(recordCard.getByText(expectedMaskedName, { exact: true })).toBeVisible();
     await expect(recordCard.getByText(expectedMaskedEmail, { exact: true })).toBeVisible();
     await expect(recordCard.getByText(expectedMaskedId, { exact: true })).toBeVisible();
@@ -142,7 +142,7 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
     await page.getByRole('button', { name: 'Submit Enrollment', exact: true }).click();
 
     await page.waitForURL('**/student/enrollment-status**');
-    await expect(page.getByRole('heading', { name: 'Enrollment Status Result', level: 1, exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Enrollment Status Result', level: 2, exact: true })).toBeVisible();
     await expect(page.getByText('PENDING', { exact: true })).toBeVisible();
 
     currentStage = 'enrollment_submitted';
@@ -220,8 +220,7 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
 
     await page.waitForURL('**/student/dashboard**');
 
-    const quickActions = page.locator('main').locator('div').filter({ has: page.getByText('Quick Actions') });
-    await quickActions.getByRole('link', { name: 'Enrollment Status', exact: true }).click();
+    await page.getByRole('link', { name: 'Enrollment Status', exact: true }).click();
     await page.waitForURL('**/student/enrollment-status**');
 
     // Assert exact ENROLLED status
