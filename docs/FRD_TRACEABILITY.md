@@ -8,8 +8,8 @@ This matrix compares the available Functional Requirements Documentation (FRD) w
 
 | Status | Total |
 | --- | ---: |
-| Implemented | 15 |
-| Partially Implemented | 17 |
+| Implemented | 14 |
+| Partially Implemented | 18 |
 | Placeholder | 5 |
 | Deferred | 6 |
 | Awaiting Client Confirmation | 1 |
@@ -56,7 +56,7 @@ This matrix compares the available Functional Requirements Documentation (FRD) w
 | ACC-05 | Duplicate account prevention | Implemented | Account creation checks existing profile email and student ID before creating records; database indexes also enforce normalized profile-email and Student-ID uniqueness. | `app/create-account/actions.ts`; `supabase/migrations/20260714000000_student_account_claim_integrity.sql` | Mention this as an MVP safeguard during account claiming. | Validate against final institutional identifier rules. |
 | ACC-06 | Initial account status | Partially Implemented | `requireRole` permits only `ACTIVE` profiles. Current successful MVP account creation makes the created profile active; no separate activation queue is implemented. | `lib/auth/session.ts`; `app/create-account/actions.ts`; `types/database.ts` | Do not imply an operational Registrar activation process exists. | Confirm final activation, suspension, and admitted-applicant status rules. |
 | ACC-07 | Generated-password workflow | Deferred | The FRD/client direction calls for generated initial credentials. The MVP does not generate passwords; it uses either a direct MVP password path or, when explicitly configured, a one-time password setup link. | `app/create-account/actions.ts`; `lib/email/`; `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`; `docs/SUPABASE_SETUP.md` | State this difference directly during presentation questions. | Implement only with approved password, email, and first-login policies. |
-| ACC-08 | Email delivery | Implemented | Server-only email abstraction using Resend. Sends one-time setup link. Disabled by default. | `lib/email/` | State that live email requires explicit server configuration. | Configure live delivery when approved. |
+| ACC-08 | Email delivery | Partially Implemented | Server-only email abstraction using Resend can send a one-time setup link, but delivery is disabled by default and has not been verified against an approved sender or live email workflow. | `lib/email/`; `docs/SUPABASE_SETUP.md` | State that live delivery is not part of the presentation preview. | Configure and verify delivery only after PKM approves the sender, templates, and operating rules. |
 | FUT-01 | Official COR generation | Deferred | Current output is a browser-print draft registration form based on a sample layout, not a final official COR. | `components/print/registration-form.tsx`; `docs/REGISTRATION_FORM_SAMPLE_SCOPE.md` | Use the term **draft registration form**. | Confirm the approved template and formal generation requirements. |
 | FUT-02 | Digital signatures | Deferred | Only signature labels appear on the draft registration form. No electronic signature capture or validation exists. | `components/print/registration-form.tsx`; `docs/SOURCE_DOCUMENT_REGISTER.md` | Do not present the labels as completed approvals. | Define authorization, identity, retention, and legal requirements. |
 | FUT-03 | Clearance routing | Deferred | The manual clearance path is documented as background only; the application has no routing or approval state. | `README.md`; `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`; `docs/SOURCE_DOCUMENT_REGISTER.md` | Explain that the MVP proposes enrollment flow only. | Design routing after the official sequence and rules are finalized. |
