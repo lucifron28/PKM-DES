@@ -65,8 +65,18 @@ export function SideNav({
                 : "border-transparent text-slateui-secondary hover:bg-primary-50 hover:text-primary-800"
             )}
           >
-            <Icon className="h-4 w-4" aria-hidden="true" />
-            <span>{item.label}</span>
+            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="flex-1">{item.label}</span>
+            {item.isStub ? (
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                  active ? "bg-primary-700 text-secondary-600" : "bg-slateui-surfaceAlt text-slateui-muted"
+                )}
+              >
+                Stub
+              </span>
+            ) : null}
           </Link>
         );
       })}

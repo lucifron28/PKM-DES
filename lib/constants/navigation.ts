@@ -15,6 +15,7 @@ export type NavigationItem = {
   label: string;
   href: string;
   icon: NavigationIcon;
+  isStub?: boolean;
 };
 
 export const publicNavigation = [
@@ -30,9 +31,9 @@ export const studentNavigation: NavigationItem[] = [
   { label: "Subject List", href: "/student/subjects", icon: "subjects" },
   ...(ENABLE_STUB_PAGES
     ? [
-        { label: "Grades", href: "/student/grades", icon: "grades" } as NavigationItem,
-        { label: "Class Schedule", href: "/student/schedule", icon: "schedule" } as NavigationItem,
-        { label: "Balances", href: "/student/balances", icon: "balances" } as NavigationItem
+        { label: "Grades", href: "/student/grades", icon: "grades", isStub: true } as NavigationItem,
+        { label: "Class Schedule", href: "/student/schedule", icon: "schedule", isStub: true } as NavigationItem,
+        { label: "Balances", href: "/student/balances", icon: "balances", isStub: true } as NavigationItem
       ]
     : []),
   { label: "Account", href: "/student/account", icon: "account" }
