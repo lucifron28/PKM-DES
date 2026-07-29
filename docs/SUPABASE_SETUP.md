@@ -432,6 +432,13 @@ Admin password changes:
 - The form uses the same authenticated Supabase Auth password-change flow as student accounts.
 - Admin accounts remain internal; public admin registration is not exposed.
 
+Student password resets by an admin:
+
+- An admin can reset a student password from `/admin/students/[recordId]/edit` only when the official record has an exact active student account match by email and Student ID.
+- The server re-fetches the official record, student row, profile, and Supabase Auth user before calling the server-only `auth.admin.updateUserById` API. The browser never supplies an Auth user ID.
+- The admin enters a temporary password and shares it privately. PKM-DES does not store, display again, or email that password, and this MVP does not force a password change on the next login.
+- Successful resets write a `RESET_STUDENT_PASSWORD` audit entry when the existing admin audit-log policy is available. Do not use this preview workflow as a substitute for a formally approved institutional password-reset policy.
+
 ### Admin Login
 
 Admin accounts are internal and are not created through public registration.

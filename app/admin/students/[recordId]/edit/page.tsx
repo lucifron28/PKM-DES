@@ -1,8 +1,10 @@
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ResetStudentPasswordForm } from "@/components/admin/reset-student-password-form";
 import { OfficialStudentRecordForm } from "../../official-record-form";
-import { updateOfficialStudentRecordAction } from "../../actions";
+import { resetStudentPasswordAction, updateOfficialStudentRecordAction } from "../../actions";
+import { isExactActiveStudentAccount } from "@/lib/admin-student-records/password-reset";
 import { requireRole } from "@/lib/auth/session";
 import { OFFICIAL_RECORD_ERROR_MESSAGES } from "@/lib/constants/pkm";
 import type { OfficialStudentRecord, Program } from "@/types/database";
@@ -65,6 +67,33 @@ export default async function EditOfficialStudentRecordPage({
     );
   }
 
+  const { data: accountStudent, error: accountStudentError } = record.student_id_number
+    ? await supabase
+        .from("students")
+        .select("profile_id, student_id_number")
+        .eq("student_id_number", record.student_id_number)
+        .maybeSingle()
+    : { data: null, error: null };
+  const { data: accountProfile, error: accountProfileError } = accountStudent
+    ? await supabase
+        .from("profiles")
+        .select("email, role, account_status")
+        .eq("id", accountStudent.profile_id)
+        .maybeSingle()
+    : { data: null, error: null };
+  const passwordResetAvailable = !accountStudentError && !accountProfileError && isExactActiveStudentAccount({
+    officialEmail: record.email,
+    officialStudentId: record.student_id_number,
+    accountEmail: accountProfile?.email ?? null,
+    accountStudentId: accountStudent?.student_id_number ?? null,
+    accountRole: accountProfile?.role ?? null,
+    accountStatus: accountProfile?.account_status ?? null
+  });
+
+  if (accountStudentError || accountProfileError) {
+    console.error("official_student_records:password_reset_account_lookup");
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -97,6 +126,19 @@ export default async function EditOfficialStudentRecordPage({
           record={record}
           submitLabel="Update Official Record"
         />
+      </Card>
+      <Card className="border-t-4 border-t-secondary-600">
+        <CardHeader
+          title="Student Password Reset"
+          description="Reset is available only for an exact active student account matched to this official record."
+        />
+        {passwordResetAvailable ? (
+          <ResetStudentPasswordForm action={resetStudentPasswordAction} officialRecordId={record.id} />
+        ) : (
+          <div className="border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+            A password reset becomes available after this official record has an exact active student account match. Account matching identifiers must remain aligned.
+          </div>
+        )}
       </Card>
     </div>
   );

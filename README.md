@@ -77,6 +77,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Rejection keeps optional free-text remarks; no requirements checklist or document-verification workflow is invented
 - Enrollment masterlist across pending, approved, and rejected submitted requests, with program, academic year, year level, semester, review-status, and student identity search filters
 - Admin Account page with internal account details and password change
+- Registrar/Admin can reset the password of an exact active student account from its official-record edit page; the temporary password is shared privately and never stored or displayed again
 - MVP draft printable registration form aligned with the supplied registration form sample layout and readable A4 browser printing
 - Printable registration form displays deterministic attached-subject rows, total units, classification markers, review status, fee/payment placeholders, signature labels, and data privacy authorization text
 - Students can print only their latest approved request; Registrar/Admin can preview individual enrollment forms for every review status

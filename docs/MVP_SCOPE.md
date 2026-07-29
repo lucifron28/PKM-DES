@@ -42,6 +42,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Admin dashboard enrollment-status overview.
 - Manual creation, search, filtering, and editing of official student records.
+- Registrar/Admin reset of an exact active student account password from the linked official-record edit page. The temporary password is shared privately; no password-reset email or forced-change rule is implemented.
 - Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, and audit row commit atomically; the queue does not implement a document or requirements checklist.
 - Enrollment masterlist and browser-printable report views.
 
