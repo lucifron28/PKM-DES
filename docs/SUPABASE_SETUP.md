@@ -418,6 +418,19 @@ For setup-link accounts, the setup action first confirms that the authenticated 
 
 Health Record Update applicability is recalculated from the current Registrar-managed official record whenever the student or Registrar view is rendered. The stored status is used only when that current record makes the requirement applicable.
 
+### Disposable Local Database Verification
+
+After Docker and the Supabase CLI are available, reset a local-only stack and run the focused verification script. It uses fictional records in one transaction and rolls them back.
+
+```powershell
+npx supabase db reset --local --no-seed --yes
+Get-Content -Raw scripts/integration/verify-local-supabase-workflows.sql |
+  docker exec -i supabase_db_PKM-DES psql -U postgres -d postgres -v ON_ERROR_STOP=1
+.\scripts\integration\verify-local-supabase-concurrency.ps1
+```
+
+The concurrency runner creates separate fictional records for parallel review and resend calls, then resets the local stack when it finishes. Do not run either verification script against a linked, preview, or institutional database.
+
 Current client direction:
 
 - Every student type is matched against official Registrar-provided data before account access.
