@@ -30,9 +30,9 @@ export function PublicReveal({ children, className }: { children: ReactNode; cla
         const processItems = gsap.utils.toArray<HTMLElement>("[data-public-process-item]");
         if (processItems.length) {
           gsap.from(processItems, {
-            autoAlpha: 0,
             duration: 0.36,
             ease: "power1.out",
+            immediateRender: false,
             stagger: 0.08,
             y: 12,
             scrollTrigger: {
