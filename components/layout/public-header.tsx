@@ -12,7 +12,7 @@ export async function PublicHeader() {
   const dashboardLabel = profile?.role === "admin" ? "Open Admin Portal" : "Open Student Portal";
 
   return (
-    <header className="border-b border-slateui-border bg-white">
+    <header className="sticky top-0 z-40 border-b border-slateui-border/80 bg-white/95 backdrop-blur-md shadow-2xs">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:px-6 lg:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-3">
           <BrandMarks />
