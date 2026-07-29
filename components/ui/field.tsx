@@ -19,20 +19,36 @@ function FieldLabel({
 }
 
 const inputClass =
-  "mt-2 min-h-11 w-full rounded-md border border-slateui-border bg-white px-3 py-2 text-sm text-slateui-text outline-none transition placeholder:text-slateui-muted focus:border-primary-800 focus:ring-2 focus:ring-primary-100";
+  "mt-2 min-h-11 w-full rounded-md border border-slateui-border bg-white px-3 py-2 text-sm text-slateui-text outline-none transition placeholder:text-slateui-muted focus-visible:border-primary-800 focus-visible:ring-2 focus-visible:ring-primary-100";
 
 export function TextInput({
   label,
   required,
+  error,
   className,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+}: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
+  const fieldId = String(props.id ?? props.name);
+  const errorId = error ? `${fieldId}-error` : undefined;
+
   return (
     <div>
-      <FieldLabel htmlFor={String(props.id ?? props.name)} required={required}>
+      <FieldLabel htmlFor={fieldId} required={required}>
         {label}
       </FieldLabel>
-      <input className={cn(inputClass, className)} required={required} {...props} />
+      <input
+        id={fieldId}
+        className={cn(inputClass, error && "border-red-600 focus-visible:border-red-600 focus-visible:ring-red-100", className)}
+        required={required}
+        aria-invalid={Boolean(error)}
+        aria-describedby={errorId ?? props["aria-describedby"]}
+        {...props}
+      />
+      {error ? (
+        <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-red-600">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -41,17 +57,33 @@ export function SelectInput({
   label,
   children,
   required,
+  error,
   className,
   ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & { label: string }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; error?: string }) {
+  const fieldId = String(props.id ?? props.name);
+  const errorId = error ? `${fieldId}-error` : undefined;
+
   return (
     <div>
-      <FieldLabel htmlFor={String(props.id ?? props.name)} required={required}>
+      <FieldLabel htmlFor={fieldId} required={required}>
         {label}
       </FieldLabel>
-      <select className={cn(inputClass, className)} required={required} {...props}>
+      <select
+        id={fieldId}
+        className={cn(inputClass, error && "border-red-600 focus-visible:border-red-600 focus-visible:ring-red-100", className)}
+        required={required}
+        aria-invalid={Boolean(error)}
+        aria-describedby={errorId ?? props["aria-describedby"]}
+        {...props}
+      >
         {children}
       </select>
+      {error ? (
+        <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-red-600">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -59,19 +91,31 @@ export function SelectInput({
 export function TextArea({
   label,
   required,
+  error,
   className,
   ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string }) {
+  const fieldId = String(props.id ?? props.name);
+  const errorId = error ? `${fieldId}-error` : undefined;
+
   return (
     <div>
-      <FieldLabel htmlFor={String(props.id ?? props.name)} required={required}>
+      <FieldLabel htmlFor={fieldId} required={required}>
         {label}
       </FieldLabel>
       <textarea
-        className={cn(inputClass, "min-h-28 resize-y", className)}
+        id={fieldId}
+        className={cn(inputClass, "min-h-28 resize-y", error && "border-red-600 focus-visible:border-red-600 focus-visible:ring-red-100", className)}
         required={required}
+        aria-invalid={Boolean(error)}
+        aria-describedby={errorId ?? props["aria-describedby"]}
         {...props}
       />
+      {error ? (
+        <p id={errorId} role="alert" className="mt-1.5 text-xs font-medium text-red-600">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
