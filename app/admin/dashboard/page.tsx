@@ -52,9 +52,9 @@ export default async function AdminDashboardPage() {
           tone="info"
         />
       </div>
-      <Card>
+      <Card className="border-t-4 border-t-primary-800">
         <CardHeader title="Registrar Workflow" description="Follow the submitted enrollment process from source record to review and reporting." />
-        <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+        <div className="mb-5 border-l-4 border-sky-500 bg-sky-50 px-4 py-3 text-sm text-sky-900">
           <p className="font-semibold">Demo path</p>
           <p className="mt-1">
             Add or confirm an Official Student Record, let the student claim the account, then submit Online Enrollment.
@@ -69,31 +69,31 @@ export default async function AdminDashboardPage() {
           {ENABLE_STUB_PAGES ? <ButtonLink href="/admin/encode" variant="outline" className="w-full">Encode Grades/Schedule</ButtonLink> : null}
         </div>
       </Card>
-      <Card>
+      <Card className="border-t-4 border-t-secondary-600">
         <CardHeader title="Enrollment Status Overview" />
         {statusCounts === null ? (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="mb-4 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">
             Enrollment counts could not be loaded. Please try again.
           </div>
         ) : statusCounts.total === 0 ? (
-          <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <div className="mb-4 border-l-4 border-sky-500 bg-sky-50 px-4 py-3 text-sm text-sky-900">
             Dashboard counts include submitted enrollment records only. Official Student Records appear here after a student claims an account and submits Online Enrollment.
           </div>
         ) : null}
         <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-md bg-amber-50 p-4 text-amber-900">
+          <div className="border-l-4 border-amber-500 bg-amber-50 p-4 text-amber-900">
             <p className="font-semibold">Pending</p>
             <p className="mt-1 text-2xl font-bold">{statusCounts?.PENDING ?? "Unavailable"}</p>
           </div>
-          <div className="rounded-md bg-green-50 p-4 text-green-800">
+          <div className="border-l-4 border-green-600 bg-green-50 p-4 text-green-800">
             <p className="font-semibold">Approved</p>
             <p className="mt-1 text-2xl font-bold">{statusCounts?.APPROVED ?? "Unavailable"}</p>
           </div>
-          <div className="rounded-md bg-red-50 p-4 text-red-800">
+          <div className="border-l-4 border-red-600 bg-red-50 p-4 text-red-800">
             <p className="font-semibold">Rejected</p>
             <p className="mt-1 text-2xl font-bold">{statusCounts?.REJECTED ?? "Unavailable"}</p>
           </div>
-          <div className="rounded-md bg-sky-50 p-4 text-sky-900">
+          <div className="border-l-4 border-sky-500 bg-sky-50 p-4 text-sky-900">
             <p className="font-semibold">Total Records</p>
             <p className="mt-1 text-2xl font-bold">{statusCounts?.total ?? "Unavailable"}</p>
           </div>

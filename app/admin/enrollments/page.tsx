@@ -68,8 +68,11 @@ export default async function PendingEnrollmentsPage({
         </div>
       ) : null}
       {enrollments.length ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
+        <div>
+          <p className="mb-2 text-xs text-slateui-muted sm:hidden">Swipe horizontally to view all enrollment details and actions.</p>
+          <div className="overflow-hidden rounded-lg border border-slateui-border bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
             <thead className="bg-primary-800 text-white">
               <tr>
                 {[
@@ -130,7 +133,9 @@ export default async function PendingEnrollmentsPage({
                 );
               })}
             </tbody>
-          </table>
+              </table>
+            </div>
+          </div>
         </div>
       ) : (
         <EmptyState

@@ -44,7 +44,7 @@ export function SideNav({
   const router = useRouter();
 
   return (
-    <nav className="space-y-1" aria-label={label}>
+    <nav className="space-y-1.5" aria-label={label}>
       {items.map((item) => {
         const Icon = icons[item.icon];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -59,9 +59,9 @@ export function SideNav({
             onFocus={() => router.prefetch(item.href)}
             onMouseEnter={() => router.prefetch(item.href)}
             className={cn(
-              "flex min-h-11 items-center gap-3 border-l-4 px-3 py-2 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-offset-2",
+              "flex min-h-11 items-center gap-3 border-l-4 px-3 py-2 text-sm font-semibold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-offset-2",
               active
-                ? "border-secondary-600 bg-primary-800 text-white"
+                ? "border-secondary-600 bg-primary-50 text-primary-900 shadow-2xs"
                 : "border-transparent text-slateui-secondary hover:bg-primary-50 hover:text-primary-800"
             )}
           >
@@ -71,7 +71,7 @@ export function SideNav({
               <span
                 className={cn(
                   "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                  active ? "bg-primary-700 text-secondary-600" : "bg-slateui-surfaceAlt text-slateui-muted"
+                  active ? "bg-secondary-100 text-slateui-text" : "bg-slateui-surfaceAlt text-slateui-muted"
                 )}
               >
                 Stub

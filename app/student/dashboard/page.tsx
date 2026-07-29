@@ -19,9 +19,9 @@ export default function StudentDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="border-l-4 border-secondary-600 pl-4">
         <h2 className="text-xl font-bold text-slateui-text sm:text-2xl">Welcome, {formatName(profile.first_name, profile.last_name)}!</h2>
-        <p className="mt-1 text-sm text-slateui-muted">Your enrollment pages remain accessible regardless of current enrollment status.</p>
+        <p className="mt-1 text-sm leading-6 text-slateui-muted">Your enrollment pages remain accessible regardless of current enrollment status.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
         <StatCard
@@ -46,7 +46,7 @@ export default function StudentDashboardPage() {
         />
       </div>
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <Card>
+        <Card className="border-t-4 border-t-primary-800">
           <CardHeader title="Student Information" />
           <dl className="grid gap-3 text-sm">
             <div className="grid gap-1 border-b border-slateui-border pb-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:gap-4">
@@ -67,7 +67,7 @@ export default function StudentDashboardPage() {
             </div>
           </dl>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-t-secondary-600">
           <CardHeader title="Quick Actions" />
           <div className="grid gap-3 sm:grid-cols-2">
             <ButtonLink href="/student/enrollment" className="w-full">Online Enrollment</ButtonLink>
