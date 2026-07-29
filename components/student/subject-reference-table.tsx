@@ -5,9 +5,13 @@ type SubjectReferenceRow = Pick<CourseOfferingSeed | SubjectSeed, "course_code" 
 
 export function SubjectReferenceTable({ rows, codeLabel }: { rows: SubjectReferenceRow[]; codeLabel: string }) {
   return (
-    <div className="overflow-hidden rounded-md border border-slateui-border bg-white">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[24rem] table-fixed text-left text-sm">
+    <div>
+      <p className="print-hidden mb-2 text-xs text-slateui-muted sm:hidden">
+        Swipe horizontally to view complete subject details.
+      </p>
+      <div className="overflow-hidden rounded-md border border-slateui-border bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[28rem] table-fixed text-left text-sm">
           <thead className="bg-primary-800 text-white">
             <tr>
               <th scope="col" className="w-28 px-3 py-3 font-semibold sm:px-4">
@@ -36,6 +40,7 @@ export function SubjectReferenceTable({ rows, codeLabel }: { rows: SubjectRefere
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 }
