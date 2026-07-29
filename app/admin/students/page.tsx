@@ -148,12 +148,21 @@ export default async function StudentRecordsPage({
     console.error("official_student_records:records_load");
     return (
       <div className="space-y-6">
-        <Card>
+        <Card className="border-t-4 border-t-primary-800">
           <CardHeader
             title="Official Student Records"
-            description="Registrar-managed source records for account matching."
+            description="Add a Registrar-managed source record when the records list is available again."
           />
-          <OfficialStudentRecordForm action={addOfficialStudentRecordAction} programs={programs} submitLabel="Save Official Record" />
+          <details className="group border border-slateui-border bg-slateui-surfaceAlt" open={Boolean(params.error)}>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-primary-900 marker:hidden [&::-webkit-details-marker]:hidden">
+              Add Official Record
+              <span className="text-xs font-medium text-slateui-muted group-open:hidden">Open</span>
+              <span className="hidden text-xs font-medium text-slateui-muted group-open:inline">Close</span>
+            </summary>
+            <div className="border-t border-slateui-border bg-white p-4">
+              <OfficialStudentRecordForm action={addOfficialStudentRecordAction} programs={programs} submitLabel="Save Official Record" />
+            </div>
+          </details>
         </Card>
         <EmptyState
           title="Official student records could not be loaded."
@@ -236,38 +245,30 @@ export default async function StudentRecordsPage({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-t-4 border-t-primary-800">
         <CardHeader
-          title="Official Student Records"
-          description="Registrar-managed source records used for exact account matching."
+          title="Official Records"
+          description="Search, filter, and review Registrar-managed source records for account matching."
         />
         {params.created ? (
-          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+          <div className="mb-5 border-l-4 border-green-600 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
             <p className="font-semibold">Official student record saved.</p>
-            <p className="mt-1">
+            <p className="mt-1 leading-6">
               The student must claim the record, log in, and submit Online Enrollment before appearing in Pending Enrollments, the Masterlist, or dashboard counts.
             </p>
           </div>
         ) : null}
         {params.updated ? (
-          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+          <div className="mb-5 border-l-4 border-green-600 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
             <p className="font-semibold">Official student record updated.</p>
-            <p className="mt-1">Updates here do not create or change enrollment requests or student accounts.</p>
+            <p className="mt-1 leading-6">Updates here do not create or change enrollment requests or student accounts.</p>
           </div>
         ) : null}
         {params.error ? (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          <div className="mb-5 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="alert">
             {OFFICIAL_RECORD_ERROR_MESSAGES[params.error] ?? "Official student record could not be saved."}
           </div>
         ) : null}
-        <OfficialStudentRecordForm action={addOfficialStudentRecordAction} programs={programs} submitLabel="Save Official Record" />
-      </Card>
-
-      <Card>
-        <CardHeader
-          title="Official Records"
-          description="Search, filter, and review Registrar-managed source records for account matching."
-        />
         <div className="mb-5 grid gap-4 md:grid-cols-3">
           <StatCard label="Displayed records" value={records.length} helper="Current page after validated filters" />
           {accountMatchUnavailable ? (
@@ -280,11 +281,11 @@ export default async function StudentRecordsPage({
           )}
         </div>
         {accountMatchUnavailable ? (
-          <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-5 border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Account match information is unavailable. Official records remain visible, but account links should be checked again later.
           </div>
         ) : null}
-        <form className="mb-5 grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_auto_auto] lg:items-end">
+        <form className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-[1.3fr_1fr_1fr_1fr_1fr_auto_auto] xl:items-end" aria-label="Official student record filters">
           <TextInput label="Search" name="q" placeholder="Name, email, or Student ID" defaultValue={filters.search} />
           <SelectInput label="Program" name="program_id" defaultValue={filters.programId}>
             <option value="">All programs</option>
@@ -383,6 +384,23 @@ export default async function StudentRecordsPage({
             description="Official Student Records are Registrar source records for account claiming. They become Pending Enrollments only after a student claims an account and submits Online Enrollment."
           />
         )}
+      </Card>
+
+      <Card className="border-t-4 border-t-secondary-600">
+        <CardHeader
+          title="Add Official Record"
+          description="Create a Registrar-managed source record for student account matching."
+        />
+        <details className="group border border-slateui-border bg-slateui-surfaceAlt" open={Boolean(params.error)}>
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-primary-900 marker:hidden [&::-webkit-details-marker]:hidden">
+            Add Official Record
+            <span className="text-xs font-medium text-slateui-muted group-open:hidden">Open form</span>
+            <span className="hidden text-xs font-medium text-slateui-muted group-open:inline">Close form</span>
+          </summary>
+          <div className="border-t border-slateui-border bg-white p-4">
+            <OfficialStudentRecordForm action={addOfficialStudentRecordAction} programs={programs} submitLabel="Save Official Record" />
+          </div>
+        </details>
       </Card>
     </div>
   );

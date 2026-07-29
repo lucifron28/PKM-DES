@@ -18,11 +18,11 @@ export function EnrollmentFilterGrid({
   resetHref
 }: EnrollmentFilterGridProps) {
   const gridClass = showAcademicYear
-    ? "print-hidden grid gap-4 lg:grid-cols-report-filters lg:items-end"
-    : "print-hidden grid gap-4 lg:grid-cols-admin-filters lg:items-end";
+    ? "print-hidden grid gap-4 md:grid-cols-2 xl:grid-cols-report-filters xl:items-end"
+    : "print-hidden grid gap-4 md:grid-cols-2 xl:grid-cols-admin-filters xl:items-end";
 
   return (
-    <form className={gridClass}>
+    <form className={gridClass} aria-label="Enrollment filters">
       <TextInput
         label="Search"
         name="search"
