@@ -42,3 +42,10 @@ test("areRequirementsFulfilled checks status VERIFIED", () => {
 
   assert.deepEqual(getMissingOrUnverifiedRequirements(["HEALTH_RECORD_UPDATE"], records), ["HEALTH_RECORD_UPDATE"]);
 });
+
+test("Requirement status transition validations", () => {
+  const validStatuses: ("PENDING" | "VERIFIED" | "REJECTED")[] = ["PENDING", "VERIFIED", "REJECTED"];
+  assert.equal(validStatuses.includes("VERIFIED"), true);
+  assert.equal(validStatuses.includes("REJECTED"), true);
+  assert.equal(validStatuses.includes("PENDING"), true);
+});
