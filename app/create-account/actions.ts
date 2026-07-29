@@ -39,6 +39,8 @@ export type ClaimAccountState = {
   message?: string;
   matchedRecord?: ClaimRecordSummary;
   selectedStudentType?: StudentType;
+  email?: string;
+  studentIdNumber?: string;
 };
 
 export type CreateAccountState = {
@@ -301,22 +303,24 @@ export async function claimOfficialRecordAction(
   await clearClaimCookie();
 
   const studentType = readStudentType(formData.get("student_type"));
+  const rawEmail = String(formData.get("email") ?? "").trim();
+  const rawStudentIdNumber = String(formData.get("student_id_number") ?? "").trim();
   const lookupInput = validateClaimLookupInput({
-    email: String(formData.get("email") ?? ""),
-    studentIdNumber: String(formData.get("student_id_number") ?? "")
+    email: rawEmail,
+    studentIdNumber: rawStudentIdNumber
   });
 
   if (!studentType) {
-    return { message: "Please select a valid student type." };
+    return { message: "Please select a valid student type.", email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
   if (!lookupInput.valid && lookupInput.code === "missing_email") {
-    return { message: "Active Email Address is required.", selectedStudentType: studentType };
+    return { message: "Active Email Address is required.", selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
   if (!lookupInput.valid && lookupInput.code === "missing_student_id") {
-    return { message: "Student ID Number is required.", selectedStudentType: studentType };
+    return { message: "Student ID Number is required.", selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
   if (!lookupInput.valid) {
-    return { message: "Please use a valid active email address.", selectedStudentType: studentType };
+    return { message: "Please use a valid active email address.", selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
   const { email, studentIdNumber } = lookupInput;
 
@@ -324,21 +328,23 @@ export async function claimOfficialRecordAction(
   if (!admin) {
     return {
       message: "Account claiming is not configured for this preview environment.",
-      selectedStudentType: studentType
+      selectedStudentType: studentType,
+      email: rawEmail,
+      studentIdNumber: rawStudentIdNumber
     };
   }
 
   const record = await findExactOfficialRecord({ admin, email, studentIdNumber });
   if (!record || !isCompatibleStudentType(studentType, record.student_type)) {
     logClaimFailure("claim_not_verifiable");
-    return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType };
+    return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
 
   const normalizedRecordEmail = normalizeClaimEmail(record.email);
   const normalizedRecordStudentId = normalizeStudentId(record.student_id_number);
   if (!normalizedRecordEmail || !normalizedRecordStudentId || normalizedRecordEmail !== email || normalizedRecordStudentId !== studentIdNumber) {
     logClaimFailure("claim_record_not_normalized");
-    return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType };
+    return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
 
   const accountInfo = await findExistingStudentAccount({ admin, email: normalizedRecordEmail, studentIdNumber: normalizedRecordStudentId });
@@ -350,14 +356,14 @@ export async function claimOfficialRecordAction(
       // Proceed to allow resend via createStudentAccountAction
     } else {
       logClaimFailure("claim_already_exists");
-      return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType };
+      return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
     }
   }
 
   const summary = summarizeOfficialRecord(record, studentType);
   if (!summary) {
     logClaimFailure("claim_record_missing_student_id");
-    return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType };
+    return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
 
   try {
@@ -369,10 +375,10 @@ export async function claimOfficialRecordAction(
     await setClaimCookie(token);
   } catch {
     logClaimFailure("claim_token_issue_failed");
-    return { message: "Account claiming is not configured for this preview environment.", selectedStudentType: studentType };
+    return { message: "Account claiming is not configured for this preview environment.", selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
   }
 
-  return { matchedRecord: summary, selectedStudentType: studentType };
+  return { matchedRecord: summary, selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
 }
 
 export async function createStudentAccountAction(

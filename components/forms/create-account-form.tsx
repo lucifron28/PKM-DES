@@ -114,6 +114,7 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
             type="email"
             autoComplete="email"
             placeholder="maria.santos@example.com"
+            defaultValue={claimState.email ?? ""}
             required
           />
           <TextInput
@@ -121,6 +122,7 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
             name="student_id_number"
             label="Student ID Number"
             placeholder="23-00340"
+            defaultValue={claimState.studentIdNumber ?? ""}
             required
           />
         </div>

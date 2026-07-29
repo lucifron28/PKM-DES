@@ -66,31 +66,38 @@ export default async function EditOfficialStudentRecordPage({
   }
 
   return (
-    <Card>
-      <CardHeader
-        title="Edit Official Student Record"
-        description="Update Registrar-managed data used for account matching."
-        action={<ButtonLink href="/admin/students" variant="outline">Back to Records</ButtonLink>}
-      />
-      {query.updated ? (
-        <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
-          Official student record updated.
-        </div>
-      ) : null}
-      {query.error ? (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-          {OFFICIAL_RECORD_ERROR_MESSAGES[query.error] ?? "Official student record could not be updated."}
-        </div>
-      ) : null}
-      <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Email and Student ID are account-matching identifiers. Changing them does not update an existing Supabase Auth account or student account automatically. Check the records list afterward for partial matches or identity conflicts.
+    <div className="space-y-4">
+      <div>
+        <ButtonLink href="/admin/students" variant="outline" className="px-3 py-1 text-xs">
+          ← Back to Student Records
+        </ButtonLink>
       </div>
-      <OfficialStudentRecordForm
-        action={updateOfficialStudentRecordAction}
-        programs={programs}
-        record={record}
-        submitLabel="Update Official Record"
-      />
-    </Card>
+      <Card>
+        <CardHeader
+          title="Edit Official Student Record"
+          description="Update Registrar-managed data used for account matching."
+          action={<ButtonLink href="/admin/students" variant="outline">Back to Records</ButtonLink>}
+        />
+        {query.updated ? (
+          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+            Official student record updated.
+          </div>
+        ) : null}
+        {query.error ? (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {OFFICIAL_RECORD_ERROR_MESSAGES[query.error] ?? "Official student record could not be updated."}
+          </div>
+        ) : null}
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Email and Student ID are account-matching identifiers. Changing them does not update an existing Supabase Auth account or student account automatically. Check the records list afterward for partial matches or identity conflicts.
+        </div>
+        <OfficialStudentRecordForm
+          action={updateOfficialStudentRecordAction}
+          programs={programs}
+          record={record}
+          submitLabel="Update Official Record"
+        />
+      </Card>
+    </div>
   );
 }
