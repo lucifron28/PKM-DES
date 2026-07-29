@@ -79,4 +79,10 @@ test.describe('Public Read-Only Pages', () => {
     await page.waitForURL('**/login**');
     await expect(page.getByRole('heading', { name: 'Login', exact: true })).toBeVisible();
   });
+
+  test('Non-existent route renders custom 404 page', async ({ page }) => {
+    await page.goto('/non-existent-route-path');
+    await expect(page.getByRole('heading', { name: 'Page Not Found', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Return Home/i })).toBeVisible();
+  });
 });
