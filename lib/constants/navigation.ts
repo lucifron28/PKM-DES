@@ -15,6 +15,7 @@ export type NavigationItem = {
   label: string;
   href: string;
   icon: NavigationIcon;
+  section?: "Workflow" | "Reference" | "Account";
   isStub?: boolean;
 };
 
@@ -26,24 +27,24 @@ export const publicNavigation = [
 export const ENABLE_STUB_PAGES = process.env.NEXT_PUBLIC_ENABLE_STUB_PAGES === "true";
 
 export const studentNavigation: NavigationItem[] = [
-  { label: "Student Dashboard", href: "/student/dashboard", icon: "dashboard" },
-  { label: "Online Enrollment", href: "/student/enrollment", icon: "enrollment" },
-  { label: "Subject List", href: "/student/subjects", icon: "subjects" },
+  { label: "Student Dashboard", href: "/student/dashboard", icon: "dashboard", section: "Workflow" },
+  { label: "Online Enrollment", href: "/student/enrollment", icon: "enrollment", section: "Workflow" },
+  { label: "Subject List", href: "/student/subjects", icon: "subjects", section: "Reference" },
   ...(ENABLE_STUB_PAGES
     ? [
-        { label: "Grades", href: "/student/grades", icon: "grades", isStub: true } as NavigationItem,
-        { label: "Class Schedule", href: "/student/schedule", icon: "schedule", isStub: true } as NavigationItem,
-        { label: "Balances", href: "/student/balances", icon: "balances", isStub: true } as NavigationItem
+        { label: "Grades", href: "/student/grades", icon: "grades", section: "Reference", isStub: true } as NavigationItem,
+        { label: "Class Schedule", href: "/student/schedule", icon: "schedule", section: "Reference", isStub: true } as NavigationItem,
+        { label: "Balances", href: "/student/balances", icon: "balances", section: "Reference", isStub: true } as NavigationItem
       ]
     : []),
-  { label: "Account", href: "/student/account", icon: "account" }
+  { label: "Account", href: "/student/account", icon: "account", section: "Account" }
 ];
 
 export const adminNavigation: NavigationItem[] = [
-  { label: "Admin Dashboard", href: "/admin/dashboard", icon: "dashboard" },
-  { label: "Enrollment Reports", href: "/admin/reports", icon: "reports" },
-  { label: "Enrollment Masterlist", href: "/admin/masterlist", icon: "masterlist" },
-  { label: "Pending Enrollments", href: "/admin/enrollments", icon: "pending" },
-  { label: "Student Records", href: "/admin/students", icon: "students" },
-  { label: "Account", href: "/admin/account", icon: "account" }
+  { label: "Admin Dashboard", href: "/admin/dashboard", icon: "dashboard", section: "Workflow" },
+  { label: "Pending Enrollments", href: "/admin/enrollments", icon: "pending", section: "Workflow" },
+  { label: "Student Records", href: "/admin/students", icon: "students", section: "Workflow" },
+  { label: "Enrollment Masterlist", href: "/admin/masterlist", icon: "masterlist", section: "Reference" },
+  { label: "Enrollment Reports", href: "/admin/reports", icon: "reports", section: "Reference" },
+  { label: "Account", href: "/admin/account", icon: "account", section: "Account" }
 ];
