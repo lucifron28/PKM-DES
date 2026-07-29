@@ -19,7 +19,7 @@ function FieldLabel({
 }
 
 const inputClass =
-  "mt-2 min-h-11 w-full rounded-md border border-slateui-border bg-white px-3 py-2 text-sm text-slateui-text outline-none transition placeholder:text-slateui-muted focus-visible:border-primary-800 focus-visible:ring-2 focus-visible:ring-primary-100";
+  "mt-2 min-h-11 w-full rounded-md border border-slateui-border bg-white px-3 py-2 text-sm text-slateui-text shadow-2xs outline-none transition duration-200 placeholder:text-slateui-muted focus-visible:border-primary-800 focus-visible:ring-2 focus-visible:ring-primary-100";
 
 export function TextInput({
   label,

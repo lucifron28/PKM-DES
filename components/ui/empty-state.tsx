@@ -11,8 +11,8 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slateui-border bg-slateui-surfaceAlt/60 px-6 py-14 text-center backdrop-blur-xs">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-primary-800 ring-8 ring-primary-50/50">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slateui-border bg-slateui-surfaceAlt/80 px-6 py-14 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary-50 text-primary-800 ring-8 ring-primary-50/50">
         <FileSearch className="h-7 w-7" aria-hidden="true" />
       </div>
       <h2 className="mt-5 text-lg font-bold text-slateui-text sm:text-xl">{title}</h2>

@@ -39,10 +39,18 @@ const config: Config = {
           text: "#0f172a",
           secondary: "#334155",
           muted: "#475569"
+        },
+        feedback: {
+          success: "#15803d",
+          warning: "#b45309",
+          error: "#b91c1c",
+          info: "#0369a1"
         }
       },
       boxShadow: {
-        soft: "0 18px 50px rgba(15, 23, 42, 0.08)"
+        soft: "0 18px 50px rgba(15, 23, 42, 0.08)",
+        panel: "0 10px 28px rgba(0, 58, 135, 0.08)",
+        lift: "0 14px 32px rgba(0, 58, 135, 0.14)"
       },
       gridTemplateColumns: {
         "admin-filters": "1fr 1fr 1fr 1fr auto",

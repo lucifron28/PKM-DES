@@ -24,15 +24,15 @@ export function StatCard({
   }[tone];
 
   return (
-    <Card className="group relative min-w-0 overflow-hidden p-5 transition-all duration-200 hover:border-primary-200 sm:p-6">
+    <Card className="group relative min-w-0 overflow-hidden border-t-4 border-t-primary-800 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-200 hover:border-t-primary-800 hover:shadow-lift sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-slateui-muted">{label}</p>
-          <div className="mt-2.5 break-words text-3xl font-black tracking-tight text-slateui-text tabular-nums sm:text-4xl">{value}</div>
+          <p className="text-xs font-bold tracking-wide text-slateui-muted">{label}</p>
+          <div className="mt-2.5 break-words text-3xl font-black text-slateui-text tabular-nums sm:text-4xl">{value}</div>
           {helper ? <p className="mt-2 text-xs font-medium leading-5 text-slateui-muted">{helper}</p> : null}
         </div>
         {icon ? (
-          <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl p-2.5 transition-transform duration-200 group-hover:scale-105", toneClass)} aria-hidden="true">
+          <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-lg p-2.5 transition-transform duration-200 group-hover:scale-105", toneClass)} aria-hidden="true">
             {icon}
           </div>
         ) : null}
