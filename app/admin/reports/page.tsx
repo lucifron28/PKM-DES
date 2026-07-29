@@ -82,9 +82,13 @@ export default async function EnrollmentReportsPage({
           ))}
         </div>
         {result.enrollments.length ? (
-          <div className="overflow-hidden rounded-lg border border-slateui-border">
-            <div className="overflow-x-auto print:overflow-x-visible">
-              <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
+          <div>
+            <p className="print-hidden mb-2 text-xs text-slateui-muted sm:hidden">
+              Swipe horizontally to view complete report columns.
+            </p>
+            <div className="overflow-hidden rounded-lg border border-slateui-border">
+              <div className="overflow-x-auto print:overflow-x-visible">
+                <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
                 <thead className="bg-primary-800 text-white">
                   <tr>
                     {["Student name", "Student ID", "Program", "Year Level", "Academic Year", "Semester", "Status", "Submitted", "Reviewed", "Remarks"].map((column) => (
@@ -110,6 +114,7 @@ export default async function EnrollmentReportsPage({
                 </tbody>
               </table>
             </div>
+          </div>
           </div>
         ) : (
           <EmptyState title={emptyTitle} description="Reports are generated from submitted enrollment records only. Saved Official Student Records appear here after students claim accounts and submit Online Enrollment." />

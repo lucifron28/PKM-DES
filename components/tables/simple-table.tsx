@@ -8,9 +8,13 @@ export function SimpleTable({
   rows: ReactNode[][];
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slateui-border bg-white">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
+    <div>
+      <p className="print-hidden mb-2 text-xs text-slateui-muted sm:hidden">
+        Swipe horizontally to view all columns.
+      </p>
+      <div className="overflow-hidden rounded-lg border border-slateui-border bg-white">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
           <thead className="bg-primary-800 text-white">
             <tr>
               {columns.map((column) => (
@@ -33,6 +37,7 @@ export function SimpleTable({
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 }
