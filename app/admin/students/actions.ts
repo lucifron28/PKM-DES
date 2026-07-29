@@ -2,8 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import {
+  isExactActiveStudentAccount,
+  type StudentPasswordResetState,
+  validateStudentPasswordResetInput
+} from "@/lib/admin-student-records/password-reset";
 import { requireRole } from "@/lib/auth/session";
 import { normalizeClaimEmail, normalizeStudentId } from "@/lib/account-claim/rules";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import {
   ADMISSION_STATUS_OPTIONS,
   CIVIL_STATUS_OPTIONS,
@@ -263,4 +269,129 @@ export async function updateOfficialStudentRecordAction(formData: FormData) {
   revalidatePath("/admin/students");
   revalidatePath(`/admin/students/${recordId}/edit`);
   redirect(`/admin/students/${recordId}/edit?updated=1`);
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export async function resetStudentPasswordAction(
+  _previousState: StudentPasswordResetState,
+  formData: FormData
+): Promise<StudentPasswordResetState> {
+  const temporaryPassword = String(formData.get("temporary_password") ?? "");
+  const confirmTemporaryPassword = String(formData.get("confirm_temporary_password") ?? "");
+  const validation = validateStudentPasswordResetInput({
+    password: temporaryPassword,
+    confirmPassword: confirmTemporaryPassword
+  });
+
+  if (validation.message) {
+    return validation;
+  }
+
+  const officialRecordId = String(formData.get("official_record_id") ?? "").trim();
+  if (!isUuid(officialRecordId)) {
+    return { message: "Student account could not be verified. Refresh the record and try again." };
+  }
+
+  const { supabase, profile: adminProfile } = await requireRole("admin");
+  const { data: officialRecord, error: officialRecordError } = await supabase
+    .from("official_student_records")
+    .select("id, email, student_id_number")
+    .eq("id", officialRecordId)
+    .maybeSingle();
+
+  if (officialRecordError) {
+    console.error("student_password_reset:official_record_load");
+    return { message: "Student account could not be verified. Please try again." };
+  }
+
+  if (!officialRecord?.student_id_number) {
+    return { message: "This official record does not have a linked student account to reset." };
+  }
+
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("profile_id, student_id_number")
+    .eq("student_id_number", officialRecord.student_id_number)
+    .maybeSingle();
+
+  if (studentError) {
+    console.error("student_password_reset:student_load");
+    return { message: "Student account could not be verified. Please try again." };
+  }
+
+  if (!student) {
+    return { message: "This official record does not have a linked student account to reset." };
+  }
+
+  const { data: studentProfile, error: studentProfileError } = await supabase
+    .from("profiles")
+    .select("id, email, role, account_status")
+    .eq("id", student.profile_id)
+    .maybeSingle();
+
+  if (studentProfileError) {
+    console.error("student_password_reset:profile_load");
+    return { message: "Student account could not be verified. Please try again." };
+  }
+
+  if (!studentProfile) {
+    return { message: "This official record does not have a linked student account to reset." };
+  }
+
+  if (!isExactActiveStudentAccount({
+    officialEmail: officialRecord.email,
+    officialStudentId: officialRecord.student_id_number,
+    accountEmail: studentProfile.email,
+    accountStudentId: student.student_id_number,
+    accountRole: studentProfile.role,
+    accountStatus: studentProfile.account_status
+  })) {
+    return { message: "This official record does not have an exact active student account to reset." };
+  }
+
+  let admin;
+  try {
+    admin = createSupabaseAdminClient();
+  } catch {
+    console.error("student_password_reset:admin_client_unavailable");
+    return { message: "Student password reset is not configured for this environment." };
+  }
+
+  const { data: authLookup, error: authLookupError } = await admin.auth.admin.getUserById(studentProfile.id);
+  if (
+    authLookupError ||
+    !authLookup.user ||
+    authLookup.user.id !== studentProfile.id ||
+    authLookup.user.email?.trim().toLowerCase() !== studentProfile.email.trim().toLowerCase()
+  ) {
+    console.error("student_password_reset:auth_user_verification");
+    return { message: "Student account could not be verified. Please try again." };
+  }
+
+  const { error: resetError } = await admin.auth.admin.updateUserById(studentProfile.id, {
+    password: temporaryPassword
+  });
+
+  if (resetError) {
+    console.error("student_password_reset:auth_password_update");
+    return { message: "Student password could not be reset. Please try again." };
+  }
+
+  const { error: auditError } = await supabase.from("audit_logs").insert({
+    actor_profile_id: adminProfile.id,
+    action: "RESET_STUDENT_PASSWORD",
+    target_table: "profiles",
+    target_id: studentProfile.id
+  });
+
+  if (auditError) {
+    console.error("student_password_reset:audit_log");
+  }
+
+  revalidatePath("/admin/students");
+  revalidatePath(`/admin/students/${officialRecordId}/edit`);
+  return { success: true, message: "Student password reset. Share the temporary password privately." };
 }
