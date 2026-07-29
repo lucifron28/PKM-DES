@@ -47,7 +47,7 @@ export default async function EnrollmentMasterlistPage({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="print-hidden border-t-4 border-t-primary-800">
         <CardHeader
           title="Enrollment Masterlist"
           description="Submitted enrollment records across pending, approved, and rejected review statuses."
@@ -55,17 +55,22 @@ export default async function EnrollmentMasterlistPage({
         />
         <EnrollmentFilterGrid params={result.filters} programOptions={result.programOptions} showAcademicYear resetHref="/admin/masterlist" />
       </Card>
-      <p className="text-sm text-slateui-muted">
-        Overall Student Status is the student&apos;s current summarized enrollment state. It is separate from this enrollment request&apos;s review status.
-      </p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6 print:grid-cols-6">
-        {reportCriteria.map(([label, value]) => (
-          <div key={label} className="rounded-md border border-slateui-border bg-slateui-surfaceAlt p-3">
-            <p className="text-xs font-semibold uppercase text-slateui-muted">{label}</p>
-            <p className="mt-1 text-sm font-semibold text-slateui-text">{value}</p>
-          </div>
-        ))}
-      </div>
+      <section aria-labelledby="masterlist-criteria-heading" className="border-y border-slateui-border py-4">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="masterlist-criteria-heading" className="text-base font-semibold text-slateui-text">Applied criteria</h2>
+          <p className="text-sm text-slateui-muted">
+            Overall Student Status is separate from this enrollment request&apos;s review status.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6 print:grid-cols-6">
+          {reportCriteria.map(([label, value]) => (
+            <div key={label} className="border border-slateui-border bg-slateui-surfaceAlt p-3">
+              <p className="text-xs font-semibold text-slateui-muted">{label}</p>
+              <p className="mt-1 text-sm font-semibold text-slateui-text">{value}</p>
+            </div>
+          ))}
+        </div>
+      </section>
       {result.enrollments.length ? (
         <SimpleTable
           columns={["Student name", "Student ID", "Program", "Year Level", "Academic Year", "Semester", "Review Status", "Overall Student Status", "Form"]}

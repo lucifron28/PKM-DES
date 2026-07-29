@@ -3,26 +3,15 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
 import { formatDate } from "@/lib/utils/format";
-import type { Enrollment, EnrollmentStatus } from "@/types/database";
+import type { Enrollment } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 type LatestEnrollment = Pick<
   Enrollment,
   "academic_year" | "semester" | "status" | "submitted_at" | "reviewed_at" | "remarks"
 >;
-
-function getDisplayedStatus(latestEnrollment: LatestEnrollment | null, fallbackStatus: EnrollmentStatus) {
-  if (!latestEnrollment) {
-    return fallbackStatus;
-  }
-
-  if (latestEnrollment.status === "APPROVED") {
-    return "ENROLLED";
-  }
-
-  return latestEnrollment.status;
-}
 
 export default async function EnrollmentStatusPage() {
   const { supabase, profile } = await requireRole("student");
@@ -41,7 +30,14 @@ export default async function EnrollmentStatusPage() {
     .maybeSingle();
 
   const latestEnrollment = (data as LatestEnrollment | null) ?? null;
-  const status = getDisplayedStatus(latestEnrollment, student.enrollment_status);
+  const status = getDisplayedEnrollmentStatus(latestEnrollment?.status ?? null, student.enrollment_status);
+  const statusPanelClass = status === "ENROLLED"
+    ? "border-green-600 bg-green-50"
+    : status === "PENDING"
+      ? "border-amber-500 bg-amber-50"
+      : status === "REJECTED"
+        ? "border-red-600 bg-red-50"
+        : "border-primary-800 bg-primary-50";
 
   const actions = status === "ENROLLED"
     ? [["/student/cor", "Print Draft Registration Form", "secondary"], ["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]]
@@ -50,7 +46,7 @@ export default async function EnrollmentStatusPage() {
       : [["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]];
 
   return (
-    <Card>
+    <Card className="border-t-4 border-t-primary-800">
       <CardHeader
         title="Enrollment Status Result"
         description={
@@ -59,33 +55,39 @@ export default async function EnrollmentStatusPage() {
             : "Your latest enrollment status is shown below."
         }
       />
-      <div className="rounded-lg bg-slateui-surfaceAlt p-5">
-        <Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>
+      <div className={`border-l-4 p-5 ${statusPanelClass}`}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-slateui-text">Current enrollment result</p>
+            <p className="mt-1 text-sm leading-6 text-slateui-secondary">{latestEnrollment ? "Your most recently submitted enrollment request." : "No enrollment request is currently recorded."}</p>
+          </div>
+          <Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>
+        </div>
         {status === "PENDING" ? (
           <div className="mt-4 space-y-2">
             <p className="text-base font-semibold text-slateui-text">
               Your enrollment request has been submitted and is pending approval.
             </p>
-            <p className="text-sm text-slateui-secondary">
+            <p className="text-sm leading-6 text-slateui-secondary">
               Submitted: {formatDate(latestEnrollment?.submitted_at)}
             </p>
           </div>
         ) : status === "ENROLLED" ? (
           <div className="mt-4 space-y-2">
             <p className="text-base font-semibold text-slateui-text">Congratulations! You are now officially enrolled.</p>
-            <p className="text-sm text-slateui-secondary">Please print your draft registration form.</p>
+            <p className="text-sm leading-6 text-slateui-secondary">Please print your draft registration form.</p>
           </div>
         ) : status === "REJECTED" ? (
           <div className="mt-4 space-y-2">
             <p className="text-base font-semibold text-slateui-text">
               Your enrollment request was not approved.
             </p>
-            <p className="text-sm text-slateui-secondary">
+            <p className="text-sm leading-6 text-slateui-secondary">
               {latestEnrollment?.remarks
                 ? `Remarks: ${latestEnrollment.remarks}`
                 : "Please contact the Registrar for details."}
             </p>
-            <p className="text-sm text-slateui-secondary">
+            <p className="text-sm leading-6 text-slateui-secondary">
               Reviewed: {formatDate(latestEnrollment?.reviewed_at)}
             </p>
           </div>

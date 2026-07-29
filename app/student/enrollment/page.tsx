@@ -63,9 +63,9 @@ export default async function OnlineEnrollmentPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-t-4 border-t-primary-800">
         <CardHeader title="Online Enrollment" description={`Enrollment Type: ${student.student_type}`} />
-        <div className="mb-6 grid gap-4 rounded-lg bg-slateui-surfaceAlt p-4 text-sm sm:grid-cols-3">
+        <div className="mb-6 grid gap-4 border-l-4 border-primary-800 bg-primary-50 p-4 text-sm sm:grid-cols-3">
           <div>
             <p className="font-medium text-slateui-muted">Student ID</p>
             <p className="mt-1 font-semibold text-slateui-text">{student.student_id_number ?? "Not provided"}</p>
@@ -80,7 +80,7 @@ export default async function OnlineEnrollmentPage() {
           </div>
         </div>
         {termEnrollment ? (
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+          <div className="border-l-4 border-sky-500 bg-sky-50 p-4 text-sm text-sky-950">
             <p className="font-semibold">An enrollment request already exists for this term.</p>
             <dl className="mt-3 grid gap-3 sm:grid-cols-3">
               <div><dt className="font-medium">Academic Year</dt><dd>{termEnrollment.academic_year}</dd></div>
@@ -92,7 +92,7 @@ export default async function OnlineEnrollmentPage() {
         ) : eligibility === "eligible" ? (
           <EnrollmentForm student={student} />
         ) : (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <div className="border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-950">
             {getStudentSubmissionMessage(eligibility)}
           </div>
         )}

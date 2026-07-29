@@ -68,8 +68,11 @@ export default async function PendingEnrollmentsPage({
         </div>
       ) : null}
       {enrollments.length ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
+        <div>
+          <p className="mb-2 text-xs text-slateui-muted sm:hidden">Swipe horizontally to view all enrollment details and actions.</p>
+          <div className="overflow-hidden rounded-lg border border-slateui-border bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
             <thead className="bg-primary-800 text-white">
               <tr>
                 {[
@@ -114,7 +117,7 @@ export default async function PendingEnrollmentsPage({
                     <td className="whitespace-nowrap px-4 py-3">
                       <Badge tone={enrollmentBadgeTone(enrollment.status)}>{enrollment.status}</Badge>
                     </td>
-                    <td className="min-w-[280px] whitespace-normal px-4 py-3">
+                    <td className="min-w-[220px] whitespace-normal px-4 py-3">
                       <div className="space-y-3">
                         <ButtonLink
                           href={`/admin/enrollments/${enrollment.id}/registration`}
@@ -123,14 +126,25 @@ export default async function PendingEnrollmentsPage({
                         >
                           View/Print Form
                         </ButtonLink>
-                        <EnrollmentReviewControls enrollmentId={enrollment.id} />
+                        <details className="group border border-slateui-border bg-slateui-surfaceAlt">
+                          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-bold text-primary-800 outline-none transition-colors hover:bg-primary-50 focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-inset">
+                            Review request
+                            <span className="text-xs font-semibold text-slateui-muted group-open:hidden">Open</span>
+                            <span className="hidden text-xs font-semibold text-slateui-muted group-open:inline">Close</span>
+                          </summary>
+                          <div className="border-t border-slateui-border bg-white p-3">
+                            <EnrollmentReviewControls enrollmentId={enrollment.id} />
+                          </div>
+                        </details>
                       </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
-          </table>
+              </table>
+            </div>
+          </div>
         </div>
       ) : (
         <EmptyState

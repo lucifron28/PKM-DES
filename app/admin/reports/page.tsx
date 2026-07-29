@@ -50,7 +50,7 @@ export default async function EnrollmentReportsPage({
 
   return (
     <section className="print-page space-y-6">
-      <Card className="print-hidden">
+      <Card className="print-hidden border-t-4 border-t-primary-800">
         <CardHeader
           title="Enrollment Reports"
           description="MVP browser-print report for Registrar review."
@@ -71,16 +71,19 @@ export default async function EnrollmentReportsPage({
         <StatCard label="Total Records" value={statusCounts.total} helper="Filtered submitted enrollment records." icon={<FileText className="h-5 w-5" />} tone="info" />
       </div>
 
-      <Card>
+      <Card className="border-t-4 border-t-secondary-600">
         <CardHeader title="Enrollment Report Output" description={`Generated ${generatedAt}`} />
-        <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:mb-3 print:grid-cols-6">
-          {reportCriteria.map(([label, value]) => (
-            <div key={label} className="rounded-md border border-slateui-border bg-slateui-surfaceAlt p-3">
-              <p className="text-xs font-semibold uppercase text-slateui-muted">{label}</p>
-              <p className="mt-1 text-sm font-semibold text-slateui-text">{value}</p>
-            </div>
-          ))}
-        </div>
+        <section aria-labelledby="report-criteria-heading" className="mb-5 border-y border-slateui-border py-4 print:mb-3">
+          <h2 id="report-criteria-heading" className="mb-3 text-base font-semibold text-slateui-text">Applied criteria</h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6 print:grid-cols-6">
+            {reportCriteria.map(([label, value]) => (
+              <div key={label} className="border border-slateui-border bg-slateui-surfaceAlt p-3">
+                <p className="text-xs font-semibold text-slateui-muted">{label}</p>
+                <p className="mt-1 text-sm font-semibold text-slateui-text">{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
         {result.enrollments.length ? (
           <div>
             <p className="print-hidden mb-2 text-xs text-slateui-muted sm:hidden">

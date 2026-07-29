@@ -103,7 +103,7 @@ export default async function StudentAccountPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-t-4 border-t-primary-800">
         <CardHeader title="Account" description="Displayed student profile details." />
         <DetailList rows={accountRows} />
         <div className="mt-6">
@@ -113,7 +113,7 @@ export default async function StudentAccountPage() {
         </div>
       </Card>
 
-      <Card>
+      <Card className="border-t-4 border-t-secondary-600">
         <CardHeader
           title="Account Security"
           description="Change your password while signed in."
@@ -121,7 +121,7 @@ export default async function StudentAccountPage() {
         <ChangePasswordForm action={changePasswordAction} />
       </Card>
 
-      <Card>
+      <Card className="border-t-4 border-t-primary-800">
         <CardHeader
           title="Official Student Details"
           description="Registrar-managed details shown when an official record matches your account."

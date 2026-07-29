@@ -12,20 +12,20 @@ export async function PublicHeader() {
   const dashboardLabel = profile?.role === "admin" ? "Open Admin Portal" : "Open Student Portal";
 
   return (
-    <header className="border-b border-slateui-border bg-white">
+    <header className="sticky top-0 z-40 border-b border-primary-100/90 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:px-6 lg:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3">
+        <Link href="/" className="flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-offset-2">
           <BrandMarks />
           <span className="text-sm font-bold leading-5 text-slateui-text sm:hidden">PKM-DES</span><span className="hidden max-w-[620px] text-sm font-bold leading-5 text-slateui-text sm:inline sm:text-base">{SITE_NAME}</span>
         </Link>
         <nav className="flex shrink-0 items-center gap-2">
           {dashboardHref ? (
-            <ButtonLink href={dashboardHref} variant="outline" className="min-h-10 px-3 sm:px-4">
+            <ButtonLink href={dashboardHref} variant="outline" className="px-3 sm:px-4">
               {dashboardLabel}
             </ButtonLink>
           ) : (
             publicNavigation.map((item) => (
-              <ButtonLink key={item.href} href={item.href} variant={item.label === "Login" ? "primary" : "ghost"} className="min-h-10 px-3 sm:px-4">
+              <ButtonLink key={item.href} href={item.href} variant={item.label === "Login" ? "primary" : "ghost"} className="px-3 sm:px-4">
                 {item.label}
               </ButtonLink>
             ))

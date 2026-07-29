@@ -6,6 +6,10 @@
   color-scheme: light;
   --background: #f8fafc;
   --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-alt: #f1f5f9;
+  --border: #dbe4ee;
+  --focus-ring: #004aad;
 }
 
 * {
@@ -21,6 +25,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-portal), "Segoe UI", Arial, sans-serif;
 }
 
 a {
@@ -51,6 +56,38 @@ textarea {
 ::selection {
   background: #f9d818;
   color: #0f172a;
+}
+
+.public-display {
+  font-family: var(--font-public-display), Georgia, serif;
+}
+
+.public-canvas {
+  background-color: #f8fafc;
+  background-image: linear-gradient(rgba(0, 74, 173, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 74, 173, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.public-hero-texture {
+  background-color: #004aad;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0.75px, transparent 0.75px), linear-gradient(45deg, rgba(249, 216, 24, 0.12) 0.75px, transparent 0.75px);
+  background-size: 20px 20px, 28px 28px;
+}
+
+.portal-page {
+  background: linear-gradient(180deg, rgba(237, 245, 254, 0.58) 0, rgba(248, 250, 252, 0) 15rem);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
 }
 
 .registration-print-table-wrap {

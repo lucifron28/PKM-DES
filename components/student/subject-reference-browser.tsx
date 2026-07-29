@@ -96,7 +96,7 @@ export function SubjectReferenceBrowser({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-t-4 border-t-primary-800">
         <CardHeader
           title="Subject List"
           description="This page provides source-based academic references. Your actual enrollment subjects are determined by your submitted enrollment record and Registrar review."
@@ -104,7 +104,7 @@ export function SubjectReferenceBrowser({
         />
       </Card>
 
-      <Card>
+      <Card className="border-t-4 border-t-secondary-600">
         <CardHeader
           title="Program Course Offering Reference"
           description="Course offerings recorded in the client-provided workbook for AY 2025-2026, 2nd Semester. This is historical reference information and is not your current enrollment subject load."
@@ -190,7 +190,7 @@ export function SubjectReferenceBrowser({
       </Card>
 
       {programCode === "BSAIS" ? (
-        <Card>
+        <Card className="border-t-4 border-t-primary-800">
           <CardHeader
             title="BSAIS Curriculum Reference"
             description="Full BSAIS curriculum reference derived from the client-provided Subjects document. These curriculum rows support the research-MVP BSAIS subject seed. They are not proof that you are currently enrolled in every listed subject."
