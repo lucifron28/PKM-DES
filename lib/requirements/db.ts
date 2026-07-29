@@ -1,5 +1,7 @@
-import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
-import { RequirementCode, RequirementStatus, StudentRequirementRecord } from "./types";
+import "server-only";
+
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { RequirementTerm, StudentRequirementRecord } from "./types";
 
 export async function getStudentRequirements(studentId: string): Promise<StudentRequirementRecord[]> {
   try {
@@ -19,31 +21,24 @@ export async function getStudentRequirements(studentId: string): Promise<Student
   }
 }
 
-export async function updateRequirementStatusAction(
+export async function getStudentRequirementForTerm(
   studentId: string,
-  requirementCode: RequirementCode,
-  status: RequirementStatus
-): Promise<{ success: boolean; message?: string }> {
+  term: RequirementTerm
+): Promise<StudentRequirementRecord | null> {
   try {
-    const admin = createSupabaseAdminClient();
-    const { error } = await admin
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
       .from("student_requirements")
-      .upsert(
-        {
-          student_id: studentId,
-          requirement_code: requirementCode,
-          status,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: "student_id,requirement_code" }
-      );
+      .select("*")
+      .eq("student_id", studentId)
+      .eq("requirement_code", "HEALTH_RECORD_UPDATE")
+      .eq("academic_year", term.academicYear)
+      .eq("semester", term.semester)
+      .maybeSingle();
 
-    if (error) {
-      return { success: false, message: error.message };
-    }
-
-    return { success: true };
-  } catch (e) {
-    return { success: false, message: e instanceof Error ? e.message : "Failed to update status" };
+    if (error || !data) return null;
+    return data as StudentRequirementRecord;
+  } catch {
+    return null;
   }
 }

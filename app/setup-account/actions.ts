@@ -21,7 +21,12 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
     return { message: "Password must be at least 8 characters." };
   }
 
-  const supabase = await createSupabaseServerClient();
+  let supabase;
+  try {
+    supabase = await createSupabaseServerClient();
+  } catch {
+    return { message: "Account setup could not be completed. Please request a new setup email." };
+  }
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (userError || !user) {
@@ -31,7 +36,7 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
   // Update password
   const { error: updateError } = await supabase.auth.updateUser({ password });
   if (updateError) {
-    return { message: "Failed to update password: " + updateError.message };
+    return { message: "Could not update your password. Please try again." };
   }
 
   // Update account_status to ACTIVE in app_metadata & profiles
@@ -39,7 +44,7 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
   try {
     admin = createSupabaseAdminClient();
   } catch {
-    return { message: "Admin client unavailable to finalize account setup." };
+    return { message: "Account setup could not be completed. Please request a new setup email." };
   }
 
   const { error: adminAuthError } = await admin.auth.admin.updateUserById(user.id, {
@@ -47,7 +52,7 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
   });
 
   if (adminAuthError) {
-    return { message: "Failed to set active account status in auth." };
+    return { message: "Account setup could not be completed. Please request a new setup email." };
   }
 
   const { error: profileError } = await admin
@@ -56,7 +61,7 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
     .eq("id", user.id);
 
   if (profileError) {
-    return { message: "Failed to set active account status in profile." };
+    return { message: "Account setup could not be completed. Please request a new setup email." };
   }
 
   redirect("/student/dashboard");

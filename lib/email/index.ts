@@ -1,3 +1,5 @@
+import "server-only";
+
 import { getEmailEnv } from "./env";
 import { ResendEmailAdapter } from "./resend-adapter";
 import { MockEmailAdapter } from "./mock-adapter";

@@ -74,7 +74,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Browser-printable enrollment report table for Registrar review
 - Atomic admin approve/reject enrollment actions for pending requests only
 - Approval or rejection, the summarized student status, and one audit record commit together; concurrent stale reviews cannot overwrite the first decision
-- Rejection keeps optional free-text remarks; no requirements checklist or document-verification workflow is invented
+- Rejection keeps optional free-text remarks; the MVP has only a narrow, status-only current-term Health Record Update verification for applicable students, not a full document workflow
 - Enrollment masterlist across pending, approved, and rejected submitted requests, with program, academic year, year level, semester, review-status, and student identity search filters
 - Admin Account page with internal account details and password change
 - Registrar/Admin can reset the password of an exact active student account from its official-record edit page; the temporary password is shared privately and never stored or displayed again
@@ -332,7 +332,7 @@ Security:
 - Client has confirmed First Semester AY 2026-2027 as the current MVP enrollment term, but the app still needs a full academic calendar configuration before additional terms are opened.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Student Account official-detail display depends on an exact matching Registrar-managed official record and server-only Supabase service-role configuration.
-- Generated-password email delivery is not implemented yet.
+- Generated-password email delivery is not implemented. A one-time account setup-link path exists only when explicitly enabled and configured; it remains disabled by default.
 
 ## 15. Future Enhancements
 

@@ -21,11 +21,24 @@ DB -> DB : Selects enrollment FOR UPDATE (Stale concurrent review protection)
 alt if status is not PENDING
     DB --> Supabase : Error (Already reviewed)
 else
+    opt Applicable current-term Health Record Update
+      DB -> DB : Reads status-only requirement for this enrollment term
+      alt requirement is not VERIFIED
+        DB --> Supabase : Error (Unverified requirements)
+      end
+    end
     DB -> DB : Updates enrollment status to APPROVED/REJECTED
     DB -> DB : Updates student enrollment_status to ENROLLED (if approved)
     DB -> DB : Inserts into audit_logs
     DB --> Supabase : Success
 end
+
+note right of DB
+  Health Record Update applies only to an
+  Incoming 1st Year Student with an explicitly
+  confirmed Female official-record value.
+  No medical details or uploaded forms are stored.
+end note
 
 Supabase --> Action : Result
 Action --> Browser : Success / Revalidate Table

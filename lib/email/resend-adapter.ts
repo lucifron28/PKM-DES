@@ -1,3 +1,5 @@
+import "server-only";
+
 import { Resend } from "resend";
 import { EmailAdapter, SendEmailOptions } from "./index";
 
@@ -20,11 +22,11 @@ export class ResendEmailAdapter implements EmailAdapter {
       });
 
       if (error) {
-        console.error("Resend API error:", error.message);
+        console.error("email_delivery:provider_rejected");
         throw new Error("Failed to send email.");
       }
-    } catch (err) {
-      console.error("Email delivery failed:", err instanceof Error ? err.message : "Unknown error");
+    } catch {
+      console.error("email_delivery:send_failed");
       throw new Error("Email delivery failed.");
     }
   }

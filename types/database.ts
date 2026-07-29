@@ -1,5 +1,5 @@
 export type UserRole = "student" | "admin";
-export type AccountStatus = "ACTIVE" | "PENDING";
+export type AccountStatus = "ACTIVE" | "PENDING" | "SETUP";
 export type EnrollmentStatus = "NOT ENROLLED" | "PENDING" | "ENROLLED";
 export type EnrollmentReviewStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type StudentType =

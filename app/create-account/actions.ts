@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import crypto from "crypto";
 import React from "react";
@@ -22,7 +22,7 @@ import {
 } from "@/lib/account-claim/rules";
 import { CREATE_ACCOUNT_STUDENT_TYPES } from "@/lib/constants/pkm";
 import type { OfficialStudentRecord, Program, StudentType, YearLevel } from "@/types/database";
-import { getEmailEnv, getEmailAdapter, AccountSetupEmail } from "@/lib/email";
+import { getAppBaseUrl, getEmailEnv, getEmailAdapter, AccountSetupEmail, type EmailEnvironment } from "@/lib/email";
 
 const CLAIM_COOKIE_NAME = "pkm_account_claim";
 
@@ -196,16 +196,13 @@ async function cleanupNewRegistration(
 }
 
 async function sendAccountSetupEmail(admin: ReturnType<typeof createSupabaseAdminClient>, email: string) {
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const siteUrl = `${protocol}://${host}`;
+  const siteUrl = getAppBaseUrl();
 
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email,
     options: {
-      redirectTo: `${siteUrl}/auth/callback?next=/setup-account`
+      redirectTo: `${siteUrl}/auth/callback`
     }
   });
 
@@ -225,9 +222,9 @@ async function sendAccountSetupEmail(admin: ReturnType<typeof createSupabaseAdmi
 async function performStudentRegistration(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   details: AccountDetails,
+  emailEnv: EmailEnvironment,
   password?: string
 ): Promise<{ success: boolean; isEmailSent?: boolean }> {
-  const emailEnv = getEmailEnv();
   const isEmailMode = emailEnv.enabled;
   const initialStatus = isEmailMode ? "SETUP" : "ACTIVE";
   const initialPassword = isEmailMode ? crypto.randomUUID() : (password || crypto.randomUUID());
@@ -350,6 +347,11 @@ export async function claimOfficialRecordAction(
   const accountInfo = await findExistingStudentAccount({ admin, email: normalizedRecordEmail, studentIdNumber: normalizedRecordStudentId });
   const emailEnv = getEmailEnv();
 
+  if (emailEnv.configurationError) {
+    logClaimFailure("email_configuration_invalid");
+    return { message: "Account email delivery is not configured. Please contact the Registrar.", selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
+  }
+
   if (accountInfo.exists) {
     // If account exists and is in SETUP status and email is enabled, we allow resending link
     if (emailEnv.enabled && accountInfo.status === "SETUP") {
@@ -386,6 +388,11 @@ export async function createStudentAccountAction(
   formData: FormData
 ): Promise<CreateAccountState> {
   const emailEnv = getEmailEnv();
+
+  if (emailEnv.configurationError) {
+    logClaimFailure("email_configuration_invalid");
+    return { message: "Account email delivery is not configured. Please contact the Registrar." };
+  }
 
   let password = "";
   if (!emailEnv.enabled) {
@@ -470,6 +477,7 @@ export async function createStudentAccountAction(
       yearLevel: record.year_level,
       studentType: record.student_type
     },
+    emailEnv,
     password
   );
 

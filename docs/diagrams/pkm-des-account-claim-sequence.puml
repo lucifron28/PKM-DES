@@ -17,7 +17,7 @@ DB --> Supabase : Returns Record
 Supabase --> App : Record Data
 App --> Browser : Displays Masked Record
 
-Student -> Browser : Submits New Password
+Student -> Browser : Chooses direct MVP password path
 Browser -> Action : createStudentAccountAction(payload, signedProof)
 Action -> Action : Verifies Signed Claim Proof (HMAC)
 Action -> Supabase : Checks for duplicate account
@@ -37,5 +37,17 @@ DB --> Supabase : Success
 Supabase --> Action : Result
 
 Action --> Browser : Success / Redirect to Login
+
+opt Setup-link delivery explicitly configured
+  Action -> Auth : Generate one-time recovery/setup link
+  Action -> Email : Send setup link using trusted APP_BASE_URL callback
+  note right of Email
+    Server-only path, disabled by default.
+    It does not send a generated password.
+  end note
+  Email --> Student : Receives setup link
+  Student -> Browser : Opens /auth/callback
+  Browser -> App : Redirects only to /setup-account
+end
 
 @enduml

@@ -4,12 +4,25 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnrollmentReviewControls } from "@/components/admin/enrollment-review-controls";
 import { requireRole } from "@/lib/auth/session";
+import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { formatDate, formatName } from "@/lib/utils/format";
-import type { Enrollment, Profile, Student } from "@/types/database";
+import type { StudentRequirementRecord } from "@/lib/requirements/types";
+import type { Enrollment, OfficialStudentRecord, Profile, Student } from "@/types/database";
 
 type EnrollmentRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
 };
+
+type RequirementRow = Pick<
+  StudentRequirementRecord,
+  "student_id" | "academic_year" | "semester" | "applicability" | "status" | "note"
+>;
+
+type OfficialRecordGenderRow = Pick<OfficialStudentRecord, "student_id_number" | "gender_sex">;
+
+function requirementKey(studentId: string, academicYear: string, semester: string) {
+  return `${studentId}:${academicYear}:${semester}`;
+}
 
 export default async function PendingEnrollmentsPage({
   searchParams
@@ -43,7 +56,8 @@ export default async function PendingEnrollmentsPage({
     not_found: "Enrollment request is not available. Refresh the pending list.",
     already_reviewed: "This enrollment request has already been reviewed. Refresh the pending list.",
     invalid_request: "Enrollment request could not be reviewed. Please try again.",
-    review_failed: "Enrollment request could not be reviewed. Please try again."
+    review_failed: "Enrollment request could not be reviewed. Please try again.",
+    unverified_requirements: "Applicable Health Record Update verification is still pending for this enrollment term."
   };
 
   const successMessages: Record<string, string> = {
@@ -51,11 +65,43 @@ export default async function PendingEnrollmentsPage({
     rejected: "Enrollment request rejected successfully."
   };
 
+  const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.student_id))];
+  const studentIdNumbers = [...new Set(enrollments.map((enrollment) => enrollment.students?.student_id_number).filter(Boolean))] as string[];
+  const [requirementsResult, officialRecordsResult] = await Promise.all([
+    studentIds.length
+      ? supabase
+          .from("student_requirements")
+          .select("student_id, academic_year, semester, applicability, status, note")
+          .eq("requirement_code", "HEALTH_RECORD_UPDATE")
+          .in("student_id", studentIds)
+      : Promise.resolve({ data: [], error: null }),
+    studentIdNumbers.length
+      ? supabase
+          .from("official_student_records")
+          .select("student_id_number, gender_sex")
+          .in("student_id_number", studentIdNumbers)
+      : Promise.resolve({ data: [], error: null })
+  ]);
+
+  if (requirementsResult.error) console.error("pending_enrollments:requirement_load");
+  if (officialRecordsResult.error) console.error("pending_enrollments:official_record_load");
+
+  const requirementsByTerm = new Map(
+    ((requirementsResult.data as RequirementRow[] | null) ?? []).map((requirement) => [
+      requirementKey(requirement.student_id, requirement.academic_year ?? "", requirement.semester ?? ""),
+      requirement
+    ])
+  );
+  const officialGenderByStudentId = new Map(
+    ((officialRecordsResult.data as OfficialRecordGenderRow[] | null) ?? []).map((record) => [record.student_id_number ?? "", record.gender_sex])
+  );
+  const requirementDataUnavailable = Boolean(requirementsResult.error || officialRecordsResult.error);
+
   return (
     <Card>
       <CardHeader
         title="Pending Enrollments"
-        description="This queue contains submitted Online Enrollment requests awaiting Registrar review. The research MVP does not yet include the official document and requirements checklist."
+        description="This queue contains submitted Online Enrollment requests awaiting Registrar review. The MVP records only the current-term Health Record Update verification status; paper forms remain with PKM Health Services."
       />
       {params.success ? (
         <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
@@ -97,6 +143,13 @@ export default async function PendingEnrollmentsPage({
               {enrollments.map((enrollment) => {
                 const student = enrollment.students;
                 const profile = student?.profiles;
+                const requirement = requirementsByTerm.get(
+                  requirementKey(enrollment.student_id, enrollment.academic_year, enrollment.semester)
+                );
+                const healthRequirementApplicability = requirement?.applicability ?? getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+                  student_type: student?.student_type ?? "",
+                  official_gender_sex: officialGenderByStudentId.get(student?.student_id_number ?? "") ?? null
+                });
 
                 return (
                   <tr key={enrollment.id} className="bg-white align-top">
@@ -133,7 +186,15 @@ export default async function PendingEnrollmentsPage({
                             <span className="hidden text-xs font-semibold text-slateui-muted group-open:inline">Close</span>
                           </summary>
                           <div className="border-t border-slateui-border bg-white p-3">
-                            <EnrollmentReviewControls enrollmentId={enrollment.id} />
+                            <EnrollmentReviewControls
+                              enrollmentId={enrollment.id}
+                              healthRequirement={{
+                                applicability: healthRequirementApplicability,
+                                status: requirement?.status ?? "PENDING",
+                                note: requirement?.note ?? null,
+                                unavailable: requirementDataUnavailable
+                              }}
+                            />
                           </div>
                         </details>
                       </div>
