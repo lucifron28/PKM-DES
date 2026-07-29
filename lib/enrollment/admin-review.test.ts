@@ -18,3 +18,7 @@ test("normalizes remarks and rejects malformed enrollment IDs", () => {
   assert.equal(normalizeEnrollmentReviewId("not-an-id"), null);
   assert.equal(normalizeEnrollmentReviewId("0fbbf16d-1f18-4d55-92ee-2d94c8c5555f"), "0fbbf16d-1f18-4d55-92ee-2d94c8c5555f");
 });
+
+test("handles unverified_requirements outcome", () => {
+  assert.deepEqual(getEnrollmentReviewRedirect("unverified_requirements"), { kind: "error", value: "unverified_requirements" });
+});
