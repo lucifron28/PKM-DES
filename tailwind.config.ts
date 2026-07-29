@@ -38,7 +38,7 @@ const config: Config = {
           border: "#dbe4ee",
           text: "#0f172a",
           secondary: "#334155",
-          muted: "#64748b"
+          muted: "#475569"
         }
       },
       boxShadow: {

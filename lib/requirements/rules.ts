@@ -1,4 +1,4 @@
-import { RequirementCode, RequirementStatus, StudentRequirementRecord, StudentRequirementTarget } from "./types";
+import { RequirementCode, StudentRequirementRecord, StudentRequirementTarget } from "./types";
 
 export function isRequirementAppliableToStudent(
   code: RequirementCode,

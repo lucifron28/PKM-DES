@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { NavigationItem } from "@/lib/constants/navigation";
 import { buttonClassName } from "@/components/ui/button";
 import { LogoutButton } from "./logout-button";
@@ -20,7 +20,28 @@ export function PortalNavigation({
   userRole: string;
 }) {
   const [open, setOpen] = useState(false);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
   const navigationLabel = `${portalLabel} navigation`;
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && open) {
+        setOpen(false);
+      }
+    }
+
+    if (open) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   return (
     <>
@@ -43,7 +64,21 @@ export function PortalNavigation({
             <span>{open ? "Close navigation" : "Open navigation"}</span>
           </button>
         </div>
-        {open ? <div id="portal-mobile-navigation" className="border-t border-slateui-border px-4 py-4 sm:px-6"><SideNav items={navigation} label={navigationLabel} onNavigate={() => setOpen(false)} /><div className="mt-4 border-t border-slateui-border pt-4"><p className="text-sm font-semibold text-slateui-text">{userName}</p><p className="text-xs text-slateui-muted">{userRole}</p><div className="mt-3"><LogoutButton /></div></div></div> : null}
+        {open ? (
+          <div
+            id="portal-mobile-navigation"
+            ref={mobileNavRef}
+            tabIndex={-1}
+            className="border-t border-slateui-border px-4 py-4 sm:px-6 focus:outline-none"
+          >
+            <SideNav items={navigation} label={navigationLabel} onNavigate={() => setOpen(false)} />
+            <div className="mt-4 border-t border-slateui-border pt-4">
+              <p className="text-sm font-semibold text-slateui-text">{userName}</p>
+              <p className="text-xs text-slateui-muted">{userRole}</p>
+              <div className="mt-3"><LogoutButton /></div>
+            </div>
+          </div>
+        ) : null}
       </header>
     </>
   );
