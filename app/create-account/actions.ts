@@ -234,8 +234,7 @@ async function performStudentRegistration(
     password: initialPassword,
     email_confirm: true,
     app_metadata: {
-      role: "student",
-      account_status: initialStatus
+      role: "student"
     },
     user_metadata: {
       first_name: details.firstName,

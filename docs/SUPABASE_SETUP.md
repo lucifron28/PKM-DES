@@ -414,6 +414,8 @@ Account status behavior:
 
 Only `ACTIVE` accounts can log in.
 
+For setup-link accounts, the setup action first confirms that the authenticated profile is exactly a `student` with `SETUP` status. It updates the password, then calls a database-authorized, idempotent transition to `ACTIVE`. If the final transition is temporarily unavailable, the account remains unable to log in and the student can submit the same form again while the setup session is still open.
+
 Current client direction:
 
 - Every student type is matched against official Registrar-provided data before account access.

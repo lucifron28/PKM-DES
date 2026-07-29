@@ -1,10 +1,16 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
+import { isEligibleStudentSetupProfile } from "@/lib/account-setup/rules";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { AccountStatus, UserRole } from "@/types/database";
 
 export type SetupAccountState = {
   message?: string;
+};
+
+type SetupCompletionResult = {
+  outcome: "completed" | "invalid_setup" | "unauthorized";
 };
 
 export async function setupAccountAction(_previousState: SetupAccountState, formData: FormData): Promise<SetupAccountState> {
@@ -33,35 +39,29 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
     return { message: "Your setup session has expired or is invalid. Please request a new setup email." };
   }
 
-  // Update password
+  const { data: profileData, error: profileLookupError } = await supabase
+    .from("profiles")
+    .select("role, account_status")
+    .eq("id", user.id)
+    .maybeSingle();
+  const profile = profileData as { role: UserRole; account_status: AccountStatus } | null;
+
+  if (profileLookupError || !isEligibleStudentSetupProfile(profile)) {
+    return { message: "Your setup session has expired or is invalid. Please request a new setup email." };
+  }
+
   const { error: updateError } = await supabase.auth.updateUser({ password });
   if (updateError) {
     return { message: "Could not update your password. Please try again." };
   }
 
-  // Update account_status to ACTIVE in app_metadata & profiles
-  let admin;
-  try {
-    admin = createSupabaseAdminClient();
-  } catch {
-    return { message: "Account setup could not be completed. Please request a new setup email." };
-  }
+  const { data: completionData, error: completionError } = await supabase.rpc("complete_student_account_setup");
+  const completion = (completionData as SetupCompletionResult[] | null)?.[0];
 
-  const { error: adminAuthError } = await admin.auth.admin.updateUserById(user.id, {
-    app_metadata: { role: "student", account_status: "ACTIVE" }
-  });
-
-  if (adminAuthError) {
-    return { message: "Account setup could not be completed. Please request a new setup email." };
-  }
-
-  const { error: profileError } = await admin
-    .from("profiles")
-    .update({ account_status: "ACTIVE" })
-    .eq("id", user.id);
-
-  if (profileError) {
-    return { message: "Account setup could not be completed. Please request a new setup email." };
+  if (completionError || completion?.outcome !== "completed") {
+    return {
+      message: "Your password was saved, but account activation is not complete. Please submit this form again while this setup session is open."
+    };
   }
 
   redirect("/student/dashboard");
