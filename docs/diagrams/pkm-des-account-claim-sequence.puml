@@ -6,6 +6,7 @@ participant "Next.js App" as App
 participant "Server Action" as Action
 participant "Supabase Client" as Supabase
 participant "Supabase Auth" as Auth
+participant "Email Service" as Email
 database "PostgreSQL" as DB
 
 Student -> Browser : Enters Claim Details (ID, Email, Type)

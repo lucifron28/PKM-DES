@@ -120,3 +120,7 @@ The research MVP is successful when:
 ## 9. Post-Presentation Work
 
 After client validation, the next phase should prioritize production hardening, full data modeling, security redesign, institutional policy confirmation, approved data imports, official output templates, and the additional modules identified in the traceability matrix. These changes should be sequenced only after PKM validates the proposed workflow and supplies the required institutional rules, formats, and source data.
+
+### 4. Requirements & Email Scope
+- **Email Delivery Service**: Integrated Resend adapter for setup link delivery, disabled by default in preview environment.
+- **Health Record Requirement**: Status-only verification ("HEALTH_RECORD_UPDATE") gating enrollment approval for 1st Year female students. No sensitive medical data stored.
