@@ -26,8 +26,8 @@ function AlertMessage({ message, success }: { message?: string; success?: boolea
     <div
       className={
         success
-          ? "rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"
-          : "rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
+          ? "rounded-md border-l-4 border-green-600 bg-green-50 px-4 py-3 text-sm font-medium text-green-700"
+          : "rounded-md border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800"
       }
     >
       {message}
@@ -46,7 +46,7 @@ function DetailGrid({ record }: { record: ClaimRecordSummary }) {
   ];
 
   return (
-    <dl className="grid gap-3 rounded-lg border border-slateui-border bg-slateui-surfaceAlt p-4 text-sm sm:grid-cols-2">
+    <dl className="grid gap-3 border border-slateui-border bg-slateui-surfaceAlt p-4 text-sm sm:grid-cols-2">
       {rows.map(([label, value]) => (
         <div key={label}>
           <dt className="font-medium text-slateui-muted">{label}</dt>
@@ -87,10 +87,10 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
 
   return (
     <div className="space-y-6">
-      <form action={claimAction} className="space-y-5">
+      <form action={claimAction} className="space-y-5 border-b border-slateui-border pb-6">
         {claimExpired ? <AlertMessage message={EXPIRED_CLAIM_MESSAGE} /> : null}
         <AlertMessage message={claimState.message} />
-        <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
+        <div className="border-l-4 border-sky-500 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
           <p className="font-semibold">Find your Registrar-managed record first.</p>
           <p className="mt-1">
             Enter your active email address and Student ID Number exactly as recorded by the Registrar. If a matching official record exists, the system will use those official details for your account.
@@ -133,14 +133,14 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
       </form>
 
       {createState.success ? (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+        <div className="border-l-4 border-green-600 bg-green-50 p-4 text-sm text-green-900">
           <AlertMessage message={createState.message} success />
           <ButtonLink href="/login" className="mt-3">Go to Login</ButtonLink>
         </div>
       ) : null}
 
       {matchedRecord ? (
-        <form action={createAction} className="space-y-5 rounded-lg border border-green-200 bg-white p-4">
+        <form action={createAction} className="space-y-5 border border-green-200 bg-white p-5 shadow-panel">
           <AlertMessage message={createState.message} success={createState.success} />
           <div>
             <p className="text-sm font-semibold text-green-800">Official record found</p>
@@ -151,7 +151,7 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
           <DetailGrid record={matchedRecord} />
           {!emailEnabled && <PasswordFields />}
           {emailEnabled && (
-            <div className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-800">
+            <div className="border-l-4 border-sky-500 bg-sky-50 px-3 py-2 text-sm text-sky-800">
               A setup link will be sent to your email address to complete account creation.
             </div>
           )}
@@ -162,7 +162,7 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
         </form>
       ) : null}
 
-      <p className="rounded-md bg-secondary-100 px-3 py-2 text-sm text-slateui-text">
+      <p className="border-l-4 border-secondary-600 bg-secondary-100 px-3 py-2.5 text-sm leading-6 text-slateui-text">
         You may change your password after first login. The official generated-password email workflow remains pending.
       </p>
       <ButtonLink href="/" variant="outline">

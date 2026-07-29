@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClipboardCheck } from "lucide-react";
 import { PublicHeader } from "@/components/layout/public-header";
 import { CreateAccountForm } from "@/components/forms/create-account-form";
 import { getEmailEnv } from "@/lib/email";
@@ -18,10 +19,20 @@ export default async function CreateAccountPage({
   const emailEnv = getEmailEnv();
 
   return (
-    <div className="min-h-screen bg-slateui-background">
+    <div className="public-canvas min-h-screen">
       <PublicHeader />
-      <main id="main-content" className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <Card>
+      <main id="main-content" className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[0.75fr_1.25fr] lg:px-8">
+        <section className="border-l-4 border-secondary-600 pl-5 sm:pl-6">
+          <ClipboardCheck className="h-7 w-7 text-primary-800" aria-hidden="true" />
+          <h1 className="public-display mt-4 text-4xl font-semibold leading-none text-primary-900 sm:text-5xl">Claim your student account.</h1>
+          <p className="mt-4 max-w-sm text-sm leading-7 text-slateui-secondary">First locate the official student record prepared by the Registrar. Then confirm it and set a password for this research MVP account.</p>
+          <ol className="mt-7 space-y-3 text-sm text-slateui-secondary">
+            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-secondary-100 font-bold text-slateui-text">1</span>Find your official record.</li>
+            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary-50 font-bold text-primary-800">2</span>Review the matched details.</li>
+            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary-50 font-bold text-primary-800">3</span>Set your password.</li>
+          </ol>
+        </section>
+        <Card className="border-t-4 border-t-primary-800 sm:p-7">
           <CardHeader
             title="Create Student Account"
             description="Verify your Registrar-managed record using your email address and Student ID, then set your password."
