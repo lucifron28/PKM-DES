@@ -19,3 +19,8 @@ The following system diagrams illustrate the architecture, domain models, and ke
 
 ### Deployment
 - **[Deployment Diagram](diagrams/pkm-des-deployment.puml)**: Maps the temporary Vercel client-preview boundary against the Supabase cloud infrastructure. *Show this to clarify that the current environment is a fictional-data preview and not a production deployment.*
+
+## Email Delivery & Health Requirement Architecture
+- **Server-Only Email Abstraction**: Provides a pluggable `EmailAdapter` (Resend adapter for live, Mock adapter for preview).
+- **One-Time Setup Link**: Generates a secure recovery/setup link to set account password without exposing raw secrets.
+- **Requirement Verification Gate**: Gated enrollment approval in database RPC level using `student_requirements` table.
