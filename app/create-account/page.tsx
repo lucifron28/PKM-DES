@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PublicHeader } from "@/components/layout/public-header";
 import { CreateAccountForm } from "@/components/forms/create-account-form";
+import { getEmailEnv } from "@/lib/email";
 import { Card, CardHeader } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ export default async function CreateAccountPage({
 }) {
   const { claim } = await searchParams;
   const claimExpired = claim === "expired";
+  const emailEnv = getEmailEnv();
 
   return (
     <div className="min-h-screen bg-slateui-background">
@@ -24,7 +26,7 @@ export default async function CreateAccountPage({
             title="Create Student Account"
             description="Verify your Registrar-managed record using your email address and Student ID, then set your password."
           />
-          <CreateAccountForm claimExpired={claimExpired} />
+          <CreateAccountForm claimExpired={claimExpired} emailEnabled={emailEnv.enabled} />
         </Card>
       </main>
     </div>

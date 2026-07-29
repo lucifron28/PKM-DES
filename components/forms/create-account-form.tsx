@@ -80,7 +80,7 @@ function PasswordFields() {
   );
 }
 
-export function CreateAccountForm({ claimExpired = false }: { claimExpired?: boolean }) {
+export function CreateAccountForm({ claimExpired = false, emailEnabled = false }: { claimExpired?: boolean; emailEnabled?: boolean }) {
   const [claimState, claimAction, claiming] = useActionState(claimOfficialRecordAction, initialClaimState);
   const [createState, createAction, creating] = useActionState(createStudentAccountAction, initialCreateState);
   const matchedRecord = !createState.success ? claimState.matchedRecord : undefined;
@@ -147,7 +147,12 @@ export function CreateAccountForm({ claimExpired = false }: { claimExpired?: boo
             </p>
           </div>
           <DetailGrid record={matchedRecord} />
-          <PasswordFields />
+          {!emailEnabled && <PasswordFields />}
+          {emailEnabled && (
+            <div className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-800">
+              A setup link will be sent to your email address to complete account creation.
+            </div>
+          )}
           <Button type="submit" disabled={creating}>
             <UserPlus className="h-4 w-4" aria-hidden="true" />
             {creating ? "Creating..." : "Create Account"}
