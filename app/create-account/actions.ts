@@ -1,7 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import crypto from "crypto";
+import React from "react";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import {
   ACCOUNT_CLAIM_TOKEN_LIFETIME_SECONDS,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/account-claim/rules";
 import { CREATE_ACCOUNT_STUDENT_TYPES } from "@/lib/constants/pkm";
 import type { OfficialStudentRecord, Program, StudentType, YearLevel } from "@/types/database";
+import { getEmailEnv, getEmailAdapter, AccountSetupEmail } from "@/lib/email";
 
 const CLAIM_COOKIE_NAME = "pkm_account_claim";
 
@@ -160,16 +163,18 @@ async function findExistingStudentAccount({
   studentIdNumber: string;
 }) {
   const [existingProfileResult, existingStudentResult] = await Promise.all([
-    admin.from("profiles").select("id").eq("email", email).limit(1).maybeSingle(),
+    admin.from("profiles").select("id, account_status").eq("email", email).limit(1).maybeSingle(),
     admin.from("students").select("id").eq("student_id_number", studentIdNumber).limit(1).maybeSingle()
   ]);
 
   if (existingProfileResult.error || existingStudentResult.error) {
     logClaimFailure("account_lookup_failed");
-    return true;
+    return { exists: true, status: null };
   }
 
-  return Boolean(existingProfileResult.data || existingStudentResult.data);
+  const exists = Boolean(existingProfileResult.data || existingStudentResult.data);
+  const status = existingProfileResult.data?.account_status ?? null;
+  return { exists, status };
 }
 
 async function cleanupNewRegistration(
@@ -188,18 +193,50 @@ async function cleanupNewRegistration(
   }
 }
 
+async function sendAccountSetupEmail(admin: ReturnType<typeof createSupabaseAdminClient>, email: string) {
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  const siteUrl = `${protocol}://${host}`;
+
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: {
+      redirectTo: `${siteUrl}/auth/callback?next=/setup-account`
+    }
+  });
+
+  if (error || !data.properties?.action_link) {
+    logClaimFailure("generate_setup_link_failed");
+    throw new Error("Failed to generate account setup link.");
+  }
+
+  const adapter = getEmailAdapter();
+  await adapter.send({
+    to: email,
+    subject: "PKM-DES Account Setup",
+    react: React.createElement(AccountSetupEmail, { setupLink: data.properties.action_link })
+  });
+}
+
 async function performStudentRegistration(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   details: AccountDetails,
-  password: string
-): Promise<boolean> {
+  password?: string
+): Promise<{ success: boolean; isEmailSent?: boolean }> {
+  const emailEnv = getEmailEnv();
+  const isEmailMode = emailEnv.enabled;
+  const initialStatus = isEmailMode ? "SETUP" : "ACTIVE";
+  const initialPassword = isEmailMode ? crypto.randomUUID() : (password || crypto.randomUUID());
+
   const { data: createdUser, error: authError } = await admin.auth.admin.createUser({
     email: details.email,
-    password,
+    password: initialPassword,
     email_confirm: true,
     app_metadata: {
       role: "student",
-      account_status: "ACTIVE"
+      account_status: initialStatus
     },
     user_metadata: {
       first_name: details.firstName,
@@ -209,7 +246,7 @@ async function performStudentRegistration(
 
   if (authError || !createdUser.user) {
     logClaimFailure("auth_create_failed");
-    return false;
+    return { success: false };
   }
 
   const profileId = createdUser.user.id;
@@ -219,13 +256,13 @@ async function performStudentRegistration(
     first_name: details.firstName,
     last_name: details.lastName,
     email: details.email,
-    account_status: "ACTIVE"
+    account_status: initialStatus
   });
 
   if (profileError) {
     logClaimFailure("profile_insert_failed");
     await cleanupNewRegistration(admin, profileId, "profile_insert");
-    return false;
+    return { success: false };
   }
 
   const { error: studentError } = await admin.from("students").insert({
@@ -240,10 +277,21 @@ async function performStudentRegistration(
   if (studentError) {
     logClaimFailure("student_insert_failed");
     await cleanupNewRegistration(admin, profileId, "student_insert");
-    return false;
+    return { success: false };
   }
 
-  return true;
+  if (isEmailMode) {
+    try {
+      await sendAccountSetupEmail(admin, details.email);
+      return { success: true, isEmailSent: true };
+    } catch {
+      logClaimFailure("setup_email_send_failed");
+      await cleanupNewRegistration(admin, profileId, "student_insert");
+      return { success: false };
+    }
+  }
+
+  return { success: true, isEmailSent: false };
 }
 
 export async function claimOfficialRecordAction(
@@ -293,9 +341,17 @@ export async function claimOfficialRecordAction(
     return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType };
   }
 
-  if (await findExistingStudentAccount({ admin, email: normalizedRecordEmail, studentIdNumber: normalizedRecordStudentId })) {
-    logClaimFailure("claim_already_exists");
-    return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType };
+  const accountInfo = await findExistingStudentAccount({ admin, email: normalizedRecordEmail, studentIdNumber: normalizedRecordStudentId });
+  const emailEnv = getEmailEnv();
+
+  if (accountInfo.exists) {
+    // If account exists and is in SETUP status and email is enabled, we allow resending link
+    if (emailEnv.enabled && accountInfo.status === "SETUP") {
+      // Proceed to allow resend via createStudentAccountAction
+    } else {
+      logClaimFailure("claim_already_exists");
+      return { message: GENERIC_CLAIM_FAILURE, selectedStudentType: studentType };
+    }
   }
 
   const summary = summarizeOfficialRecord(record, studentType);
@@ -323,11 +379,16 @@ export async function createStudentAccountAction(
   _previousState: CreateAccountState,
   formData: FormData
 ): Promise<CreateAccountState> {
-  const password = String(formData.get("password") ?? "");
-  const confirmPassword = String(formData.get("confirm_password") ?? "");
-  const passwordError = validatePassword(password, confirmPassword);
-  if (passwordError) {
-    return { message: passwordError };
+  const emailEnv = getEmailEnv();
+
+  let password = "";
+  if (!emailEnv.enabled) {
+    password = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirm_password") ?? "");
+    const passwordError = validatePassword(password, confirmPassword);
+    if (passwordError) {
+      return { message: passwordError };
+    }
   }
 
   const cookieStore = await cookies();
@@ -373,13 +434,26 @@ export async function createStudentAccountAction(
     redirect(getInvalidClaimRecoveryPath());
   }
 
-  if (await findExistingStudentAccount({ admin, email, studentIdNumber })) {
+  const accountInfo = await findExistingStudentAccount({ admin, email, studentIdNumber });
+  if (accountInfo.exists) {
+    // If account exists and is in SETUP state and email is enabled, trigger resend!
+    if (emailEnv.enabled && accountInfo.status === "SETUP") {
+      try {
+        await sendAccountSetupEmail(admin, email);
+        await clearClaimCookie();
+        return { success: true, message: "A new setup link has been sent to your email address." };
+      } catch {
+        await clearClaimCookie();
+        return { message: "Failed to resend account setup email. Please try again later." };
+      }
+    }
+
     await clearClaimCookie();
     logClaimFailure("claim_already_exists_before_registration");
     redirect(getInvalidClaimRecoveryPath());
   }
 
-  const created = await performStudentRegistration(
+  const result = await performStudentRegistration(
     admin,
     {
       studentIdNumber,
@@ -393,11 +467,16 @@ export async function createStudentAccountAction(
     password
   );
 
-  if (!created) {
+  if (!result.success) {
     await clearClaimCookie();
     redirect(getInvalidClaimRecoveryPath());
   }
 
   await clearClaimCookie();
+
+  if (result.isEmailSent) {
+    return { success: true, message: "A setup link has been sent to your email address." };
+  }
+
   return { success: true, message: "Account created. You may now log in." };
 }

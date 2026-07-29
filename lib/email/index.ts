@@ -24,3 +24,5 @@ export function getEmailAdapter(): EmailAdapter {
 }
 
 export * from "./templates";
+
+export * from "./env";
