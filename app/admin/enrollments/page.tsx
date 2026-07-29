@@ -146,10 +146,13 @@ export default async function PendingEnrollmentsPage({
                 const requirement = requirementsByTerm.get(
                   requirementKey(enrollment.student_id, enrollment.academic_year, enrollment.semester)
                 );
-                const healthRequirementApplicability = requirement?.applicability ?? getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+                const healthRequirementApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
                   student_type: student?.student_type ?? "",
                   official_gender_sex: officialGenderByStudentId.get(student?.student_id_number ?? "") ?? null
                 });
+                const healthRequirementStatus = healthRequirementApplicability === "APPLICABLE"
+                  ? requirement?.status ?? "PENDING"
+                  : "PENDING";
 
                 return (
                   <tr key={enrollment.id} className="bg-white align-top">
@@ -190,8 +193,8 @@ export default async function PendingEnrollmentsPage({
                               enrollmentId={enrollment.id}
                               healthRequirement={{
                                 applicability: healthRequirementApplicability,
-                                status: requirement?.status ?? "PENDING",
-                                note: requirement?.note ?? null,
+                                status: healthRequirementStatus,
+                                note: healthRequirementApplicability === "APPLICABLE" ? requirement?.note ?? null : null,
                                 unavailable: requirementDataUnavailable
                               }}
                             />

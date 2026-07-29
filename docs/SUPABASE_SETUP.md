@@ -416,12 +416,15 @@ Only `ACTIVE` accounts can log in.
 
 For setup-link accounts, the setup action first confirms that the authenticated profile is exactly a `student` with `SETUP` status. It updates the password, then calls a database-authorized, idempotent transition to `ACTIVE`. If the final transition is temporarily unavailable, the account remains unable to log in and the student can submit the same form again while the setup session is still open.
 
+Health Record Update applicability is recalculated from the current Registrar-managed official record whenever the student or Registrar view is rendered. The stored status is used only when that current record makes the requirement applicable.
+
 Current client direction:
 
 - Every student type is matched against official Registrar-provided data before account access.
 - The target workflow is system-generated passwords sent by email, with students allowed to change passwords later.
 - PKM-DES does not generate passwords. Its default MVP path uses a self-selected password; an optional server-only one-time setup-link path can be enabled only with `EMAIL_DELIVERY_ENABLED=true`, `RESEND_API_KEY`, `EMAIL_FROM`, and a trusted `APP_BASE_URL`.
 - The setup-link path is disabled by default and requires the Supabase Auth redirect allowlist to include `${APP_BASE_URL}/auth/callback` before it is used.
+- Setup-link delivery has a five-minute server-side resend cooldown. It is reserved before email delivery so concurrent resend requests do not send multiple links.
 
 Student password changes:
 

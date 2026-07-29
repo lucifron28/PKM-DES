@@ -62,6 +62,10 @@ type AccountDetails = {
   studentType: StudentType;
 };
 
+type SetupEmailReservationResult = {
+  outcome: "reserved" | "cooldown" | "invalid_account";
+};
+
 function readStudentType(value: FormDataEntryValue | null) {
   const studentType = String(value ?? "").trim() as StudentType;
   return CREATE_ACCOUNT_STUDENT_TYPES.includes(studentType) ? studentType : null;
@@ -176,7 +180,22 @@ async function findExistingStudentAccount({
 
   const exists = Boolean(existingProfileResult.data || existingStudentResult.data);
   const status = existingProfileResult.data?.account_status ?? null;
-  return { exists, status };
+  const profileId = existingProfileResult.data?.id ?? null;
+  return { exists, status, profileId };
+}
+
+async function reserveSetupEmailDelivery(admin: ReturnType<typeof createSupabaseAdminClient>, profileId: string) {
+  const { data, error } = await admin.rpc("reserve_student_setup_email_delivery", {
+    p_profile_id: profileId
+  });
+  const result = (data as SetupEmailReservationResult[] | null)?.[0];
+
+  if (error || !result) {
+    logClaimFailure("setup_email_reservation_failed");
+    return "invalid_account" as const;
+  }
+
+  return result.outcome;
 }
 
 async function cleanupNewRegistration(
@@ -280,6 +299,11 @@ async function performStudentRegistration(
 
   if (isEmailMode) {
     try {
+      if (await reserveSetupEmailDelivery(admin, profileId) !== "reserved") {
+        logClaimFailure("setup_email_reservation_rejected");
+        await cleanupNewRegistration(admin, profileId, "student_insert");
+        return { success: false };
+      }
       await sendAccountSetupEmail(admin, details.email);
       return { success: true, isEmailSent: true };
     } catch {
@@ -449,14 +473,21 @@ export async function createStudentAccountAction(
   const accountInfo = await findExistingStudentAccount({ admin, email, studentIdNumber });
   if (accountInfo.exists) {
     // If account exists and is in SETUP state and email is enabled, trigger resend!
-    if (emailEnv.enabled && accountInfo.status === "SETUP") {
+    if (emailEnv.enabled && accountInfo.status === "SETUP" && accountInfo.profileId) {
       try {
+        const reservation = await reserveSetupEmailDelivery(admin, accountInfo.profileId);
+        if (reservation === "cooldown") {
+          return { message: "A setup link was requested recently. Please wait a few minutes before trying again." };
+        }
+        if (reservation !== "reserved") {
+          return { message: "A setup link could not be sent. Please contact the Registrar." };
+        }
         await sendAccountSetupEmail(admin, email);
         await clearClaimCookie();
         return { success: true, message: "A new setup link has been sent to your email address." };
       } catch {
         await clearClaimCookie();
-        return { message: "Failed to resend account setup email. Please try again later." };
+        return { message: "A setup link could not be sent. Please contact the Registrar." };
       }
     }
 

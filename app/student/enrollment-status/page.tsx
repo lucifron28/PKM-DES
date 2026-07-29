@@ -5,6 +5,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
 import { CURRENT_ENROLLMENT_TERM } from "@/lib/constants/pkm";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
+import { getRequirementApplicability } from "@/lib/requirements/rules";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatDate } from "@/lib/utils/format";
 import type { Enrollment } from "@/types/database";
@@ -46,6 +48,30 @@ export default async function EnrollmentStatusPage() {
 
   const latestEnrollment = (data as LatestEnrollment | null) ?? null;
   const currentTermRequirement = (requirementData as StudentRequirementRecord | null) ?? null;
+  let healthRequirementApplicability = currentTermRequirement?.applicability ?? null;
+  let officialRecordError = false;
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data: officialRecord, error } = await admin
+      .from("official_student_records")
+      .select("gender_sex")
+      .eq("student_id_number", student.student_id_number ?? "")
+      .maybeSingle();
+
+    if (error) {
+      officialRecordError = true;
+      console.error("student_enrollment_status:official_record_load");
+    } else {
+      healthRequirementApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+        student_type: student.student_type,
+        official_gender_sex: officialRecord?.gender_sex ?? null
+      });
+    }
+  } catch {
+    officialRecordError = true;
+    console.error("student_enrollment_status:official_record_load");
+  }
+
   const status = getDisplayedEnrollmentStatus(latestEnrollment?.status ?? null, student.enrollment_status);
   const statusPanelClass = status === "ENROLLED"
     ? "border-green-600 bg-green-50"
@@ -119,21 +145,21 @@ export default async function EnrollmentStatusPage() {
             <h2 id="health-record-update" className="text-base font-bold text-slateui-text">Health Record Update</h2>
             <p className="mt-1 text-sm leading-6 text-slateui-secondary">Current term: {CURRENT_ENROLLMENT_TERM.label}</p>
           </div>
-          {currentTermRequirement?.applicability === "APPLICABLE" ? (
-            <Badge tone={currentTermRequirement.status === "VERIFIED" ? "success" : currentTermRequirement.status === "REJECTED" ? "error" : "warning"}>
-              {currentTermRequirement.status}
+          {healthRequirementApplicability === "APPLICABLE" ? (
+            <Badge tone={currentTermRequirement?.status === "VERIFIED" ? "success" : currentTermRequirement?.status === "REJECTED" ? "error" : "warning"}>
+              {currentTermRequirement?.status ?? "PENDING"}
             </Badge>
-          ) : currentTermRequirement?.applicability === "NOT_APPLICABLE" ? <Badge tone="info">NOT REQUIRED</Badge> : null}
+          ) : healthRequirementApplicability === "NOT_APPLICABLE" ? <Badge tone="info">NOT REQUIRED</Badge> : null}
         </div>
-        {requirementError ? (
+        {requirementError || officialRecordError ? (
           <p className="mt-3 border-l-4 border-amber-500 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950">Current-term requirement information could not be loaded. Please contact the Registrar.</p>
-        ) : currentTermRequirement?.applicability === "APPLICABLE" ? (
+        ) : healthRequirementApplicability === "APPLICABLE" ? (
           <div className="mt-3 space-y-2 text-sm leading-6 text-slateui-secondary">
             <p>Submit the required paper form directly to PKM Health Services. PKM-DES records only the verification status; do not upload medical details.</p>
-            {currentTermRequirement.status === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this paper form is verified for the current term.</p> : null}
-            {currentTermRequirement.status === "REJECTED" ? <p className="font-semibold text-red-800">Please contact the Registrar or PKM Health Services about the paper-form verification.</p> : null}
+            {(currentTermRequirement?.status ?? "PENDING") === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this paper form is verified for the current term.</p> : null}
+            {currentTermRequirement?.status === "REJECTED" ? <p className="font-semibold text-red-800">Please contact the Registrar or PKM Health Services about the paper-form verification.</p> : null}
           </div>
-        ) : currentTermRequirement?.applicability === "NOT_APPLICABLE" ? (
+        ) : healthRequirementApplicability === "NOT_APPLICABLE" ? (
           <p className="mt-3 text-sm leading-6 text-slateui-secondary">No Health Record Update verification is required for your current-term enrollment request.</p>
         ) : (
           <p className="mt-3 text-sm leading-6 text-slateui-secondary">Current-term Health Record Update status appears after an enrollment request is recorded, when applicable.</p>
