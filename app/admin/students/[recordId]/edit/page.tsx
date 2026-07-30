@@ -18,7 +18,7 @@ export default async function EditOfficialStudentRecordPage({
   searchParams
 }: {
   params: Promise<EditPageParams>;
-  searchParams?: Promise<{ updated?: string; error?: string }>;
+  searchParams?: Promise<{ updated?: string; error?: string; email_mismatch?: string }>;
 }) {
   const { supabase } = await requireRole("admin");
   const { recordId } = await params;
@@ -108,8 +108,15 @@ export default async function EditOfficialStudentRecordPage({
           action={<ButtonLink href="/admin/students" variant="outline">Back to Records</ButtonLink>}
         />
         {query.updated ? (
-          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
-            Official student record updated.
+          <div className="mb-4 space-y-2">
+            <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+              Official student record updated and linked student account fields synchronized.
+            </div>
+            {query.email_mismatch ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                Email differs; account email not changed. Supabase Auth and profile email address remain unchanged.
+              </div>
+            ) : null}
           </div>
         ) : null}
         {query.error ? (

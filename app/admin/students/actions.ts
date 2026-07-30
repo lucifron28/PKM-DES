@@ -215,7 +215,7 @@ export async function addOfficialStudentRecordAction(formData: FormData) {
 }
 
 export async function updateOfficialStudentRecordAction(formData: FormData) {
-  const { supabase, profile } = await requireRole("admin");
+  const { supabase } = await requireRole("admin");
   const recordId = String(formData.get("record_id") ?? "").trim();
   const errorPath = recordId ? `/admin/students/${recordId}/edit` : "/admin/students";
   const input = readOfficialRecordInput(formData);
@@ -257,18 +257,60 @@ export async function updateOfficialStudentRecordAction(formData: FormData) {
     redirectWithError(duplicateError, errorPath);
   }
 
-  const { error } = await supabase
-    .from("official_student_records")
-    .update(buildOfficialRecordPayload(formData, input, program.id, profile.id))
-    .eq("id", recordId);
+  type SyncRpcResult = {
+    outcome: string;
+    record_id: string;
+    email_mismatch: boolean;
+  };
 
-  if (error) {
-    redirectWithError(uniqueConstraintError(error) ? "duplicate_identity" : "save", errorPath);
+  const { data: syncData, error: syncError } = await supabase.rpc("update_official_student_record_and_sync", {
+    p_record_id: recordId,
+    p_student_id_number: input.studentIdNumber || null,
+    p_first_name: input.firstName,
+    p_last_name: input.lastName,
+    p_email: input.email,
+    p_program_id: program.id,
+    p_year_level: input.yearLevel,
+    p_student_type: input.studentType,
+    p_birthdate: optionalValue(formData.get("birthdate")),
+    p_gender_sex: optionalGuidedValue(formData.get("gender_sex"), GENDER_SEX_OPTIONS),
+    p_address: optionalValue(formData.get("address")),
+    p_contact_number: optionalValue(formData.get("contact_number")),
+    p_guardian: optionalValue(formData.get("guardian")),
+    p_emergency_contact_person: optionalValue(formData.get("emergency_contact_person")),
+    p_nationality: optionalValue(formData.get("nationality")),
+    p_civil_status: optionalGuidedValue(formData.get("civil_status"), CIVIL_STATUS_OPTIONS),
+    p_previous_school_information: optionalValue(formData.get("previous_school_information")),
+    p_admission_status: optionalGuidedValue(formData.get("admission_status"), ADMISSION_STATUS_OPTIONS),
+    p_enrollment_status: input.enrollmentStatus
+  });
+
+  const syncResult = (syncData as SyncRpcResult[] | null)?.[0];
+
+  if (syncError || !syncResult) {
+    console.error("official_student_records:sync_rpc_failed", syncError);
+    redirectWithError("save", errorPath);
+  }
+
+  if (syncResult.outcome === "student_id_conflict") {
+    redirectWithError("duplicate_student_id", errorPath);
+  }
+
+  if (syncResult.outcome !== "updated") {
+    redirectWithError("save", errorPath);
   }
 
   revalidatePath("/admin/students");
   revalidatePath(`/admin/students/${recordId}/edit`);
-  redirect(`/admin/students/${recordId}/edit?updated=1`);
+  revalidatePath("/student", "layout");
+  revalidatePath("/student/dashboard");
+  revalidatePath("/student/account");
+  revalidatePath("/student/enrollment-status");
+  revalidatePath("/student/cor");
+  revalidatePath("/admin/enrollments");
+
+  const mismatchQuery = syncResult.email_mismatch ? "&email_mismatch=1" : "";
+  redirect(`/admin/students/${recordId}/edit?updated=1${mismatchQuery}`);
 }
 
 function isUuid(value: string) {
