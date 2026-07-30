@@ -11,6 +11,8 @@ declare
   v_canonical_offering_count integer;
   v_all_programs_count integer;
 begin
+  perform set_config('pkm.fixture.migration_transaction_at', now()::text, true);
+
   select id into v_bsais_id
   from public.programs
   where code = 'BSAIS'
@@ -103,7 +105,7 @@ on conflict (id) do nothing;
 
 -- Grades:
 -- ACT-104: compatible (both 1.50 "Passed") → no conflict
--- ACT-106: conflicting (2.00 "Passed" vs 2.50 "Passed") → must be resolved by deleting one
+-- ACT-106: conflicting (2.00 "Passed" vs 2.50 "Passed") → requires explicit simulated Registrar resolution
 insert into public.grades (id, student_id, subject_id, grade, remarks, created_at, updated_at)
 values
   ('11111111-1111-4000-8000-000000000001', 'dddddddd-dddd-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000005', '1.50', 'Passed', '2026-01-01 00:00:00+0', '2026-06-01 00:00:00+0'),
@@ -219,10 +221,102 @@ begin
   if (select program_id from public.students where id = 'dddddddd-dddd-4000-8000-000000000002') <> 'aaaaaaaa-aaaa-4000-8000-000000000006' then
     raise exception 'POST-REFUSE FAIL: non-BSAIS student changed';
   end if;
+
+  if exists (
+    select 1
+    from (values
+      (current_setting('pkm.fixture.bsais_id')::uuid, 'BSAIS'),
+      ('aaaaaaaa-aaaa-4000-8000-000000000002'::uuid, 'AIS'),
+      ('aaaaaaaa-aaaa-4000-8000-000000000003'::uuid, 'bsais'),
+      ('aaaaaaaa-aaaa-4000-8000-000000000004'::uuid, ' BSAIS '),
+      ('aaaaaaaa-aaaa-4000-8000-000000000005'::uuid, 'AIS-LEGACY')
+    ) expected(id, code)
+    left join public.programs p on p.id = expected.id and p.code = expected.code
+    where p.id is null
+  ) then
+    raise exception 'POST-REFUSE FAIL: exact program IDs or codes changed';
+  end if;
+
+  if exists (
+    select 1
+    from (values
+      ('bbbbbbbb-bbbb-4000-8000-000000000001'::uuid, current_setting('pkm.fixture.bsais_id')::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000002'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000002'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000003'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000003'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000004'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000004'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000005'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000002'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000006'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000003'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000007'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000004'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000008'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000005'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000009'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000002'::uuid),
+      ('bbbbbbbb-bbbb-4000-8000-000000000010'::uuid, 'aaaaaaaa-aaaa-4000-8000-000000000006'::uuid)
+    ) expected(id, program_id)
+    left join public.subjects s on s.id = expected.id and s.program_id = expected.program_id
+    where s.id is null
+  ) then
+    raise exception 'POST-REFUSE FAIL: exact subject IDs or program references changed';
+  end if;
+
+  if exists (
+    select 1
+    from (values
+      ('ffffffff-ffff-4000-8000-000000000001'::uuid, 'eeeeeeee-eeee-4000-8000-000000000002'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000010'::uuid),
+      ('ffffffff-ffff-4000-8000-000000000002'::uuid, 'eeeeeeee-eeee-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000001'::uuid),
+      ('ffffffff-ffff-4000-8000-000000000003'::uuid, 'eeeeeeee-eeee-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000002'::uuid),
+      ('ffffffff-ffff-4000-8000-000000000004'::uuid, 'eeeeeeee-eeee-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000003'::uuid),
+      ('ffffffff-ffff-4000-8000-000000000005'::uuid, 'eeeeeeee-eeee-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000004'::uuid),
+      ('ffffffff-ffff-4000-8000-000000000006'::uuid, 'eeeeeeee-eeee-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000005'::uuid),
+      ('ffffffff-ffff-4000-8000-000000000007'::uuid, 'eeeeeeee-eeee-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000006'::uuid),
+      ('ffffffff-ffff-4000-8000-000000000008'::uuid, 'eeeeeeee-eeee-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000007'::uuid)
+    ) expected(id, enrollment_id, subject_id)
+    left join public.enrollment_subjects es
+      on es.id = expected.id
+     and es.enrollment_id = expected.enrollment_id
+     and es.subject_id = expected.subject_id
+    where es.id is null
+  ) then
+    raise exception 'POST-REFUSE FAIL: exact enrollment_subject references changed';
+  end if;
+
+  if exists (
+    select 1
+    from (values
+      ('11111111-1111-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000005'::uuid, '1.50', 'Passed'),
+      ('11111111-1111-4000-8000-000000000002'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000006'::uuid, '1.50', 'Passed'),
+      ('11111111-1111-4000-8000-000000000003'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000008'::uuid, '2.00', 'Passed'),
+      ('11111111-1111-4000-8000-000000000004'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000009'::uuid, '2.50', 'Passed')
+    ) expected(id, subject_id, grade, remarks)
+    left join public.grades g
+      on g.id = expected.id
+     and g.subject_id = expected.subject_id
+     and g.grade = expected.grade
+     and g.remarks = expected.remarks
+    where g.id is null
+  ) then
+    raise exception 'POST-REFUSE FAIL: exact grade values, remarks, or subject references changed';
+  end if;
+
+  if exists (
+    select 1
+    from (values
+      ('22222222-2222-4000-8000-000000000001'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000006'::uuid, 'Mon', '08:00-09:00', 'RM-101'),
+      ('22222222-2222-4000-8000-000000000002'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000007'::uuid, 'Tue', '09:00-10:00', 'RM-102'),
+      ('22222222-2222-4000-8000-000000000003'::uuid, 'bbbbbbbb-bbbb-4000-8000-000000000009'::uuid, 'Wed', '10:00-11:00', 'RM-103')
+    ) expected(id, subject_id, day, time, room)
+    left join public.class_schedules cs
+      on cs.id = expected.id
+     and cs.subject_id = expected.subject_id
+     and cs.day = expected.day
+     and cs.time = expected.time
+     and cs.room = expected.room
+    where cs.id is null
+  ) then
+    raise exception 'POST-REFUSE FAIL: exact schedule references changed';
+  end if;
 end;
 $post_refuse_check$;
 
--- Delete the conflicting ACT-106 grade (keep the better 2.00 one)
+-- Explicit simulated Registrar resolution: remove one deliberately selected conflicting row.
 delete from public.grades where id = '11111111-1111-4000-8000-000000000004';
 
 -- ══════════════════════════════════════════════════════════════════════
@@ -293,15 +387,18 @@ begin
     raise exception 'FAIL: ACT-104 grade value or remarks changed';
   end if;
 
-  -- ACT-106: surviving grade is 2.00, "Passed" (better of 2.00 and 2.50)
+  -- ACT-106: surviving grade is the explicitly selected 2.00 record after simulated Registrar resolution.
   if (select grade from public.grades where student_id = 'dddddddd-dddd-4000-8000-000000000001' and subject_id = 'bbbbbbbb-bbbb-4000-8000-000000000008') <> '2.00'
      or (select remarks from public.grades where student_id = 'dddddddd-dddd-4000-8000-000000000001' and subject_id = 'bbbbbbbb-bbbb-4000-8000-000000000008') <> 'Passed' then
     raise exception 'FAIL: ACT-106 surviving grade value or remarks is incorrect';
   end if;
 
-  -- ACT-106 created_at preserved (updated_at may change due to trigger)
+  -- The grades updated_at trigger intentionally sets this to the migration transaction timestamp.
   if (select created_at from public.grades where student_id = 'dddddddd-dddd-4000-8000-000000000001' and subject_id = 'bbbbbbbb-bbbb-4000-8000-000000000008') <> '2026-02-01 00:00:00+0'::timestamptz then
     raise exception 'FAIL: ACT-106 created_at was not preserved';
+  end if;
+  if (select updated_at from public.grades where student_id = 'dddddddd-dddd-4000-8000-000000000001' and subject_id = 'bbbbbbbb-bbbb-4000-8000-000000000008') <> current_setting('pkm.fixture.migration_transaction_at')::timestamptz then
+    raise exception 'FAIL: ACT-106 updated_at did not become the migration transaction timestamp';
   end if;
 
   -- Class schedules: all 3 preserved, no orphans

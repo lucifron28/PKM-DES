@@ -328,6 +328,10 @@ Source limitations:
 - The workbook shows a 4th Year BSAIS total of 6 units but no visible 4th Year BSAIS course rows.
 - Enrollment submission still attaches subjects from the existing `subjects` table until PKM supplies an official term-offering-to-enrollment rule.
 
+### BSAIS Alias Repair Timestamp Behavior
+
+The BSAIS alias-repair migration preserves grade values, remarks, and `created_at` during compatible subject merges. It does not preserve historical `updated_at` values: the existing `public.set_updated_at()` trigger intentionally replaces `updated_at` with the migration transaction timestamp whenever a grade row is updated. The disposable collision fixture verifies this behavior and requires explicit simulated Registrar resolution before a conflicting non-null grade is removed.
+
 ## RLS Policy Summary
 
 Profiles:
