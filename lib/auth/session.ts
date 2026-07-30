@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile, Student, UserRole } from "@/types/database";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -54,8 +55,7 @@ export async function requireRole(role: UserRole) {
   };
 }
 
-export const getStudentForProfile = cache(async function getStudentForProfile(profileId: string) {
-  const supabase = await createSupabaseServerClient();
+export async function fetchStudentForProfile(supabase: SupabaseClient, profileId: string) {
   const { data } = await supabase
     .from("students")
     .select("*, programs(*)")
@@ -63,4 +63,9 @@ export const getStudentForProfile = cache(async function getStudentForProfile(pr
     .maybeSingle();
 
   return (data as Student | null) ?? null;
+}
+
+export const getStudentForProfile = cache(async function getStudentForProfile(profileId: string) {
+  const supabase = await createSupabaseServerClient();
+  return fetchStudentForProfile(supabase, profileId);
 });

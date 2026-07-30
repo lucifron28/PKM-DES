@@ -1,0 +1,53 @@
+name: Functional Quality Assurance CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    name: Typecheck, Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run Unit & Domain Tests
+        run: |
+          npm run test:smoke-env
+          npm run test:account-claim
+          npm run test:admin-enrollment-review
+          npx tsx --test lib/account-claim/*.test.ts
+          npx tsx --test lib/account-setup/*.test.ts
+          npx tsx --test lib/admin-student-records/*.test.ts
+          npx tsx --test lib/course-offerings/*.test.ts
+          npx tsx --test lib/email/*.test.ts
+          npx tsx --test lib/enrollment/*.test.ts
+          npx tsx --test lib/registration-form/*.test.ts
+          npx tsx --test lib/requirements/*.test.ts
+          npx tsx --test lib/auth/*.test.ts
+          npx tsx --test components/ui/*.test.ts
+
+      - name: Build Application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-for-ci-build
