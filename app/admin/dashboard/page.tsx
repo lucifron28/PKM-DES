@@ -4,15 +4,25 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth/session";
 import { countEnrollmentStatuses } from "@/lib/enrollment/query";
+import { getActiveEnrollmentTerm } from "@/lib/enrollment/term-authority";
 import type { EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 export default async function AdminDashboardPage() {
   const { supabase } = await requireRole("admin");
-  const { data: enrollmentStatuses, error: enrollmentStatusesError } = await supabase
+  const activeTerm = await getActiveEnrollmentTerm(supabase);
+
+  let query = supabase
     .from("enrollments")
-    .select("status")
-    .returns<Array<{ status: EnrollmentReviewStatus }>>();
+    .select("status");
+
+  if (activeTerm) {
+    query = query
+      .eq("academic_year", activeTerm.academicYear)
+      .eq("semester", activeTerm.semester);
+  }
+
+  const { data: enrollmentStatuses, error: enrollmentStatusesError } = await query.returns<Array<{ status: EnrollmentReviewStatus }>>();
 
   if (enrollmentStatusesError) {
     console.error("enrollment_reporting:dashboard_counts");
@@ -26,28 +36,28 @@ export default async function AdminDashboardPage() {
         <StatCard
           label="Pending Enrollments"
           value={statusCounts?.PENDING ?? "Unavailable"}
-          helper="Requests awaiting administrative review."
+          helper={activeTerm ? `Pending for ${activeTerm.academicYear} ${activeTerm.semester}` : "Requests awaiting administrative review."}
           icon={<ListChecks className="h-5 w-5" />}
           tone="warning"
         />
         <StatCard
           label="Approved Enrollments"
           value={statusCounts?.APPROVED ?? "Unavailable"}
-          helper="Enrollment records approved by the Registrar."
+          helper={activeTerm ? `Approved for ${activeTerm.academicYear} ${activeTerm.semester}` : "Enrollment records approved by the Registrar."}
           icon={<ClipboardCheck className="h-5 w-5" />}
           tone="success"
         />
         <StatCard
           label="Rejected Enrollments"
           value={statusCounts?.REJECTED ?? "Unavailable"}
-          helper="Reviewed records that were not approved."
+          helper={activeTerm ? `Rejected for ${activeTerm.academicYear} ${activeTerm.semester}` : "Reviewed records that were not approved."}
           icon={<XCircle className="h-5 w-5" />}
           tone="danger"
         />
         <StatCard
           label="Enrollment Records"
           value={statusCounts?.total ?? "Unavailable"}
-          helper="Submitted enrollment records."
+          helper={activeTerm ? `Active Term: ${activeTerm.academicYear} ${activeTerm.semester}` : "Submitted enrollment records."}
           icon={<FileText className="h-5 w-5" />}
           tone="info"
         />
@@ -58,25 +68,33 @@ export default async function AdminDashboardPage() {
           <p className="font-semibold">Demo path</p>
           <p className="mt-1">
             Add or confirm an Official Student Record, let the student claim the account, then submit Online Enrollment.
-            Only submitted enrollment records are counted on this dashboard.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <ButtonLink href="/admin/enrollments" className="w-full"><ClipboardCheck className="h-4 w-4" aria-hidden="true" />Review Pending Enrollments</ButtonLink>
-          <ButtonLink href="/admin/students" variant="outline" className="w-full">Student Records</ButtonLink>
-          <ButtonLink href="/admin/masterlist" variant="outline" className="w-full">Enrollment Masterlist</ButtonLink>
-          <ButtonLink href="/admin/reports" variant="outline" className="w-full">Enrollment Reports</ButtonLink>
-          {ENABLE_STUB_PAGES ? <ButtonLink href="/admin/encode" variant="outline" className="w-full">Encode Grades/Schedule</ButtonLink> : null}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ButtonLink href="/admin/enrollments" variant="primary" className="w-full">
+            Review Pending Requests
+          </ButtonLink>
+          <ButtonLink href="/admin/masterlist" variant="outline" className="w-full">
+            Official Masterlist
+          </ButtonLink>
+          <ButtonLink href="/admin/students" variant="outline" className="w-full">
+            Student Directory
+          </ButtonLink>
+          {ENABLE_STUB_PAGES ? (
+            <>
+              <ButtonLink href="/admin/reports" variant="outline" className="w-full">
+                Summary Reports
+              </ButtonLink>
+              <ButtonLink href="/admin/encode" variant="outline" className="w-full">
+                Enrollment Encoding
+              </ButtonLink>
+              <ButtonLink href="/admin/account" variant="outline" className="w-full">
+                Account Settings
+              </ButtonLink>
+            </>
+          ) : null}
         </div>
       </Card>
-      {statusCounts === null ? (
-        <Card className="border-t-4 border-t-secondary-600">
-          <CardHeader title="Enrollment Status Overview" />
-          <div className="mb-4 border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">
-            Enrollment counts could not be loaded. Please try again.
-          </div>
-        </Card>
-      ) : null}
     </div>
   );
 }
