@@ -269,7 +269,7 @@ Student:
 - Student can submit enrollment form.
 - Enrollment form defaults to AY 2026-2027, 1st Semester.
 - Duplicate enrollment submission for the same academic year and semester is blocked.
-- Rejected enrollment records cannot be resubmitted for the same academic year and semester.
+- Rejected enrollment records cannot be resubmitted for the same academic year and semester (provisional project-owner MVP rule; terminal rejection closes same-term resubmission).
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
 - Enrollment status becomes PENDING.
 - Student can open and browser-print the MVP draft registration form only after the latest request is approved.

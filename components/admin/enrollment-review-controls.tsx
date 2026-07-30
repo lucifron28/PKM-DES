@@ -77,7 +77,9 @@ export function EnrollmentReviewControls({
           placeholder="Optional free-text information visible with the enrollment result."
           maxLength={2000}
         />
-        <p className="text-xs text-slateui-muted">Optional free-text information that will be visible with the enrollment result.</p>
+        <p className="text-xs text-slateui-muted">
+          Rejection is terminal for the active term and closes automatic resubmission for this academic year and semester. Remarks will be visible to the student.
+        </p>
         <ReviewSubmitButton decision="reject" enrollmentId={enrollmentId} />
       </form>
     </div>

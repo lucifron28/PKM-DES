@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -80,15 +80,30 @@ export default async function OnlineEnrollmentPage() {
           </div>
         </div>
         {termEnrollment ? (
-          <div className="border-l-4 border-sky-500 bg-sky-50 p-4 text-sm text-sky-950">
-            <p className="font-semibold">An enrollment request already exists for this term.</p>
-            <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-              <div><dt className="font-medium">Academic Year</dt><dd>{termEnrollment.academic_year}</dd></div>
-              <div><dt className="font-medium">Semester</dt><dd>{termEnrollment.semester}</dd></div>
-              <div><dt className="font-medium">Current Status</dt><dd><Badge tone="info">{termEnrollment.status}</Badge></dd></div>
-            </dl>
-            <ButtonLink className="mt-4" href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>
-          </div>
+          termEnrollment.status === "REJECTED" ? (
+            <div className="border-l-4 border-red-600 bg-red-50 p-4 text-sm text-red-950 space-y-3">
+              <p className="font-semibold">Your enrollment request for this term was rejected by the Registrar.</p>
+              <p className="text-sm leading-6 text-red-900">
+                This request cannot be automatically resubmitted for the same term. Please contact the Registrar for correction instructions.
+              </p>
+              <dl className="grid gap-3 sm:grid-cols-3">
+                <div><dt className="font-medium">Academic Year</dt><dd>{termEnrollment.academic_year}</dd></div>
+                <div><dt className="font-medium">Semester</dt><dd>{termEnrollment.semester}</dd></div>
+                <div><dt className="font-medium">Current Status</dt><dd><Badge tone={enrollmentBadgeTone(termEnrollment.status)}>{termEnrollment.status}</Badge></dd></div>
+              </dl>
+              <ButtonLink className="mt-4" href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>
+            </div>
+          ) : (
+            <div className="border-l-4 border-sky-500 bg-sky-50 p-4 text-sm text-sky-950">
+              <p className="font-semibold">An enrollment request already exists for this term.</p>
+              <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div><dt className="font-medium">Academic Year</dt><dd>{termEnrollment.academic_year}</dd></div>
+                <div><dt className="font-medium">Semester</dt><dd>{termEnrollment.semester}</dd></div>
+                <div><dt className="font-medium">Current Status</dt><dd><Badge tone={enrollmentBadgeTone(termEnrollment.status)}>{termEnrollment.status}</Badge></dd></div>
+              </dl>
+              <ButtonLink className="mt-4" href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>
+            </div>
+          )
         ) : eligibility === "eligible" ? (
           <EnrollmentForm student={student} />
         ) : (
