@@ -48,6 +48,7 @@ jobs:
           npm run test:admin-student-records
           npm run test:student-enrollment
           npm run test:registration-form
+          npm run test:portal-navigation
           npx tsx --test lib/account-setup/*.test.ts
           npx tsx --test lib/course-offerings/*.test.ts
           npx tsx --test lib/email/*.test.ts
