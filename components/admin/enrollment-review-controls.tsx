@@ -10,10 +10,12 @@ import type { RequirementApplicability, RequirementStatus } from "@/lib/requirem
 
 function ReviewSubmitButton({
   decision,
-  enrollmentId
+  enrollmentId,
+  disabled = false
 }: {
   decision: "approve" | "reject";
   enrollmentId: string;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   const isApproval = decision === "approve";
@@ -23,7 +25,7 @@ function ReviewSubmitButton({
       type="submit"
       variant={isApproval ? "primary" : "danger"}
       className="w-full"
-      disabled={pending}
+      disabled={pending || disabled}
       aria-label={`${isApproval ? "Approve" : "Reject"} pending enrollment request ${enrollmentId}`}
     >
       {pending ? (isApproval ? "Approving..." : "Rejecting...") : isApproval ? "Approve" : "Reject"}
@@ -49,6 +51,18 @@ export function EnrollmentReviewControls({
     unavailable: boolean;
   };
 }) {
+  const isApprovalBlocked =
+    healthRequirement.unavailable ||
+    (healthRequirement.applicability === "APPLICABLE" && healthRequirement.status !== "VERIFIED");
+
+  const approvalBlockReason = healthRequirement.unavailable
+    ? "Requirement status data is currently unavailable."
+    : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "PENDING"
+      ? "Health Record Update verification is PENDING."
+      : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "REJECTED"
+        ? "Health Record Update status is REJECTED."
+        : null;
+
   return (
     <div className="space-y-3">
       <RequirementStatusCard
@@ -63,7 +77,12 @@ export function EnrollmentReviewControls({
         onSubmit={(event) => confirmReview(event, "Approve this pending enrollment request?")}
       >
         <input type="hidden" name="enrollment_id" value={enrollmentId} />
-        <ReviewSubmitButton decision="approve" enrollmentId={enrollmentId} />
+        {isApprovalBlocked && approvalBlockReason ? (
+          <p className="mb-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs font-semibold text-amber-900">
+            Approval disabled: {approvalBlockReason}
+          </p>
+        ) : null}
+        <ReviewSubmitButton decision="approve" enrollmentId={enrollmentId} disabled={isApprovalBlocked} />
       </form>
       <form
         action={rejectEnrollmentAction}
