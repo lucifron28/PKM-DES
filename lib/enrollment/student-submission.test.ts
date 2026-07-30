@@ -8,7 +8,7 @@ import {
   type StudentEnrollmentFormInput,
   type TrustedStudentEnrollmentContext
 } from "@/lib/enrollment/student-submission";
-import { CURRENT_ENROLLMENT_TERM, PROGRAM } from "@/lib/constants/pkm";
+import { PROGRAM } from "@/lib/constants/pkm";
 import type { StudentType } from "@/types/database";
 
 function context(overrides: Partial<TrustedStudentEnrollmentContext> = {}): TrustedStudentEnrollmentContext {
@@ -58,20 +58,22 @@ test("an empty matching subject set is rejected", () => {
   assert.equal(evaluateStandardLoadEligibility(context({ matchingSubjectCount: 0 })), "no_configured_subjects");
 });
 
+const activeTermFixture = { academicYear: "2026-2027", semester: "1st Semester" as const };
+
 test("the configured term is accepted", () => {
-  assert.equal(isCurrentEnrollmentTerm(CURRENT_ENROLLMENT_TERM), true);
+  assert.equal(isCurrentEnrollmentTerm(activeTermFixture, activeTermFixture), true);
 });
 
 test("a wrong academic year is rejected", () => {
   assert.equal(
-    isCurrentEnrollmentTerm({ ...CURRENT_ENROLLMENT_TERM, academicYear: "2025-2026" }),
+    isCurrentEnrollmentTerm({ academicYear: "2025-2026", semester: "1st Semester" }, activeTermFixture),
     false
   );
 });
 
 test("a wrong semester is rejected", () => {
   assert.equal(
-    isCurrentEnrollmentTerm({ ...CURRENT_ENROLLMENT_TERM, semester: "2nd Semester" }),
+    isCurrentEnrollmentTerm({ academicYear: "2026-2027", semester: "2nd Semester" }, activeTermFixture),
     false
   );
 });
