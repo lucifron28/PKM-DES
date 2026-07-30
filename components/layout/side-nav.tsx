@@ -31,6 +31,19 @@ const icons: Record<NavigationIcon, typeof BookOpen> = {
   subjects: BookOpen
 };
 
+function isItemActive(href: string, pathname: string): boolean {
+  if (href === "/student/enrollment") {
+    return (
+      pathname === "/student/enrollment" ||
+      pathname === "/student/enrollment-status" ||
+      pathname.startsWith("/student/enrollments/") ||
+      pathname === "/student/cor" ||
+      pathname.startsWith("/student/cor/")
+    );
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function SideNav({
   items,
   label,
@@ -43,7 +56,6 @@ export function SideNav({
   const pathname = usePathname();
   const router = useRouter();
   const sections = ["Workflow", "Reference", "Account"] as const;
-
   return (
     <nav className="space-y-5" aria-label={label}>
       {sections.map((section) => {
@@ -59,7 +71,7 @@ export function SideNav({
             <div className="space-y-1.5">
               {sectionItems.map((item) => {
                 const Icon = icons[item.icon];
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const active = isItemActive(item.href, pathname);
 
                 return (
                   <Link
