@@ -22,6 +22,14 @@ export function OfficialStudentRecordForm({
   record?: OfficialStudentRecord | null;
   submitLabel: string;
 }) {
+  const bsaisProgram = programs.find(
+    (p) =>
+      (p.code ?? "").trim().toUpperCase() === "BSAIS" ||
+      (p.name ?? "").trim().toUpperCase().includes("ACCOUNTING INFORMATION")
+  );
+
+  const defaultProgramId = record ? record.program_id : bsaisProgram?.id ?? "";
+
   return (
     <form action={action} className="grid gap-4 lg:grid-cols-3">
       {record ? <input type="hidden" name="record_id" value={record.id} /> : null}
@@ -39,14 +47,21 @@ export function OfficialStudentRecordForm({
       <TextInput label="First Name" name="first_name" required defaultValue={record?.first_name ?? ""} />
       <TextInput label="Last Name" name="last_name" required defaultValue={record?.last_name ?? ""} />
       <TextInput label="Active Email Address" name="email" type="email" required defaultValue={record?.email ?? ""} />
-      <SelectInput label="Program" name="program_id" required defaultValue={record?.program_id ?? ""}>
-        <option value="" disabled>{programs.length ? "Select program" : "No programs configured"}</option>
-        {programs.map((program) => (
-          <option key={program.id} value={program.id}>
-            {program.name}
-          </option>
-        ))}
-      </SelectInput>
+      <div>
+        <SelectInput label="Program" name="program_id" required defaultValue={defaultProgramId}>
+          <option value="" disabled>{programs.length ? "Select program" : "No programs configured"}</option>
+          {programs.map((program) => (
+            <option key={program.id} value={program.id}>
+              {program.name}
+            </option>
+          ))}
+        </SelectInput>
+        {!record && !bsaisProgram ? (
+          <p className="mt-1 text-xs text-red-700">
+            BSAIS program configuration is unavailable. Please verify program settings.
+          </p>
+        ) : null}
+      </div>
       <SelectInput label="Year Level" name="year_level" required defaultValue={record?.year_level ?? ""}>
         <option value="" disabled>Select year level</option>
         {YEAR_LEVELS.map((year) => (
