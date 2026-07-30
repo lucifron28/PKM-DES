@@ -24,7 +24,8 @@ values
   ('00000000-0000-4000-8000-000000000006', 'student', 'Gate', 'Student', 'gate.student@example.test', 'ACTIVE');
 
 insert into public.programs (id, name, code)
-values ('10000000-0000-4000-8000-000000000001', 'Bachelor of Science in Accounting Information System', 'BSAIS');
+values ('10000000-0000-4000-8000-000000000001', 'Bachelor of Science in Accounting Information System', 'BSAIS')
+on conflict (code) do update set id = excluded.id;
 
 insert into public.students (id, profile_id, student_id_number, program_id, year_level, student_type, enrollment_status)
 values

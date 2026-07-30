@@ -58,7 +58,8 @@ values
   ('$resendId', 'student', 'Concurrent', 'Resend', 'concurrent.resend@example.test', 'SETUP');
 
 insert into public.programs (id, name, code)
-values ('$programId', 'Bachelor of Science in Accounting Information System', 'BSAIS');
+values ('$programId', 'Bachelor of Science in Accounting Information System', 'BSAIS')
+on conflict (code) do update set id = excluded.id;
 
 insert into public.students (id, profile_id, student_id_number, program_id, year_level, student_type, enrollment_status)
 values ('$studentRecordId', '$studentId', '26-00010', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED');

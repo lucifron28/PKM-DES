@@ -1,16 +1,27 @@
+// Server-only guard for production. Tests bypass via tsx environment.
+import "server-only";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   isExactActiveStudentAccount,
   type StudentPasswordResetState,
   validateStudentPasswordResetInput
 } from "./password-reset";
-
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
+/**
+ * Resets a student's temporary password.
+ *
+ * The admin client is injected for testability. In production, it defaults
+ * to createSupabaseAdminClient(). The Auth password update and audit log
+ * insertion are NOT one atomic transaction: if Auth succeeds but audit fails,
+ * the password update remains effective in Auth.
+ */
 export async function resetStudentPasswordService(
   supabase: SupabaseClient,
   formData: FormData,
-  actorProfileId?: string
+  actorProfileId: string,
+  adminClient?: SupabaseClient
 ): Promise<StudentPasswordResetState> {
   const officialRecordId = String(formData.get("official_record_id") ?? "").trim();
   const temporaryPassword = String(formData.get("temporary_password") ?? "");
@@ -76,15 +87,18 @@ export async function resetStudentPasswordService(
     return { message: "Password reset is available only for exact active student account matches." };
   }
 
-  let adminClient: SupabaseClient;
-  try {
-    adminClient = createSupabaseAdminClient();
-  } catch (adminEnvError) {
-    console.error("official_student_records:password_reset_admin_client_init", adminEnvError);
-    return { message: "Password reset service is unavailable. Please try again later." };
+  // Use injected admin client for testability, or create the real one.
+  let resolvedAdmin = adminClient;
+  if (!resolvedAdmin) {
+    try {
+      resolvedAdmin = createSupabaseAdminClient();
+    } catch (adminEnvError) {
+      console.error("official_student_records:password_reset_admin_client_init", adminEnvError);
+      return { message: "Password reset service is unavailable. Please try again later." };
+    }
   }
 
-  const { data: authUserData, error: authUserError } = await adminClient.auth.admin.getUserById(
+  const { data: authUserData, error: authUserError } = await resolvedAdmin.auth.admin.getUserById(
     accountStudent.profile_id
   );
 
@@ -104,7 +118,7 @@ export async function resetStudentPasswordService(
     return { message: "Student account could not be verified in Supabase Auth. Refresh the record and try again." };
   }
 
-  const { error: resetError } = await adminClient.auth.admin.updateUserById(accountStudent.profile_id, {
+  const { error: resetError } = await resolvedAdmin.auth.admin.updateUserById(accountStudent.profile_id, {
     password: temporaryPassword
   });
 
@@ -113,20 +127,18 @@ export async function resetStudentPasswordService(
     return { message: "Password could not be updated. Please try again." };
   }
 
-  // Insert audit log row using the caller's authenticated RLS client.
-  // Note: Supabase Auth operations and PostgreSQL database operations are non-atomic across systems.
-  // If the Auth update succeeds but audit log insertion fails, the password update remains effective in Auth.
-  // We log the audit error server-side and report success for demo/fictional account operations.
+  // Audit target is accountStudent.id (students table PK), NOT profile_id.
   const { error: auditError } = await supabase.from("audit_logs").insert({
-    actor_profile_id: actorProfileId ?? null,
+    actor_profile_id: actorProfileId,
     action: "RESET_STUDENT_PASSWORD",
     target_table: "students",
-    target_id: accountStudent.profile_id
+    target_id: accountStudent.id
   });
 
   if (auditError) {
     console.error("official_student_records:password_reset_audit_failed", auditError);
   }
 
+  // No password value appears in the returned state or logged error.
   return { success: true, message: "Temporary password updated successfully. Share it privately with the student." };
 }

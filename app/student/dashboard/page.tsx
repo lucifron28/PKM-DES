@@ -5,7 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
-import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
+import { getDisplayedEnrollmentStatus, separateEnrollmentsByTerm } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { EnrollmentReviewStatus } from "@/types/database";
@@ -47,26 +47,36 @@ export default async function StudentDashboardPage() {
       .order("submitted_at", { ascending: false })
   ]);
 
-  if (enrollmentsResponse.error) {
-    console.error("student_dashboard:enrollments_load", enrollmentsResponse.error);
+  // Fail closed: active term query failure renders distinct error, never NOT ENROLLED.
+  if (!activeTermResult.ok) {
+    return (
+      <EmptyState
+        title="Current academic term information could not be loaded."
+        description="Please try again. Dashboard information is unavailable until the active term can be determined."
+      />
+    );
   }
 
+  // Fail closed: enrollment query failure renders distinct error, never NOT ENROLLED.
+  if (enrollmentsResponse.error) {
+    console.error("student_dashboard:enrollments_load", enrollmentsResponse.error);
+    return (
+      <EmptyState
+        title="Enrollment records could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  const activeTerm = activeTermResult.term;
   const allEnrollments = (enrollmentsResponse.data as DashboardEnrollment[] | null) ?? [];
-  const activeTerm = activeTermResult.ok ? activeTermResult.term : null;
 
-  const currentTermRequest = activeTerm
-    ? allEnrollments.find(
-        (e) => e.academic_year === activeTerm.academicYear && e.semester === activeTerm.semester
-      ) ?? null
-    : null;
+  const { currentTermEnrollment, historicalEnrollments } = separateEnrollmentsByTerm(
+    allEnrollments,
+    activeTerm
+  );
 
-  const previousEnrollments = activeTerm
-    ? allEnrollments.filter(
-        (e) => e.academic_year !== activeTerm.academicYear || e.semester !== activeTerm.semester
-      )
-    : allEnrollments;
-
-  const status = getDisplayedEnrollmentStatus(currentTermRequest?.status ?? null);
+  const status = getDisplayedEnrollmentStatus(currentTermEnrollment?.status ?? null);
 
   const primaryAction = status === "ENROLLED"
     ? { href: "/student/cor", label: "Print Draft Registration Form", icon: FileText, variant: "secondary" as const }
@@ -98,8 +108,8 @@ export default async function StudentDashboardPage() {
           value={<Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>}
           helper={
             activeTerm
-              ? currentTermRequest
-                ? `${currentTermRequest.academic_year} | ${currentTermRequest.semester}`
+              ? currentTermEnrollment
+                ? `${currentTermEnrollment.academic_year} | ${currentTermEnrollment.semester}`
                 : `No request submitted for ${activeTerm.label}`
               : "No active enrollment term configured."
           }
@@ -149,7 +159,7 @@ export default async function StudentDashboardPage() {
         </Card>
       </div>
 
-      {previousEnrollments.length > 0 ? (
+      {historicalEnrollments.length > 0 ? (
         <Card className="border-t-4 border-t-slate-600">
           <CardHeader
             title="Previous Enrollment History"
@@ -165,7 +175,7 @@ export default async function StudentDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slateui-border">
-                {previousEnrollments.map((record) => (
+                {historicalEnrollments.map((record) => (
                   <tr key={record.id}>
                     <td className="px-4 py-3 font-semibold text-slateui-text">
                       {record.academic_year} – {record.semester}

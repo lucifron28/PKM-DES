@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,8 +26,13 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Check Git Diff Whitespace & Conflicts
-        run: git diff --check
+      - name: Check Git Diff Whitespace & Conflicts (PR vs base)
+        if: github.event_name == 'pull_request'
+        run: git diff --check ${{ github.event.pull_request.base.sha }}...HEAD
+
+      - name: Check Git Diff Whitespace & Conflicts (push to main)
+        if: github.event_name == 'push'
+        run: git show --check --format= HEAD
 
       - name: Typecheck
         run: npm run typecheck

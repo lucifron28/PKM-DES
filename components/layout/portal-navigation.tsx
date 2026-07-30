@@ -4,6 +4,7 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { NavigationItem } from "@/lib/constants/navigation";
 import { buttonClassName } from "@/components/ui/button";
+import { resolveFocusTrapAction } from "@/lib/domain/focus-trap";
 import { LogoutButton } from "./logout-button";
 import { PkmMark } from "./pkm-mark";
 import { SideNav } from "./side-nav";
@@ -32,40 +33,33 @@ export function PortalNavigation({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && open) {
+      if (!open || !mobileNavRef.current) return;
+
+      const focusableElements = Array.from(
+        mobileNavRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+      const activeElement = document.activeElement as HTMLElement | null;
+
+      const ctx = {
+        activeElementIndex: activeElement ? focusableElements.indexOf(activeElement) : -1,
+        isActiveElementOnContainer: activeElement === mobileNavRef.current,
+        isActiveElementOutside: !activeElement || !mobileNavRef.current.contains(activeElement),
+        focusableCount: focusableElements.length
+      };
+
+      const action = resolveFocusTrapAction(event.key, event.shiftKey, ctx);
+
+      if (action === "CLOSE") {
         setOpen(false);
         return;
       }
 
-      if (event.key === "Tab" && open && mobileNavRef.current) {
-        const focusables = Array.from(
-          mobileNavRef.current.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-          )
-        );
-
-        if (!focusables.length) return;
-
-        const firstElement = focusables[0];
-        const lastElement = focusables[focusables.length - 1];
-        const activeElement = document.activeElement as HTMLElement | null;
-
-        if (event.shiftKey) {
-          if (
-            activeElement === firstElement ||
-            activeElement === mobileNavRef.current ||
-            !activeElement ||
-            !mobileNavRef.current.contains(activeElement)
-          ) {
-            event.preventDefault();
-            lastElement.focus();
-          }
-        } else {
-          if (activeElement === lastElement) {
-            event.preventDefault();
-            firstElement.focus();
-          }
-        }
+      if (typeof action === "number" && focusableElements[action]) {
+        event.preventDefault();
+        focusableElements[action].focus();
       }
     }
 
