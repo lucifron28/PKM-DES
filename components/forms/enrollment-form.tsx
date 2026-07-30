@@ -3,13 +3,18 @@
 import { useActionState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { submitEnrollmentAction, type EnrollmentState } from "@/app/student/enrollment/actions";
-import { CURRENT_ENROLLMENT_TERM } from "@/lib/constants/pkm";
 import type { Student } from "@/types/database";
 import { Button, ButtonLink } from "@/components/ui/button";
 
 const initialState: EnrollmentState = {};
 
-export function EnrollmentForm({ student }: { student: Student }) {
+export function EnrollmentForm({
+  student,
+  activeTerm
+}: {
+  student: Student;
+  activeTerm: { academicYear: string; semester: string; label: string };
+}) {
   const [state, formAction, pending] = useActionState(submitEnrollmentAction, initialState);
 
   return (
@@ -29,8 +34,8 @@ export function EnrollmentForm({ student }: { student: Student }) {
           ["Program", student.programs?.name ?? "Not available"],
           ["Year Level", student.year_level],
           ["Student Type", student.student_type],
-          ["Current Academic Year", CURRENT_ENROLLMENT_TERM.academicYear],
-          ["Current Semester", CURRENT_ENROLLMENT_TERM.semester]
+          ["Current Academic Year", activeTerm.academicYear],
+          ["Current Semester", activeTerm.semester]
         ].map(([label, value]) => (
           <div key={label} className="border border-slateui-border bg-slateui-surfaceAlt p-4">
             <dt className="text-xs font-semibold tracking-wide text-slateui-muted">{label}</dt>
@@ -43,7 +48,7 @@ export function EnrollmentForm({ student }: { student: Student }) {
         The system uses the program and year level recorded in your student account.
       </p>
       <p className="border-l-4 border-primary-800 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-900">
-        Current enrollment term: {CURRENT_ENROLLMENT_TERM.label}. Additional terms require the official academic calendar.
+        Current enrollment term: {activeTerm.label}. Additional terms require the official academic calendar.
       </p>
       <section aria-labelledby="certification-heading" className="border-t border-slateui-border pt-5">
       <h2 id="certification-heading" className="text-base font-bold text-slateui-text">Certification</h2>
