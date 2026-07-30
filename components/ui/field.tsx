@@ -13,7 +13,7 @@ function FieldLabel({
   return (
     <label htmlFor={htmlFor} className="text-sm font-semibold text-slateui-secondary">
       {children}
-      {required ? <span className="text-red-600"> *</span> : null}
+      {required ? <span className="ml-1 text-red-600" aria-hidden="true">*</span> : null}
     </label>
   );
 }
@@ -26,13 +26,14 @@ export function TextInput({
   required,
   error,
   className,
+  containerClassName,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
+}: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; containerClassName?: string }) {
   const fieldId = String(props.id ?? props.name);
   const errorId = error ? `${fieldId}-error` : undefined;
 
   return (
-    <div>
+    <div className={containerClassName}>
       <FieldLabel htmlFor={fieldId} required={required}>
         {label}
       </FieldLabel>
@@ -59,13 +60,14 @@ export function SelectInput({
   required,
   error,
   className,
+  containerClassName,
   ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; error?: string }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & { label: string; error?: string; containerClassName?: string }) {
   const fieldId = String(props.id ?? props.name);
   const errorId = error ? `${fieldId}-error` : undefined;
 
   return (
-    <div>
+    <div className={containerClassName}>
       <FieldLabel htmlFor={fieldId} required={required}>
         {label}
       </FieldLabel>
@@ -93,13 +95,14 @@ export function TextArea({
   required,
   error,
   className,
+  containerClassName,
   ...props
-}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string }) {
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string; containerClassName?: string }) {
   const fieldId = String(props.id ?? props.name);
   const errorId = error ? `${fieldId}-error` : undefined;
 
   return (
-    <div>
+    <div className={containerClassName}>
       <FieldLabel htmlFor={fieldId} required={required}>
         {label}
       </FieldLabel>
