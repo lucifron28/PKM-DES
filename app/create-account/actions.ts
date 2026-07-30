@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import crypto from "crypto";
 import React from "react";
@@ -22,7 +22,7 @@ import {
 } from "@/lib/account-claim/rules";
 import { CREATE_ACCOUNT_STUDENT_TYPES } from "@/lib/constants/pkm";
 import type { OfficialStudentRecord, Program, StudentType, YearLevel } from "@/types/database";
-import { getEmailEnv, getEmailAdapter, AccountSetupEmail } from "@/lib/email";
+import { getAppBaseUrl, getEmailEnv, getEmailAdapter, AccountSetupEmail, type EmailEnvironment } from "@/lib/email";
 
 const CLAIM_COOKIE_NAME = "pkm_account_claim";
 
@@ -60,6 +60,10 @@ type AccountDetails = {
   programId: string;
   yearLevel: YearLevel;
   studentType: StudentType;
+};
+
+type SetupEmailReservationResult = {
+  outcome: "reserved" | "cooldown" | "invalid_account";
 };
 
 function readStudentType(value: FormDataEntryValue | null) {
@@ -176,7 +180,22 @@ async function findExistingStudentAccount({
 
   const exists = Boolean(existingProfileResult.data || existingStudentResult.data);
   const status = existingProfileResult.data?.account_status ?? null;
-  return { exists, status };
+  const profileId = existingProfileResult.data?.id ?? null;
+  return { exists, status, profileId };
+}
+
+async function reserveSetupEmailDelivery(admin: ReturnType<typeof createSupabaseAdminClient>, profileId: string) {
+  const { data, error } = await admin.rpc("reserve_student_setup_email_delivery", {
+    p_profile_id: profileId
+  });
+  const result = (data as SetupEmailReservationResult[] | null)?.[0];
+
+  if (error || !result) {
+    logClaimFailure("setup_email_reservation_failed");
+    return "invalid_account" as const;
+  }
+
+  return result.outcome;
 }
 
 async function cleanupNewRegistration(
@@ -196,16 +215,13 @@ async function cleanupNewRegistration(
 }
 
 async function sendAccountSetupEmail(admin: ReturnType<typeof createSupabaseAdminClient>, email: string) {
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const siteUrl = `${protocol}://${host}`;
+  const siteUrl = getAppBaseUrl();
 
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",
     email,
     options: {
-      redirectTo: `${siteUrl}/auth/callback?next=/setup-account`
+      redirectTo: `${siteUrl}/auth/callback`
     }
   });
 
@@ -225,9 +241,9 @@ async function sendAccountSetupEmail(admin: ReturnType<typeof createSupabaseAdmi
 async function performStudentRegistration(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   details: AccountDetails,
+  emailEnv: EmailEnvironment,
   password?: string
 ): Promise<{ success: boolean; isEmailSent?: boolean }> {
-  const emailEnv = getEmailEnv();
   const isEmailMode = emailEnv.enabled;
   const initialStatus = isEmailMode ? "SETUP" : "ACTIVE";
   const initialPassword = isEmailMode ? crypto.randomUUID() : (password || crypto.randomUUID());
@@ -237,8 +253,7 @@ async function performStudentRegistration(
     password: initialPassword,
     email_confirm: true,
     app_metadata: {
-      role: "student",
-      account_status: initialStatus
+      role: "student"
     },
     user_metadata: {
       first_name: details.firstName,
@@ -284,6 +299,11 @@ async function performStudentRegistration(
 
   if (isEmailMode) {
     try {
+      if (await reserveSetupEmailDelivery(admin, profileId) !== "reserved") {
+        logClaimFailure("setup_email_reservation_rejected");
+        await cleanupNewRegistration(admin, profileId, "student_insert");
+        return { success: false };
+      }
       await sendAccountSetupEmail(admin, details.email);
       return { success: true, isEmailSent: true };
     } catch {
@@ -350,6 +370,11 @@ export async function claimOfficialRecordAction(
   const accountInfo = await findExistingStudentAccount({ admin, email: normalizedRecordEmail, studentIdNumber: normalizedRecordStudentId });
   const emailEnv = getEmailEnv();
 
+  if (emailEnv.configurationError) {
+    logClaimFailure("email_configuration_invalid");
+    return { message: "Account email delivery is not configured. Please contact the Registrar.", selectedStudentType: studentType, email: rawEmail, studentIdNumber: rawStudentIdNumber };
+  }
+
   if (accountInfo.exists) {
     // If account exists and is in SETUP status and email is enabled, we allow resending link
     if (emailEnv.enabled && accountInfo.status === "SETUP") {
@@ -386,6 +411,11 @@ export async function createStudentAccountAction(
   formData: FormData
 ): Promise<CreateAccountState> {
   const emailEnv = getEmailEnv();
+
+  if (emailEnv.configurationError) {
+    logClaimFailure("email_configuration_invalid");
+    return { message: "Account email delivery is not configured. Please contact the Registrar." };
+  }
 
   let password = "";
   if (!emailEnv.enabled) {
@@ -443,14 +473,21 @@ export async function createStudentAccountAction(
   const accountInfo = await findExistingStudentAccount({ admin, email, studentIdNumber });
   if (accountInfo.exists) {
     // If account exists and is in SETUP state and email is enabled, trigger resend!
-    if (emailEnv.enabled && accountInfo.status === "SETUP") {
+    if (emailEnv.enabled && accountInfo.status === "SETUP" && accountInfo.profileId) {
       try {
+        const reservation = await reserveSetupEmailDelivery(admin, accountInfo.profileId);
+        if (reservation === "cooldown") {
+          return { message: "A setup link was requested recently. Please wait a few minutes before trying again." };
+        }
+        if (reservation !== "reserved") {
+          return { message: "A setup link could not be sent. Please contact the Registrar." };
+        }
         await sendAccountSetupEmail(admin, email);
         await clearClaimCookie();
         return { success: true, message: "A new setup link has been sent to your email address." };
       } catch {
         await clearClaimCookie();
-        return { message: "Failed to resend account setup email. Please try again later." };
+        return { message: "A setup link could not be sent. Please contact the Registrar." };
       }
     }
 
@@ -470,6 +507,7 @@ export async function createStudentAccountAction(
       yearLevel: record.year_level,
       studentType: record.student_type
     },
+    emailEnv,
     password
   );
 

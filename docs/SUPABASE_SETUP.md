@@ -414,11 +414,32 @@ Account status behavior:
 
 Only `ACTIVE` accounts can log in.
 
+For setup-link accounts, the setup action first confirms that the authenticated profile is exactly a `student` with `SETUP` status. It updates the password, then calls a database-authorized, idempotent transition to `ACTIVE`. If the final transition is temporarily unavailable, the account remains unable to log in and the student can submit the same form again while the setup session is still open.
+
+Health Record Update applicability is recalculated from the current Registrar-managed official record whenever the student or Registrar view is rendered. The stored status is used only when that current record makes the requirement applicable.
+
+### Disposable Local Database Verification
+
+After Docker and the Supabase CLI are available, reset a local-only stack and run the focused verification script. It uses fictional records in one transaction and rolls them back.
+
+```powershell
+npx supabase db reset --local --no-seed --yes
+Get-Content -Raw scripts/integration/verify-local-supabase-workflows.sql |
+  docker exec -i supabase_db_PKM-DES psql -U postgres -d postgres -v ON_ERROR_STOP=1
+.\scripts\integration\verify-local-supabase-concurrency.ps1
+```
+
+The concurrency runner creates separate fictional records for parallel review and resend calls, then resets the local stack when it finishes. Do not run either verification script against a linked, preview, or institutional database.
+
+The transactional fixture grants `authenticated` read access to `public.students` only for the duration of its local rollback transaction because the existing requirement ownership policy resolves through that table. This test-only grant does not change a migration or production permissions.
+
 Current client direction:
 
 - Every student type is matched against official Registrar-provided data before account access.
 - The target workflow is system-generated passwords sent by email, with students allowed to change passwords later.
-- The generated-password email workflow is not implemented yet and should be built before production use.
+- PKM-DES does not generate passwords. Its default MVP path uses a self-selected password; an optional server-only one-time setup-link path can be enabled only with `EMAIL_DELIVERY_ENABLED=true`, `RESEND_API_KEY`, `EMAIL_FROM`, and a trusted `APP_BASE_URL`.
+- The setup-link path is disabled by default and requires the Supabase Auth redirect allowlist to include `${APP_BASE_URL}/auth/callback` before it is used.
+- Setup-link delivery has a five-minute server-side resend cooldown. It is reserved before email delivery so concurrent resend requests do not send multiple links.
 
 Student password changes:
 
@@ -539,7 +560,7 @@ Student account profile display:
 Not implemented in this branch:
 
 - CSV import
-- Generated password email delivery
+- Generated-password email delivery
 - Registrar-managed deactivation/archive workflow
 
 ## Account Matching
@@ -560,7 +581,7 @@ Current behavior:
 Remaining gaps:
 
 - Official CSV/import format is still needed.
-- Generated initial password and email delivery are still placeholders.
+- Generated initial passwords remain a placeholder. A one-time account setup-link delivery path is available only when explicitly configured and remains disabled by default.
 - Guided official-record field options are provisional MVP values until PKM supplies official value lists.
 - No additional admitted-applicant status rules are enforced because PKM has not supplied final status values.
 
@@ -610,7 +631,7 @@ order by table_name, grantee, privilege_type;
 ## Notes and Boundaries
 
 - Designated Registrar account details are distributed privately and must not be committed to project documentation.
-- Official admitted-applicant matching is implemented for manual official records, but import format, sample data, and generated password/email delivery remain future work.
+- Official admitted-applicant matching is implemented for manual official records, but import format, sample data, and generated-password delivery remain future work. Setup-link delivery is opt-in, server-only, and disabled by default.
 - No official COR template was provided, so only an MVP draft browser-print registration form is implemented; official COR/PDF output remains future work.
 - No official grading, schedule, or balance format was provided, so those modules remain placeholders.
 - The Subject List uses source-derived curriculum and workbook-offering data for display. Only BSAIS curriculum subjects are seeded in Supabase for online enrollment attachment.

@@ -75,6 +75,19 @@ entity "official_student_records" as official_student_records {
   Source of truth for account claiming.
 }
 
+entity "student_requirements" as student_requirements {
+  * id : uuid [PK]
+  * student_id : uuid [FK -> students.id]
+  * requirement_code : text
+  * academic_year : text
+  * semester : Semester
+  * status : RequirementStatus
+  * applicability : RequirementApplicability
+  note : text
+  verified_at : timestamptz
+  verified_by : uuid [FK -> profiles.id]
+}
+
 entity "audit_logs" as audit_logs {
   * id : uuid [PK]
   * action : text
@@ -89,6 +102,8 @@ profiles "1" -- "0..1" students : has
 programs "1" -- "0..*" students : belongs to
 programs "1" -- "0..*" subjects : contains
 students "1" -- "0..*" enrollments : creates
+students "1" -- "0..*" student_requirements : has
+profiles "1" -- "0..*" student_requirements : verifies
 enrollments "1" -- "0..*" enrollment_subjects : includes
 subjects "1" -- "0..*" enrollment_subjects : included in
 programs "1" -- "0..*" official_student_records : defines
@@ -103,6 +118,14 @@ end note
 note right of official_student_records
   Source: supabase/migrations/
   Used during account claim sequence.
+end note
+
+note bottom of student_requirements
+  Term-aware, status-only verification.
+  Health Record Update is applicable only when
+  the official source record explicitly confirms Female
+  for an Incoming 1st Year Student.
+  No medical details or uploaded forms are stored.
 end note
 
 @enduml

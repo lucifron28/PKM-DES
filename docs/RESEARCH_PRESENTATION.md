@@ -21,6 +21,6 @@ The following system diagrams illustrate the architecture, domain models, and ke
 - **[Deployment Diagram](diagrams/pkm-des-deployment.puml)**: Maps the temporary Vercel client-preview boundary against the Supabase cloud infrastructure. *Show this to clarify that the current environment is a fictional-data preview and not a production deployment.*
 
 ## Email Delivery & Health Requirement Architecture
-- **Server-Only Email Abstraction**: Provides a pluggable `EmailAdapter` (Resend adapter for live, Mock adapter for preview).
-- **One-Time Setup Link**: Generates a secure recovery/setup link to set account password without exposing raw secrets.
-- **Requirement Verification Gate**: Gated enrollment approval in database RPC level using `student_requirements` table.
+- **Server-Only Email Abstraction**: Provides a pluggable `EmailAdapter` (Resend adapter when explicitly configured, Mock adapter for preview). Live delivery is disabled by default.
+- **One-Time Setup Link**: Can generate a recovery/setup link to set an account password without exposing raw secrets. It is not generated-password delivery and is not used unless PKM configures it.
+- **Requirement Verification Gate**: The database approval RPC checks status-only, current-term Health Record Update verification only when the student is an Incoming 1st Year Student and the Registrar-managed official record explicitly confirms `Female`. No medical details or uploaded forms are stored.

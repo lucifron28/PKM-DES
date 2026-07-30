@@ -39,6 +39,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "resend": "^6.18.1",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {

@@ -28,7 +28,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Home and About Us pages.
 - Supabase-backed login and logout.
-- Student account claim and MVP self-selected-password registration path.
+- Student account claim with the self-selected-password MVP path. A server-only, one-time setup-link path is available only when explicitly configured and remains disabled by default.
 
 ### Student
 
@@ -43,7 +43,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - Admin dashboard enrollment-status overview.
 - Manual creation, search, filtering, and editing of official student records.
 - Registrar/Admin reset of an exact active student account password from the linked official-record edit page. The temporary password is shared privately; no password-reset email or forced-change rule is implemented.
-- Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, and audit row commit atomically; the queue does not implement a document or requirements checklist.
+- Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, and audit row commit atomically. The queue includes only a status-only, current-term Health Record Update check when it applies; it is not a full document or requirements checklist.
 - Enrollment masterlist and browser-printable report views.
 
 ### Reporting and Printing
@@ -65,11 +65,11 @@ The demonstration does not validate real admission requirements, financial oblig
 - The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
 - Subject List workbook rows are historical AY 2025-2026, 2nd Semester display-only references, not the active AY 2026-2027 enrollment load. BSAIS curriculum rows are a separate reference; actual subject attachments belong to submitted enrollment records and cannot be selected by students on the Subject List page.
 - The browser cannot choose a student's program, year level, student type, term, status, or subjects. The current term is fixed to AY 2026-2027, 1st Semester until an approved academic-calendar module exists.
-- Transferee and Irregular Student records require Registrar-managed subject assignment. The MVP does not invent transfer-credit, irregular-load, requirement-checklist, or subject-adjustment rules.
+- Transferee and Irregular Student records require Registrar-managed subject assignment. The MVP does not invent transfer-credit, irregular-load, full requirement-checklist, or subject-adjustment rules.
 - Registrar review is limited to submitted pending requests. Stale concurrent review attempts cannot overwrite the first decision, and rejected same-term requests remain non-resubmittable under the existing term-unique enrollment rule.
 - Enrollment creation and subject attachment use one database transaction. The student-term unique index remains the concurrent duplicate safeguard.
 - Account claiming for every student type depends on manually encoded official student records; no approved import workflow exists.
-- The FRD describes generated credentials delivered by email, while the MVP uses a self-selected password so the account flow can be tested.
+- The FRD describes generated credentials delivered by email, while the default MVP path uses a self-selected password so the account flow can be tested. A configured server-only setup-link delivery path remains disabled by default and does not send generated passwords.
 - The signed account-claim proof protects the MVP workflow state but is not production-grade institutional identity verification; account-claim rate limiting remains future hardening.
 - Official student record fields and controlled options are guided MVP inputs, not finalized institutional value lists.
 - Official student records are Registrar source data. Their account-link states may be exact, partial, conflicting, missing, or temporarily unavailable, but the MVP does not automatically repair identities or synchronize existing accounts. Their enrollment-status field does not create or change an enrollment request.
@@ -92,7 +92,7 @@ The draft registration form also contains non-operational placeholders for sched
 - Real financial transactions or official assessment processing.
 - Official grade processing or release.
 - Official class scheduling or section assignment.
-- Email-generated password delivery.
+- Email-generated password delivery. A setup-link delivery path is demonstration-only until PKM approves sender, templates, and operating rules.
 - Digital clearance routing.
 - Electronic signatures.
 - Complete institutional audit and compliance implementation.
@@ -123,5 +123,5 @@ The research MVP is successful when:
 After client validation, the next phase should prioritize production hardening, full data modeling, security redesign, institutional policy confirmation, approved data imports, official output templates, and the additional modules identified in the traceability matrix. These changes should be sequenced only after PKM validates the proposed workflow and supplies the required institutional rules, formats, and source data.
 
 ### 4. Requirements & Email Scope
-- **Email Delivery Service**: Integrated Resend adapter for setup link delivery, disabled by default in preview environment.
-- **Health Record Requirement**: Status-only verification ("HEALTH_RECORD_UPDATE") gating enrollment approval for 1st Year female students. No sensitive medical data stored.
+- **Email Delivery Service**: A server-only Resend adapter can send a one-time setup link only when explicitly configured. It is disabled by default in the preview environment and does not send generated passwords.
+- **Health Record Requirement**: Status-only, current-term `HEALTH_RECORD_UPDATE` verification gates approval only for Incoming 1st Year Students whose Registrar-managed official record has an explicitly confirmed `Female` value. No sensitive medical data is stored.

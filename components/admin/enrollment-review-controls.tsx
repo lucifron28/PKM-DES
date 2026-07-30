@@ -5,6 +5,8 @@ import { useFormStatus } from "react-dom";
 import { approveEnrollmentAction, rejectEnrollmentAction } from "@/app/admin/enrollments/actions";
 import { Button } from "@/components/ui/button";
 import { TextArea } from "@/components/ui/field";
+import { RequirementStatusCard } from "@/components/requirements/requirement-status-card";
+import type { RequirementApplicability, RequirementStatus } from "@/lib/requirements/types";
 
 function ReviewSubmitButton({
   decision,
@@ -35,9 +37,27 @@ function confirmReview(event: FormEvent<HTMLFormElement>, message: string) {
   }
 }
 
-export function EnrollmentReviewControls({ enrollmentId }: { enrollmentId: string }) {
+export function EnrollmentReviewControls({
+  enrollmentId,
+  healthRequirement
+}: {
+  enrollmentId: string;
+  healthRequirement: {
+    applicability: RequirementApplicability;
+    status: RequirementStatus;
+    note: string | null;
+    unavailable: boolean;
+  };
+}) {
   return (
     <div className="space-y-3">
+      <RequirementStatusCard
+        enrollmentId={enrollmentId}
+        applicability={healthRequirement.applicability}
+        currentStatus={healthRequirement.status}
+        currentNote={healthRequirement.note}
+        unavailable={healthRequirement.unavailable}
+      />
       <form
         action={approveEnrollmentAction}
         onSubmit={(event) => confirmReview(event, "Approve this pending enrollment request?")}

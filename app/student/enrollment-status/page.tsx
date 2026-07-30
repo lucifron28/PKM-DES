@@ -3,7 +3,11 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { CURRENT_ENROLLMENT_TERM } from "@/lib/constants/pkm";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
+import { getRequirementApplicability } from "@/lib/requirements/rules";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatDate } from "@/lib/utils/format";
 import type { Enrollment } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
@@ -29,7 +33,45 @@ export default async function EnrollmentStatusPage() {
     .limit(1)
     .maybeSingle();
 
+  const { data: requirementData, error: requirementError } = await supabase
+    .from("student_requirements")
+    .select("*")
+    .eq("student_id", student.id)
+    .eq("requirement_code", "HEALTH_RECORD_UPDATE")
+    .eq("academic_year", CURRENT_ENROLLMENT_TERM.academicYear)
+    .eq("semester", CURRENT_ENROLLMENT_TERM.semester)
+    .maybeSingle();
+
+  if (requirementError) {
+    console.error("student_enrollment_status:requirement_load");
+  }
+
   const latestEnrollment = (data as LatestEnrollment | null) ?? null;
+  const currentTermRequirement = (requirementData as StudentRequirementRecord | null) ?? null;
+  let healthRequirementApplicability = currentTermRequirement?.applicability ?? null;
+  let officialRecordError = false;
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data: officialRecord, error } = await admin
+      .from("official_student_records")
+      .select("gender_sex")
+      .eq("student_id_number", student.student_id_number ?? "")
+      .maybeSingle();
+
+    if (error) {
+      officialRecordError = true;
+      console.error("student_enrollment_status:official_record_load");
+    } else {
+      healthRequirementApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+        student_type: student.student_type,
+        official_gender_sex: officialRecord?.gender_sex ?? null
+      });
+    }
+  } catch {
+    officialRecordError = true;
+    console.error("student_enrollment_status:official_record_load");
+  }
+
   const status = getDisplayedEnrollmentStatus(latestEnrollment?.status ?? null, student.enrollment_status);
   const statusPanelClass = status === "ENROLLED"
     ? "border-green-600 bg-green-50"
@@ -97,6 +139,32 @@ export default async function EnrollmentStatusPage() {
           </p>
         )}
       </div>
+      <section className="mt-6 border border-slateui-border bg-slateui-surfaceAlt p-4" aria-labelledby="health-record-update">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 id="health-record-update" className="text-base font-bold text-slateui-text">Health Record Update</h2>
+            <p className="mt-1 text-sm leading-6 text-slateui-secondary">Current term: {CURRENT_ENROLLMENT_TERM.label}</p>
+          </div>
+          {healthRequirementApplicability === "APPLICABLE" ? (
+            <Badge tone={currentTermRequirement?.status === "VERIFIED" ? "success" : currentTermRequirement?.status === "REJECTED" ? "error" : "warning"}>
+              {currentTermRequirement?.status ?? "PENDING"}
+            </Badge>
+          ) : healthRequirementApplicability === "NOT_APPLICABLE" ? <Badge tone="info">NOT REQUIRED</Badge> : null}
+        </div>
+        {requirementError || officialRecordError ? (
+          <p className="mt-3 border-l-4 border-amber-500 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950">Current-term requirement information could not be loaded. Please contact the Registrar.</p>
+        ) : healthRequirementApplicability === "APPLICABLE" ? (
+          <div className="mt-3 space-y-2 text-sm leading-6 text-slateui-secondary">
+            <p>Submit the required paper form directly to PKM Health Services. PKM-DES records only the verification status; do not upload medical details.</p>
+            {(currentTermRequirement?.status ?? "PENDING") === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this paper form is verified for the current term.</p> : null}
+            {currentTermRequirement?.status === "REJECTED" ? <p className="font-semibold text-red-800">Please contact the Registrar or PKM Health Services about the paper-form verification.</p> : null}
+          </div>
+        ) : healthRequirementApplicability === "NOT_APPLICABLE" ? (
+          <p className="mt-3 text-sm leading-6 text-slateui-secondary">No Health Record Update verification is required for your current-term enrollment request.</p>
+        ) : (
+          <p className="mt-3 text-sm leading-6 text-slateui-secondary">Current-term Health Record Update status appears after an enrollment request is recorded, when applicable.</p>
+        )}
+      </section>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {actions.map(([href, label, variant]) => <ButtonLink key={href} href={href} variant={variant as "primary" | "secondary" | "outline"} className="w-full">{label}</ButtonLink>)}
         {ENABLE_STUB_PAGES ? <><ButtonLink href="/student/grades" variant="outline" className="w-full">View Grades</ButtonLink><ButtonLink href="/student/schedule" variant="outline" className="w-full">View Class Schedule</ButtonLink><ButtonLink href="/student/balances" variant="outline" className="w-full">View Balances</ButtonLink></> : null}
