@@ -431,6 +431,8 @@ Get-Content -Raw scripts/integration/verify-local-supabase-workflows.sql |
 
 The concurrency runner creates separate fictional records for parallel review and resend calls, then resets the local stack when it finishes. Do not run either verification script against a linked, preview, or institutional database.
 
+The transactional fixture grants `authenticated` read access to `public.students` only for the duration of its local rollback transaction because the existing requirement ownership policy resolves through that table. This test-only grant does not change a migration or production permissions.
+
 Current client direction:
 
 - Every student type is matched against official Registrar-provided data before account access.
