@@ -120,18 +120,25 @@ export default async function EnrollmentStatusPage() {
             <p className="text-sm leading-6 text-slateui-secondary">Please print your draft registration form.</p>
           </div>
         ) : status === "REJECTED" ? (
-          <div className="mt-4 space-y-2">
-            <p className="text-base font-semibold text-slateui-text">
-              Your enrollment request was not approved.
+          <div className="mt-4 space-y-3">
+            <p className="text-base font-semibold text-red-900">
+              Your enrollment request was not approved by the Registrar.
             </p>
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-950">
+              <p className="font-semibold">Registrar Remarks:</p>
+              <p className="mt-1">{latestEnrollment?.remarks ? latestEnrollment.remarks : "No specific remarks were provided by the Registrar."}</p>
+            </div>
             <p className="text-sm leading-6 text-slateui-secondary">
-              {latestEnrollment?.remarks
-                ? `Remarks: ${latestEnrollment.remarks}`
-                : "Please contact the Registrar for details."}
+              Review the remarks above, resolve any missing requirements or information, and resubmit your request for the active term.
             </p>
-            <p className="text-sm leading-6 text-slateui-secondary">
+            <p className="text-xs text-slateui-muted">
               Reviewed: {formatDate(latestEnrollment?.reviewed_at)}
             </p>
+            <div className="pt-2">
+              <ButtonLink href="/student/enrollment" variant="primary">
+                Update and Resubmit Online Enrollment
+              </ButtonLink>
+            </div>
           </div>
         ) : (
           <p className="mt-4 text-base font-semibold text-slateui-text">
