@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SelectInput } from "@/components/ui/field";
 import { SubjectReferenceTable } from "@/components/student/subject-reference-table";
 import { COURSE_OFFERINGS_TERM_25_26 } from "@/lib/constants/course-offerings";
-import { SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { YEAR_LEVELS } from "@/lib/constants/pkm";
 import type { SubjectSeed } from "@/lib/constants/subjects";
 import type { Semester, YearLevel, Program } from "@/types/database";
 
@@ -43,26 +43,41 @@ function totalUnits(rows: Array<{ units: number }>) {
   return rows.reduce((sum, row) => sum + row.units, 0);
 }
 
-function groupHistoricalOfferings(rows: DBOfferingRow[], selectedYear: YearLevel | "") {
-  const visibleYears = selectedYear ? [selectedYear] : YEAR_LEVELS;
+function groupHistoricalOfferings(rows: DBOfferingRow[], selectedYear: YearLevel | ""): HistoricalOfferingGroup[] {
+  const yearsToGroup: YearLevel[] = selectedYear ? [selectedYear] : ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
-  return visibleYears
+  return yearsToGroup
     .map((yearLevel) => {
-      const offerings = rows.filter((row) => row.year_level === yearLevel);
-      return { yearLevel, offerings, totalUnits: totalUnits(offerings) };
+      const offerings = rows.filter((r) => r.year_level === yearLevel);
+      return {
+        yearLevel,
+        offerings,
+        totalUnits: totalUnits(offerings)
+      };
     })
-    .filter((group) => group.offerings.length > 0) as HistoricalOfferingGroup[];
+    .filter((group) => group.offerings.length > 0);
 }
 
-function groupCurriculumSubjects(rows: SubjectSeed[], selectedYear: YearLevel | "") {
-  const visibleYears = selectedYear ? [selectedYear] : YEAR_LEVELS;
+function groupCurriculumSubjects(rows: SubjectSeed[], selectedYear: YearLevel | ""): CurriculumGroup[] {
+  const yearsToGroup: YearLevel[] = selectedYear ? [selectedYear] : ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+  const semestersToGroup: Semester[] = ["1st Semester", "2nd Semester"];
+  const groups: CurriculumGroup[] = [];
 
-  return visibleYears.flatMap((yearLevel) =>
-    SEMESTERS.map((semester) => {
-      const subjects = rows.filter((row) => row.year_level === yearLevel && row.semester === semester);
-      return { yearLevel, semester, subjects, totalUnits: totalUnits(subjects) };
-    }).filter((group) => group.subjects.length > 0)
-  ) as CurriculumGroup[];
+  for (const yearLevel of yearsToGroup) {
+    for (const semester of semestersToGroup) {
+      const subjects = rows.filter((r) => r.year_level === yearLevel && r.semester === semester);
+      if (subjects.length > 0) {
+        groups.push({
+          yearLevel,
+          semester,
+          subjects,
+          totalUnits: totalUnits(subjects)
+        });
+      }
+    }
+  }
+
+  return groups;
 }
 
 function GroupHeading({
@@ -74,11 +89,11 @@ function GroupHeading({
   title: string;
   count: number;
   total: number;
-  itemLabel: "courses" | "subjects";
+  itemLabel: string;
 }) {
   return (
     <div className="flex flex-col gap-1 border-b border-slateui-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-      <h3 className="text-base font-bold text-slateui-text">{title}</h3>
+      <h3 className="text-sm font-bold text-slateui-text sm:text-base">{title}</h3>
       <p className="text-sm font-medium text-slateui-muted">
         {count} {count === 1 ? itemLabel.slice(0, -1) : itemLabel} | {total} units
       </p>
@@ -91,20 +106,27 @@ export function SubjectReferenceBrowser({
   studentProgramName,
   programs,
   historicalOfferings,
-  curriculumSubjects
+  curriculumSubjects,
+  historicalOfferingsError,
+  curriculumSubjectsError
 }: {
-  studentProgramCode: string;
+  studentProgramCode: string | null;
   studentProgramName: string;
   programs: Array<Pick<Program, "id" | "name" | "code">>;
   historicalOfferings: DBOfferingRow[];
   curriculumSubjects: SubjectSeed[];
+  historicalOfferingsError?: boolean;
+  curriculumSubjectsError?: boolean;
 }) {
-  // Determine initial selected program: default to student's program if offerings exist, else BSAIS
   const initialProgramCode = useMemo(() => {
-    const studentHasOfferings = historicalOfferings.some(o => o.program_code === studentProgramCode);
-    if (studentHasOfferings) return studentProgramCode;
+    if (studentProgramCode && historicalOfferings.some((o) => o.program_code === studentProgramCode)) {
+      return studentProgramCode;
+    }
+    if (studentProgramCode && programs.some((p) => p.code === studentProgramCode)) {
+      return studentProgramCode;
+    }
     return "BSAIS";
-  }, [historicalOfferings, studentProgramCode]);
+  }, [historicalOfferings, programs, studentProgramCode]);
 
   const [selectedProgramCode, setSelectedProgramCode] = useState<string>(initialProgramCode);
   const [selectedYear, setSelectedYear] = useState<YearLevel | "">("");
@@ -127,6 +149,11 @@ export function SubjectReferenceBrowser({
   const curriculumGroups = useMemo(
     () => groupCurriculumSubjects(selectedProgramCode === "BSAIS" ? curriculumSubjects : [], selectedYear),
     [selectedProgramCode, curriculumSubjects, selectedYear]
+  );
+
+  const hasNoOfferingsForStudentProgram = Boolean(
+    studentProgramCode &&
+      !historicalOfferings.some((o) => o.program_code === studentProgramCode)
   );
 
   return (
@@ -160,7 +187,7 @@ export function SubjectReferenceBrowser({
             value={selectedProgramCode}
             onChange={(event) => setSelectedProgramCode(event.target.value)}
           >
-            {programs.filter(p => Boolean(p.code)).map((p) => (
+            {programs.filter((p) => Boolean(p.code)).map((p) => (
               <option key={p.id} value={p.code ?? ""}>
                 {p.code} – {p.name}
               </option>
@@ -180,7 +207,17 @@ export function SubjectReferenceBrowser({
           </SelectInput>
         </div>
 
-        {selectedProgramCode !== studentProgramCode ? (
+        {hasNoOfferingsForStudentProgram && selectedProgramCode === studentProgramCode ? (
+          <aside className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-semibold">No Historical Course Offerings Recorded</p>
+            <p className="mt-1">
+              Your official recorded student program is <strong>{studentProgramName} ({studentProgramCode})</strong>.
+              The supplied AY 2025-2026, 2nd Semester workbook does not include course offerings for this program. Select another program above to browse available offerings.
+            </p>
+          </aside>
+        ) : null}
+
+        {studentProgramCode && selectedProgramCode !== studentProgramCode ? (
           <aside className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
             <p className="font-semibold">Browsing Program Notice</p>
             <p className="mt-1">
@@ -226,7 +263,12 @@ export function SubjectReferenceBrowser({
         </div>
 
         <div className="mt-6">
-          {!programOfferings.length ? (
+          {historicalOfferingsError ? (
+            <EmptyState
+              title="Historical course offerings could not be loaded"
+              description="Please try again. Historical course offerings failed to load from the database."
+            />
+          ) : !programOfferings.length ? (
             <EmptyState
               title="No historical offering reference is available"
               description="The supplied AY 2025-2026, 2nd Semester workbook does not include course rows for this program."
@@ -257,12 +299,17 @@ export function SubjectReferenceBrowser({
         <Card className="border-t-4 border-t-primary-800">
           <CardHeader
             title="BSAIS Curriculum Reference"
-            description="Full BSAIS curriculum reference derived from the client-provided Subjects document. These curriculum rows support the research-MVP BSAIS standard-load enrollment workflow."
+            description="Full BSAIS curriculum reference derived from the public.subjects database table. These curriculum rows support the research-MVP BSAIS standard-load enrollment workflow."
             action={<Badge tone="brand">{curriculumSubjects.length} curriculum subjects</Badge>}
           />
 
           <div className="mt-6">
-            {!curriculumGroups.length ? (
+            {curriculumSubjectsError ? (
+              <EmptyState
+                title="BSAIS curriculum reference could not be loaded"
+                description="Please try again. Database query for public.subjects failed."
+              />
+            ) : !curriculumGroups.length ? (
               <EmptyState title="No BSAIS curriculum subjects were found for the selected year level." />
             ) : (
               <div className="space-y-5">
