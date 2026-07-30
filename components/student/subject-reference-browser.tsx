@@ -8,14 +8,27 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SelectInput } from "@/components/ui/field";
 import { SubjectReferenceTable } from "@/components/student/subject-reference-table";
-import { COURSE_OFFERINGS_TERM_25_26, type CourseOfferingSeed } from "@/lib/constants/course-offerings";
+import { COURSE_OFFERINGS_TERM_25_26 } from "@/lib/constants/course-offerings";
 import { SEMESTERS, YEAR_LEVELS } from "@/lib/constants/pkm";
 import type { SubjectSeed } from "@/lib/constants/subjects";
-import type { Semester, YearLevel } from "@/types/database";
+import type { Semester, YearLevel, Program } from "@/types/database";
+
+export interface DBOfferingRow {
+  id: string;
+  program_id: string;
+  program_code: string;
+  academic_year: string;
+  semester: Semester;
+  year_level: YearLevel;
+  course_code: string;
+  course_description: string;
+  units: number;
+  source_document: string;
+}
 
 type HistoricalOfferingGroup = {
   yearLevel: YearLevel;
-  offerings: CourseOfferingSeed[];
+  offerings: DBOfferingRow[];
   totalUnits: number;
 };
 
@@ -30,7 +43,7 @@ function totalUnits(rows: Array<{ units: number }>) {
   return rows.reduce((sum, row) => sum + row.units, 0);
 }
 
-function groupHistoricalOfferings(rows: CourseOfferingSeed[], selectedYear: YearLevel | "") {
+function groupHistoricalOfferings(rows: DBOfferingRow[], selectedYear: YearLevel | "") {
   const visibleYears = selectedYear ? [selectedYear] : YEAR_LEVELS;
 
   return visibleYears
@@ -74,32 +87,54 @@ function GroupHeading({
 }
 
 export function SubjectReferenceBrowser({
-  programCode,
-  programName,
+  studentProgramCode,
+  studentProgramName,
+  programs,
   historicalOfferings,
   curriculumSubjects
 }: {
-  programCode: string;
-  programName: string;
-  historicalOfferings: CourseOfferingSeed[];
+  studentProgramCode: string;
+  studentProgramName: string;
+  programs: Array<Pick<Program, "id" | "name" | "code">>;
+  historicalOfferings: DBOfferingRow[];
   curriculumSubjects: SubjectSeed[];
 }) {
+  // Determine initial selected program: default to student's program if offerings exist, else BSAIS
+  const initialProgramCode = useMemo(() => {
+    const studentHasOfferings = historicalOfferings.some(o => o.program_code === studentProgramCode);
+    if (studentHasOfferings) return studentProgramCode;
+    return "BSAIS";
+  }, [historicalOfferings, studentProgramCode]);
+
+  const [selectedProgramCode, setSelectedProgramCode] = useState<string>(initialProgramCode);
   const [selectedYear, setSelectedYear] = useState<YearLevel | "">("");
-  const historicalGroups = useMemo(
-    () => groupHistoricalOfferings(historicalOfferings, selectedYear),
-    [historicalOfferings, selectedYear]
+
+  const activeProgram = programs.find((p) => p.code === selectedProgramCode) ?? {
+    code: selectedProgramCode,
+    name: studentProgramCode === selectedProgramCode ? studentProgramName : selectedProgramCode
+  };
+
+  const programOfferings = useMemo(
+    () => historicalOfferings.filter((o) => o.program_code === selectedProgramCode),
+    [historicalOfferings, selectedProgramCode]
   );
+
+  const historicalGroups = useMemo(
+    () => groupHistoricalOfferings(programOfferings, selectedYear),
+    [programOfferings, selectedYear]
+  );
+
   const curriculumGroups = useMemo(
-    () => groupCurriculumSubjects(curriculumSubjects, selectedYear),
-    [curriculumSubjects, selectedYear]
+    () => groupCurriculumSubjects(selectedProgramCode === "BSAIS" ? curriculumSubjects : [], selectedYear),
+    [selectedProgramCode, curriculumSubjects, selectedYear]
   );
 
   return (
     <div className="space-y-6">
       <Card className="border-t-4 border-t-primary-800">
         <CardHeader
-          title="Subject List"
-          description="This page provides source-based academic references. Your actual enrollment subjects are determined by your submitted enrollment record and Registrar review."
+          title="Subject List & Course Offering Reference"
+          description="This page provides source-based academic references across all institutional programs. Your actual enrollment subjects are determined by your submitted enrollment record and Registrar review."
           action={<ButtonLink href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>}
         />
       </Card>
@@ -118,51 +153,80 @@ export function SubjectReferenceBrowser({
           }
         />
 
-        <dl className="grid gap-3 rounded-md bg-slateui-surfaceAlt p-4 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="font-medium text-slateui-muted">Program</dt>
-            <dd className="mt-1 font-semibold text-slateui-text">{programName}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-slateui-muted">Program Code</dt>
-            <dd className="mt-1 font-semibold text-slateui-text">{programCode}</dd>
-          </div>
-        </dl>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SelectInput
+            label="Select Program to Browse"
+            name="program_select"
+            value={selectedProgramCode}
+            onChange={(event) => setSelectedProgramCode(event.target.value)}
+          >
+            {programs.filter(p => Boolean(p.code)).map((p) => (
+              <option key={p.id} value={p.code ?? ""}>
+                {p.code} – {p.name}
+              </option>
+            ))}
+          </SelectInput>
 
-        {programCode === "BSAIS" ? (
-          <aside className="mt-5 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-            <p className="font-semibold">Source note</p>
-            <p className="mt-1 font-medium">Historical workbook source note</p>
+          <SelectInput
+            label="Year Level Filter"
+            name="year_level"
+            value={selectedYear || ""}
+            onChange={(event) => setSelectedYear(event.target.value as YearLevel | "")}
+          >
+            <option value="">All year levels</option>
+            {YEAR_LEVELS.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </SelectInput>
+        </div>
+
+        {selectedProgramCode !== studentProgramCode ? (
+          <aside className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-semibold">Browsing Program Notice</p>
             <p className="mt-1">
-              The supplied course-offering workbook contains duplicate BSAIS blocks and reports six 4th Year units, but no visible 4th Year BSAIS course rows were available in the supplied sheet. No missing offering rows were invented.
+              You are currently browsing <strong>{activeProgram.name} ({activeProgram.code})</strong>. Your official recorded student program remains <strong>{studentProgramName} ({studentProgramCode})</strong>.
             </p>
           </aside>
         ) : null}
 
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="w-full sm:max-w-xs">
-            <SelectInput
-              label="Year Level"
-              name="year_level"
-              value={selectedYear}
-              onChange={(event) => setSelectedYear(event.target.value as YearLevel | "")}
-            >
-              <option value="">All year levels</option>
-              {YEAR_LEVELS.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </SelectInput>
+        <dl className="mt-4 grid gap-3 rounded-md bg-slateui-surfaceAlt p-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-slateui-muted">Active Program</dt>
+            <dd className="mt-1 font-semibold text-slateui-text">{activeProgram.name}</dd>
           </div>
+          <div>
+            <dt className="font-medium text-slateui-muted">Program Code</dt>
+            <dd className="mt-1 font-semibold text-slateui-text">{activeProgram.code}</dd>
+          </div>
+        </dl>
+
+        {selectedProgramCode === "BSAIS" ? (
+          <aside className="mt-5 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+            <p className="font-semibold">BSAIS Historical Offering Note</p>
+            <p className="mt-1">
+              The supplied course-offering workbook contains duplicate BSAIS blocks and reports six 4th Year units, but no visible 4th Year BSAIS course rows were available in the supplied sheet. No missing offering rows were invented.
+            </p>
+          </aside>
+        ) : (
+          <aside className="mt-5 rounded-md border border-slateui-border bg-slateui-surfaceAlt px-4 py-3 text-sm text-slateui-secondary">
+            <p className="font-semibold text-slateui-text">Non-BSAIS Historical Reference Notice</p>
+            <p className="mt-1">
+              These course offerings are historical workbook records from AY 2025-2026, 2nd Semester. A complete official curriculum has not been supplied for this program, and automatic standard-load Online Enrollment is not configured for non-BSAIS programs.
+            </p>
+          </aside>
+        )}
+
+        <div className="mt-5 flex items-center justify-end">
           {selectedYear ? (
-            <Button type="button" variant="outline" onClick={() => setSelectedYear("") }>
+            <Button type="button" variant="outline" onClick={() => setSelectedYear("")}>
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Show All
+              Reset Year Filter
             </Button>
           ) : null}
         </div>
 
         <div className="mt-6">
-          {!historicalOfferings.length ? (
+          {!programOfferings.length ? (
             <EmptyState
               title="No historical offering reference is available"
               description="The supplied AY 2025-2026, 2nd Semester workbook does not include course rows for this program."
@@ -189,11 +253,11 @@ export function SubjectReferenceBrowser({
         </div>
       </Card>
 
-      {programCode === "BSAIS" ? (
+      {selectedProgramCode === "BSAIS" ? (
         <Card className="border-t-4 border-t-primary-800">
           <CardHeader
             title="BSAIS Curriculum Reference"
-            description="Full BSAIS curriculum reference derived from the client-provided Subjects document. These curriculum rows support the research-MVP BSAIS subject seed. They are not proof that you are currently enrolled in every listed subject."
+            description="Full BSAIS curriculum reference derived from the client-provided Subjects document. These curriculum rows support the research-MVP BSAIS standard-load enrollment workflow."
             action={<Badge tone="brand">{curriculumSubjects.length} curriculum subjects</Badge>}
           />
 
