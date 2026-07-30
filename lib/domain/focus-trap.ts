@@ -17,6 +17,38 @@ export type FocusTrapContext = {
   focusableCount: number;
 };
 
+export type FocusTarget = {
+  focus: () => void;
+};
+
+export type ScrollLockBody = {
+  style: {
+    overflow: string;
+  };
+};
+
+export function lockBodyScroll(body: ScrollLockBody) {
+  const previousOverflow = body.style.overflow;
+  body.style.overflow = "hidden";
+
+  return () => {
+    body.style.overflow = previousOverflow;
+  };
+}
+
+export function focusFirstControl(focusables: ArrayLike<FocusTarget>, fallback: FocusTarget) {
+  if (focusables.length > 0) {
+    focusables[0].focus();
+    return;
+  }
+
+  fallback.focus();
+}
+
+export function restoreFocus(target: FocusTarget | null | undefined) {
+  target?.focus();
+}
+
 /**
  * Returns:
  *   - "CLOSE" when Escape is pressed

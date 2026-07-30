@@ -4,7 +4,12 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { NavigationItem } from "@/lib/constants/navigation";
 import { buttonClassName } from "@/components/ui/button";
-import { resolveFocusTrapAction } from "@/lib/domain/focus-trap";
+import {
+  focusFirstControl,
+  lockBodyScroll,
+  resolveFocusTrapAction,
+  restoreFocus
+} from "@/lib/domain/focus-trap";
 import { LogoutButton } from "./logout-button";
 import { PkmMark } from "./pkm-mark";
 import { SideNav } from "./side-nav";
@@ -63,28 +68,25 @@ export function PortalNavigation({
       }
     }
 
+    let restoreBodyScroll: (() => void) | null = null;
+
     if (open) {
-      document.body.style.overflow = "hidden";
+      restoreBodyScroll = lockBodyScroll(document.body);
       window.addEventListener("keydown", handleKeyDown);
       requestAnimationFrame(() => {
         if (mobileNavRef.current) {
           const focusables = mobileNavRef.current.querySelectorAll<HTMLElement>(
             'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
           );
-          if (focusables.length > 0) {
-            focusables[0].focus();
-          } else {
-            mobileNavRef.current.focus();
-          }
+          focusFirstControl(focusables, mobileNavRef.current);
         }
       });
     } else {
-      document.body.style.overflow = "";
-      menuButtonRef.current?.focus();
+      restoreFocus(menuButtonRef.current);
     }
 
     return () => {
-      document.body.style.overflow = "";
+      restoreBodyScroll?.();
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);

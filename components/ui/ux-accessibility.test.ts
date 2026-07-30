@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { enrollmentBadgeTone } from "@/components/ui/badge";
-import { resolveFocusTrapAction } from "@/lib/domain/focus-trap";
+import {
+  focusFirstControl,
+  lockBodyScroll,
+  resolveFocusTrapAction,
+  restoreFocus
+} from "@/lib/domain/focus-trap";
 import type { FocusTrapContext } from "@/lib/domain/focus-trap";
 
 // Helper to build a FocusTrapContext for tests
@@ -80,13 +85,33 @@ test("PortalNavigation close restores focus to menu button", () => {
   assert.equal(resolveFocusTrapAction("Escape", false, ctx()), "CLOSE");
 });
 
-test("PortalNavigation body scroll lock is restored on close and unmount", () => {
-  // Body scroll lock is handled by the useEffect:
-  // - open=true: document.body.style.overflow = "hidden"
-  // - open=false: document.body.style.overflow = ""
-  // - cleanup: document.body.style.overflow = ""
-  // This is DOM-level behavior tested by Playwright smoke tests.
-  // The focus-trap function handles keyboard events only.
-  // Smoke test: npm run test:smoke:workflow
-  assert.ok(true, "Body scroll lock is a DOM integration concern verified by smoke tests");
+test("PortalNavigation body scroll lock restores the previous value on close and unmount", () => {
+  const body = { style: { overflow: "scroll" } };
+  const cleanup = lockBodyScroll(body);
+
+  assert.equal(body.style.overflow, "hidden");
+  cleanup();
+  assert.equal(body.style.overflow, "scroll");
+
+  body.style.overflow = "auto";
+  const unmountCleanup = lockBodyScroll(body);
+  assert.equal(body.style.overflow, "hidden");
+  unmountCleanup();
+  assert.equal(body.style.overflow, "auto");
+});
+
+test("PortalNavigation moves initial focus and restores focus to the menu trigger", () => {
+  let firstFocused = false;
+  let fallbackFocused = false;
+  let triggerFocused = false;
+
+  focusFirstControl(
+    [{ focus: () => { firstFocused = true; } }],
+    { focus: () => { fallbackFocused = true; } }
+  );
+  restoreFocus({ focus: () => { triggerFocused = true; } });
+
+  assert.equal(firstFocused, true);
+  assert.equal(fallbackFocused, false);
+  assert.equal(triggerFocused, true);
 });
