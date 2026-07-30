@@ -53,6 +53,7 @@ type OfficialRecordWithProgram = OfficialStudentRecord & {
 };
 
 type AccountDetails = {
+  officialRecordId: string;
   studentIdNumber: string;
   firstName: string;
   lastName: string;
@@ -162,23 +163,28 @@ async function findExactOfficialRecord({
 async function findExistingStudentAccount({
   admin,
   email,
-  studentIdNumber
+  studentIdNumber,
+  officialRecordId
 }: {
   admin: ReturnType<typeof createSupabaseAdminClient>;
   email: string;
   studentIdNumber: string;
+  officialRecordId?: string;
 }) {
-  const [existingProfileResult, existingStudentResult] = await Promise.all([
+  const [existingProfileResult, existingStudentResult, existingLinkResult] = await Promise.all([
     admin.from("profiles").select("id, account_status").eq("email", email).limit(1).maybeSingle(),
-    admin.from("students").select("id").eq("student_id_number", studentIdNumber).limit(1).maybeSingle()
+    admin.from("students").select("id").eq("student_id_number", studentIdNumber).limit(1).maybeSingle(),
+    officialRecordId
+      ? admin.from("students").select("id").eq("official_record_id", officialRecordId).limit(1).maybeSingle()
+      : Promise.resolve({ data: null, error: null })
   ]);
 
-  if (existingProfileResult.error || existingStudentResult.error) {
+  if (existingProfileResult.error || existingStudentResult.error || existingLinkResult.error) {
     logClaimFailure("account_lookup_failed");
     return { exists: true, status: null };
   }
 
-  const exists = Boolean(existingProfileResult.data || existingStudentResult.data);
+  const exists = Boolean(existingProfileResult.data || existingStudentResult.data || existingLinkResult.data);
   const status = existingProfileResult.data?.account_status ?? null;
   const profileId = existingProfileResult.data?.id ?? null;
   return { exists, status, profileId };
@@ -284,13 +290,13 @@ async function performStudentRegistration(
 
   const { error: studentError } = await admin.from("students").insert({
     profile_id: profileId,
+    official_record_id: details.officialRecordId,
     student_id_number: details.studentIdNumber,
     program_id: details.programId,
     year_level: details.yearLevel,
     student_type: details.studentType,
     enrollment_status: "NOT ENROLLED"
   });
-
   if (studentError) {
     logClaimFailure("student_insert_failed");
     await cleanupNewRegistration(admin, profileId, "student_insert");
@@ -470,9 +476,8 @@ export async function createStudentAccountAction(
     redirect(getInvalidClaimRecoveryPath());
   }
 
-  const accountInfo = await findExistingStudentAccount({ admin, email, studentIdNumber });
+  const accountInfo = await findExistingStudentAccount({ admin, email, studentIdNumber, officialRecordId: record.id });
   if (accountInfo.exists) {
-    // If account exists and is in SETUP state and email is enabled, trigger resend!
     if (emailEnv.enabled && accountInfo.status === "SETUP" && accountInfo.profileId) {
       try {
         const reservation = await reserveSetupEmailDelivery(admin, accountInfo.profileId);
@@ -495,10 +500,10 @@ export async function createStudentAccountAction(
     logClaimFailure("claim_already_exists_before_registration");
     redirect(getInvalidClaimRecoveryPath());
   }
-
   const result = await performStudentRegistration(
     admin,
     {
+      officialRecordId: record.id,
       studentIdNumber,
       firstName: record.first_name,
       lastName: record.last_name,
