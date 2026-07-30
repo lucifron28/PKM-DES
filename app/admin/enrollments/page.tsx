@@ -4,6 +4,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnrollmentReviewControls } from "@/components/admin/enrollment-review-controls";
 import { requireRole } from "@/lib/auth/session";
+import { getActiveEnrollmentTerm } from "@/lib/enrollment/term-authority";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
@@ -31,11 +32,20 @@ export default async function PendingEnrollmentsPage({
 }) {
   const { supabase } = await requireRole("admin");
   const params = (await searchParams) ?? {};
-  const { data, error: enrollmentsError } = await supabase
+  const activeTerm = await getActiveEnrollmentTerm(supabase);
+
+  let query = supabase
     .from("enrollments")
     .select("*, students(*, profiles(*)), programs(*)")
-    .eq("status", "PENDING")
-    .order("submitted_at", { ascending: true });
+    .eq("status", "PENDING");
+
+  if (activeTerm) {
+    query = query
+      .eq("academic_year", activeTerm.academicYear)
+      .eq("semester", activeTerm.semester);
+  }
+
+  const { data, error: enrollmentsError } = await query.order("submitted_at", { ascending: true });
 
   const enrollments = (data as EnrollmentRow[] | null) ?? [];
 
