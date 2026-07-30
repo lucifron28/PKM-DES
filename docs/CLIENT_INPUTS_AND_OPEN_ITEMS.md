@@ -55,8 +55,12 @@ Required student profile fields beyond the current MVP:
 - Admission Status
 - Enrollment Status
 
-Official student-record enrollment status is Registrar source metadata in the MVP. It is separate from a student's submitted enrollment request and must not be treated as an approval, rejection, or account update.
-
+- Official Student Record Authority: The Official Student Record is the authoritative Registrar source for student identity, address, and academic classification.
+- Linked Account Fields: `students.official_record_id` links a student account directly and atomically to its official record.
+- Fields Synchronized: Updating an official record atomically synchronizes linked student account fields (`profiles.first_name`, `profiles.last_name`, `students.program_id`, `students.year_level`, `students.student_type`, `students.student_id_number`).
+- Email Exception: Official record email changes surface an explicit `email_mismatch` warning; Supabase Auth and profile email addresses are never changed silently without a separate Auth-aware operation.
+- Ambiguous Legacy Records: Unambiguous 1-to-1 legacy matches are backfilled by exact Student ID and email; ambiguous or competing records remain unlinked until resolved.
+- Official student-record enrollment status remains Registrar source metadata in the MVP. It is separate from a student's submitted enrollment request and must not be treated as an approval, rejection, or account update.
 Student ID examples:
 
 - `23-00340`

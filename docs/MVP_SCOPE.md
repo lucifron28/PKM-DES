@@ -72,7 +72,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - The FRD describes generated credentials delivered by email, while the default MVP path uses a self-selected password so the account flow can be tested. A configured server-only setup-link delivery path remains disabled by default and does not send generated passwords.
 - The signed account-claim proof protects the MVP workflow state but is not production-grade institutional identity verification; account-claim rate limiting remains future hardening.
 - Official student record fields and controlled options are guided MVP inputs, not finalized institutional value lists.
-- Official student records are Registrar source data. Their account-link states may be exact, partial, conflicting, missing, or temporarily unavailable, but the MVP does not automatically repair identities or synchronize existing accounts. Their enrollment-status field does not create or change an enrollment request.
+- Official student records are Registrar source data. Each claimed student account is linked via `students.official_record_id`. Official record updates by an admin automatically synchronize account-safe fields (`profiles.first_name`, `profiles.last_name`, `students.program_id`, `students.year_level`, `students.student_type`, `students.student_id_number`) through an atomic RPC, while Supabase Auth and profile email addresses require separate Auth-aware handling. Unambiguous legacy records are backfilled; ambiguous records remain unlinked. Their source enrollment-status field does not create or change an enrollment request.
 - Reports use browser printing, not an approved export, PDF, or registrar report format.
 
 ## 5. Placeholder Modules
