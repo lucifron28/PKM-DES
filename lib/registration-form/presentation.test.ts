@@ -32,6 +32,7 @@ test("maps stored student classifications to visible registration marks", () => 
   });
   assert.equal(getRegistrationClassificationMarks("Transferee").transferee, true);
   assert.equal(getRegistrationClassificationMarks("Old Student").oldStudent, true);
+  assert.equal(getRegistrationClassificationMarks("Continuing Student").oldStudent, true);
   assert.deepEqual(getRegistrationClassificationMarks("Regular Student"), {
     newStudent: false,
     oldStudent: true,

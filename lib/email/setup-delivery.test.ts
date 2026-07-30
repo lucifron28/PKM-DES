@@ -10,3 +10,12 @@ test("setup email resend cooldown accepts first sends and rejects recent request
   assert.equal(isSetupEmailResendAllowed(new Date(now.getTime() - 1).toISOString(), now), false);
   assert.equal(isSetupEmailResendAllowed("not-a-timestamp", now), false);
 });
+
+test("failed email provider delivery permits safe retry when timestamp is cleared", () => {
+  const now = new Date("2026-07-29T08:00:00.000Z");
+  let sentAtTimestamp: string | null = now.toISOString();
+
+  // Failed send releases reservation by clearing timestamp
+  sentAtTimestamp = null;
+  assert.equal(isSetupEmailResendAllowed(sentAtTimestamp, now), true);
+});
