@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
-import { CURRENT_ENROLLMENT_TERM } from "@/lib/constants/pkm";
+import { getActiveEnrollmentTerm } from "@/lib/enrollment/term-authority";
 import {
   getStudentSubmissionMessage,
   isStudentSubmissionOutcome,
@@ -32,9 +32,18 @@ export async function submitEnrollmentAction(
     return { message: "Please certify that the information provided is correct." };
   }
 
+  const activeTerm = await getActiveEnrollmentTerm(supabase);
+  if (!activeTerm) {
+    return { message: getStudentSubmissionMessage("term_unavailable") };
+  }
+
+  if (!activeTerm.enrollmentOpen) {
+    return { message: getStudentSubmissionMessage("term_not_open") };
+  }
+
   const { data, error } = await supabase.rpc("submit_standard_student_enrollment", {
-    p_academic_year: CURRENT_ENROLLMENT_TERM.academicYear,
-    p_semester: CURRENT_ENROLLMENT_TERM.semester
+    p_academic_year: activeTerm.academicYear,
+    p_semester: activeTerm.semester
   });
   const result = (data as StudentEnrollmentRpcResult[] | null)?.[0];
 
