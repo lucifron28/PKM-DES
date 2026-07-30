@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 function Invoke-LocalSql {
   param([string]$Sql)
 
-  $output = $Sql | & docker exec -i $ContainerName psql -U postgres -d postgres -At -v ON_ERROR_STOP=1
+  $output = $Sql | & docker exec -i $ContainerName psql -U postgres -d postgres -qAt -v ON_ERROR_STOP=1
   if ($LASTEXITCODE -ne 0) {
     throw "Local Supabase SQL command failed."
   }
@@ -21,7 +21,7 @@ function Invoke-ParallelLocalSql {
   $jobs = foreach ($statement in $Statements) {
     Start-Job -ScriptBlock {
       param($Sql, $DatabaseContainer)
-      $Sql | & docker exec -i $DatabaseContainer psql -U postgres -d postgres -At -v ON_ERROR_STOP=1
+      $Sql | & docker exec -i $DatabaseContainer psql -U postgres -d postgres -qAt -v ON_ERROR_STOP=1
       if ($LASTEXITCODE -ne 0) {
         throw "Concurrent local Supabase SQL command failed."
       }
@@ -86,13 +86,11 @@ commit;
   $reviewSql = @"
 begin;
 set local role authenticated;
-select set_config('request.jwt.claim.sub', '$adminId', true);
+select set_config('request.jwt.claim.sub', '$adminId', true) as jwt \gset
 select outcome from public.review_pending_enrollment('$enrollmentId', 'APPROVED', null);
 commit;
 "@
-  $reviewOutcomes = @(Invoke-ParallelLocalSql @($reviewSql, $reviewSql) |
-    Where-Object { $_ -in @("approved", "already_reviewed") } |
-    Sort-Object)
+  $reviewOutcomes = @(Invoke-ParallelLocalSql @($reviewSql, $reviewSql) | Sort-Object)
   if (($reviewOutcomes -join ',') -ne 'already_reviewed,approved') {
     throw "Concurrent enrollment review did not return one approved and one already_reviewed outcome: $($reviewOutcomes -join ',')."
   }
@@ -116,15 +114,14 @@ set local role service_role;
 select outcome from public.reserve_student_setup_email_delivery('$resendId');
 commit;
 "@
-  $resendOutcomes = @(Invoke-ParallelLocalSql @($resendSql, $resendSql) |
-    Where-Object { $_ -in @("reserved", "cooldown") } |
-    Sort-Object)
+  $resendOutcomes = @(Invoke-ParallelLocalSql @($resendSql, $resendSql) | Sort-Object)
   if (($resendOutcomes -join ',') -ne 'cooldown,reserved') {
     throw "Concurrent setup-email reservation did not return one reserved and one cooldown outcome: $($resendOutcomes -join ',')."
   }
 
   Write-Host "Local Supabase concurrency verification passed."
 } finally {
+  Start-Sleep -Seconds 1
   & npx.cmd supabase db reset --local --no-seed --yes
   if ($LASTEXITCODE -ne 0) {
     throw "Local Supabase cleanup reset failed."
