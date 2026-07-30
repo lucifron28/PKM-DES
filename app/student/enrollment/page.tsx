@@ -4,7 +4,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnrollmentForm } from "@/components/forms/enrollment-form";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
-import { CURRENT_ENROLLMENT_TERM } from "@/lib/constants/pkm";
+import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import {
   evaluateStandardLoadEligibility,
   getStudentSubmissionMessage
@@ -22,22 +22,56 @@ export default async function OnlineEnrollmentPage() {
     return <EmptyState title="Student record not found." description="Please contact the Registrar." />;
   }
 
+  const activeTermResult = await getActiveEnrollmentTermResult(supabase);
+
+  if (!activeTermResult.ok) {
+    return (
+      <EmptyState
+        title="Enrollment information could not be loaded."
+        description="Please try again."
+      />
+    );
+  }
+
+  if (!activeTermResult.term) {
+    return (
+      <EmptyState
+        title="No active enrollment term is currently configured."
+        description="Please contact the Registrar for academic calendar updates."
+      />
+    );
+  }
+
+  const activeTerm = activeTermResult.term;
+
+  if (!activeTerm.enrollmentOpen) {
+    return (
+      <Card className="border-t-4 border-t-amber-500">
+        <CardHeader title="Online Enrollment Closed" description={`Current term: ${activeTerm.label}`} />
+        <div className="border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Online enrollment is not currently open for {activeTerm.label}.</p>
+          <p className="mt-1">Please contact the Registrar for enrollment dates and submission instructions.</p>
+          <ButtonLink className="mt-4" href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>
+        </div>
+      </Card>
+    );
+  }
+
   const [subjectResult, enrollmentResult] = await Promise.all([
     supabase
       .from("subjects")
       .select("id", { count: "exact", head: true })
       .eq("program_id", student.program_id)
       .eq("year_level", student.year_level)
-      .eq("semester", CURRENT_ENROLLMENT_TERM.semester),
+      .eq("semester", activeTerm.semester),
     supabase
       .from("enrollments")
       .select("status, academic_year, semester")
       .eq("student_id", student.id)
-      .eq("academic_year", CURRENT_ENROLLMENT_TERM.academicYear)
-      .eq("semester", CURRENT_ENROLLMENT_TERM.semester)
+      .eq("academic_year", activeTerm.academicYear)
+      .eq("semester", activeTerm.semester)
       .maybeSingle()
   ]);
-
   if (subjectResult.error || enrollmentResult.error) {
     console.error("Enrollment information preload failed.", { stage: "preload" });
     return (
@@ -105,7 +139,7 @@ export default async function OnlineEnrollmentPage() {
             </div>
           )
         ) : eligibility === "eligible" ? (
-          <EnrollmentForm student={student} />
+          <EnrollmentForm student={student} activeTerm={activeTerm} />
         ) : (
           <div className="border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-950">
             {getStudentSubmissionMessage(eligibility)}

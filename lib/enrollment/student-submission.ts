@@ -1,5 +1,5 @@
-import { CURRENT_ENROLLMENT_TERM, PROGRAM, YEAR_LEVELS } from "@/lib/constants/pkm";
-import type { Semester, StudentType, YearLevel } from "@/types/database";
+import { PROGRAM, YEAR_LEVELS } from "@/lib/constants/pkm";
+import type { StudentType, YearLevel } from "@/types/database";
 
 export type StandardLoadEligibility =
   | "eligible"
@@ -58,16 +58,16 @@ export function isStoredYearLevel(value: string): value is YearLevel {
   return YEAR_LEVELS.includes(value as YearLevel);
 }
 
-export function isCurrentEnrollmentTerm({
-  academicYear,
-  semester
-}: {
-  academicYear: string;
-  semester: string;
-}) {
+export function isCurrentEnrollmentTerm(
+  term: { academicYear: string; semester: string },
+  activeTerm: { academicYear: string; semester: string } | null
+) {
+  if (!activeTerm) {
+    return false;
+  }
   return (
-    academicYear === CURRENT_ENROLLMENT_TERM.academicYear &&
-    semester === (CURRENT_ENROLLMENT_TERM.semester as Semester)
+    term.academicYear === activeTerm.academicYear &&
+    term.semester === activeTerm.semester
   );
 }
 

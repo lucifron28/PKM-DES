@@ -6,14 +6,17 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { getStudentForProfile, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
-import { formatName } from "@/lib/utils/format";
+import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
+import { formatDate, formatName } from "@/lib/utils/format";
 import type { EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 type DashboardEnrollment = {
+  id: string;
   status: EnrollmentReviewStatus;
   academic_year: string;
   semester: string;
+  submitted_at: string;
 };
 
 export default async function StudentDashboardPage() {
@@ -24,20 +27,39 @@ export default async function StudentDashboardPage() {
     return <EmptyState title="Student record not found." description="Please contact an administrator." />;
   }
 
-  const { data: latestEnrollment, error: latestEnrollmentError } = await supabase
-    .from("enrollments")
-    .select("status, academic_year, semester")
-    .eq("student_id", student.id)
-    .order("submitted_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [activeTermResult, enrollmentsResponse] = await Promise.all([
+    getActiveEnrollmentTermResult(supabase),
+    supabase
+      .from("enrollments")
+      .select("id, status, academic_year, semester, submitted_at")
+      .eq("student_id", student.id)
+      .order("submitted_at", { ascending: false })
+  ]);
 
-  if (latestEnrollmentError) {
-    console.error("student_dashboard:latest_enrollment");
+  if (enrollmentsResponse.error) {
+    console.error("student_dashboard:enrollments_load", enrollmentsResponse.error);
   }
 
-  const request = (latestEnrollment as DashboardEnrollment | null) ?? null;
-  const status = getDisplayedEnrollmentStatus(request?.status ?? null, student.enrollment_status);
+  const allEnrollments = (enrollmentsResponse.data as DashboardEnrollment[] | null) ?? [];
+  const activeTerm = activeTermResult.ok ? activeTermResult.term : null;
+
+  const currentTermRequest = activeTerm
+    ? allEnrollments.find(
+        (e) => e.academic_year === activeTerm.academicYear && e.semester === activeTerm.semester
+      ) ?? null
+    : null;
+
+  const previousEnrollments = activeTerm
+    ? allEnrollments.filter(
+        (e) => e.academic_year !== activeTerm.academicYear || e.semester !== activeTerm.semester
+      )
+    : allEnrollments;
+
+  const status = getDisplayedEnrollmentStatus(
+    currentTermRequest?.status ?? null,
+    student.enrollment_status
+  );
+
   const primaryAction = status === "ENROLLED"
     ? { href: "/student/cor", label: "Print Draft Registration Form", icon: FileText, variant: "secondary" as const }
     : status === "PENDING" || status === "REJECTED"
@@ -49,8 +71,12 @@ export default async function StudentDashboardPage() {
     <div className="space-y-6">
       <div className="grid gap-5 border-b border-slateui-border pb-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <div className="border-l-4 border-secondary-600 pl-4">
-          <h2 className="text-xl font-bold text-slateui-text sm:text-2xl">Welcome, {formatName(profile.first_name, profile.last_name)}!</h2>
-          <p className="mt-1 text-sm leading-6 text-slateui-muted">Review your current enrollment status and use the next action below.</p>
+          <h2 className="text-xl font-bold text-slateui-text sm:text-2xl">
+            Welcome, {formatName(profile.first_name, profile.last_name)}!
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-slateui-muted">
+            {activeTerm ? `Current Academic Term: ${activeTerm.label}` : "No active academic term configured."}
+          </p>
         </div>
         <ButtonLink href={primaryAction.href} variant={primaryAction.variant} className="w-full lg:w-auto">
           <PrimaryIcon className="h-4 w-4" aria-hidden="true" />
@@ -60,9 +86,15 @@ export default async function StudentDashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <StatCard
-          label="Enrollment Status"
+          label="Current Term Status"
           value={<Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>}
-          helper={request ? `${request.academic_year} | ${request.semester}` : "No request has been submitted."}
+          helper={
+            activeTerm
+              ? currentTermRequest
+                ? `${currentTermRequest.academic_year} | ${currentTermRequest.semester}`
+                : `No request submitted for ${activeTerm.label}`
+              : "No active enrollment term configured."
+          }
           icon={<ClipboardCheck className="h-5 w-5" />}
           tone={status === "ENROLLED" ? "success" : status === "PENDING" ? "warning" : status === "REJECTED" ? "danger" : "default"}
         />
@@ -108,6 +140,41 @@ export default async function StudentDashboardPage() {
           </div>
         </Card>
       </div>
+
+      {previousEnrollments.length > 0 ? (
+        <Card className="border-t-4 border-t-slate-600">
+          <CardHeader
+            title="Previous Enrollment History"
+            description="Your past enrollment records from prior academic terms."
+          />
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slateui-border bg-slateui-surfaceAlt text-xs font-semibold uppercase tracking-wider text-slateui-muted">
+                <tr>
+                  <th className="px-4 py-3">Academic Term</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Submitted Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slateui-border">
+                {previousEnrollments.map((record) => (
+                  <tr key={record.id}>
+                    <td className="px-4 py-3 font-semibold text-slateui-text">
+                      {record.academic_year} – {record.semester}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={enrollmentBadgeTone(record.status)}>{record.status}</Badge>
+                    </td>
+                    <td className="px-4 py-3 text-slateui-secondary">
+                      {formatDate(record.submitted_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }
