@@ -8,11 +8,12 @@ import { TextInput } from "@/components/ui/field";
 
 const initialState: LoginState = {};
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
     <form action={formAction} className="space-y-5">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       {state.message ? (
         <div className="rounded-md border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">
           {state.message}

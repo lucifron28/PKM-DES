@@ -23,6 +23,7 @@ export function getRegistrationClassificationMarks(studentType?: string | null):
     case "Transferee":
       return { ...emptyMarks, transferee: true };
     case "Old Student":
+    case "Continuing Student":
       return { ...emptyMarks, oldStudent: true };
     case "Regular Student":
       return { ...emptyMarks, oldStudent: true, regular: true };

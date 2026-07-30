@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getSafeNextDestination } from "@/lib/auth/safe-next-destination";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/database";
 
@@ -48,5 +49,7 @@ export async function loginAction(_previousState: LoginState, formData: FormData
     return { message: "Account not found" };
   }
 
-  redirect(typedProfile.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
+  const rawNext = String(formData.get("next") ?? "");
+  const destination = getSafeNextDestination(rawNext, typedProfile.role);
+  redirect(destination);
 }

@@ -7,8 +7,14 @@ import { BrandMarks } from "./pkm-mark";
 
 export async function PublicHeader() {
   const { profile } = await getCurrentProfile();
-  const dashboardHref =
-    profile?.role === "admin" ? "/admin/dashboard" : profile?.role === "student" ? "/student/dashboard" : null;
+  const isActive = profile?.account_status === "ACTIVE";
+  const dashboardHref = isActive
+    ? profile?.role === "admin"
+      ? "/admin/dashboard"
+      : profile?.role === "student"
+        ? "/student/dashboard"
+        : null
+    : null;
   const dashboardLabel = profile?.role === "admin" ? "Open Admin Portal" : "Open Student Portal";
 
   return (
