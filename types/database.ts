@@ -34,6 +34,7 @@ export type Program = {
 export type Student = {
   id: string;
   profile_id: string;
+  official_record_id?: string | null;
   student_id_number: string | null;
   program_id: string;
   year_level: YearLevel;
@@ -43,6 +44,7 @@ export type Student = {
   updated_at: string;
   programs?: Program | null;
   profiles?: Profile | null;
+  official_student_records?: OfficialStudentRecord | null;
 };
 
 export type Subject = {
