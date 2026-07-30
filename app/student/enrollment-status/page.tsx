@@ -129,16 +129,11 @@ export default async function EnrollmentStatusPage() {
               <p className="mt-1">{latestEnrollment?.remarks ? latestEnrollment.remarks : "No specific remarks were provided by the Registrar."}</p>
             </div>
             <p className="text-sm leading-6 text-slateui-secondary">
-              Review the remarks above, resolve any missing requirements or information, and resubmit your request for the active term.
+              This request cannot be automatically resubmitted for the same term. Please contact the Registrar for correction instructions.
             </p>
             <p className="text-xs text-slateui-muted">
               Reviewed: {formatDate(latestEnrollment?.reviewed_at)}
             </p>
-            <div className="pt-2">
-              <ButtonLink href="/student/enrollment" variant="primary">
-                Update and Resubmit Online Enrollment
-              </ButtonLink>
-            </div>
           </div>
         ) : (
           <p className="mt-4 text-base font-semibold text-slateui-text">
