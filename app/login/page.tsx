@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   title: "Login"
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams
+}: {
+  searchParams?: Promise<{ next?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
   return (
     <div className="public-canvas min-h-screen">
       <PublicHeader />
@@ -21,7 +26,7 @@ export default function LoginPage() {
         </section>
         <Card className="w-full max-w-md justify-self-center border-t-4 border-t-primary-800 sm:p-7">
           <CardHeader title="Login" description="Access your PKM-DES account with your active email address and password." />
-          <LoginForm />
+          <LoginForm next={params.next} />
           <div className="mt-4">
             <ButtonLink href="/" variant="outline" className="w-full">Back to Home</ButtonLink>
           </div>
