@@ -1,7 +1,6 @@
 -- Forward-only collision-safe migration for BSAIS program aliases.
 -- Supersedes and repairs collision vulnerabilities in 20260730000003.
 
--- Define a private normalization function so test fixtures can reuse the same logic.
 create or replace function private.normalize_bsais_programs()
 returns void
 language plpgsql
@@ -11,26 +10,53 @@ as $$
 declare
   v_canonical_id uuid;
   v_alias_ids uuid[];
-  v_rec record;
-  v_subject_found boolean;
+  v_target_ids uuid[];
+  v_subject record;
+  v_grade record;
 begin
-  -- 1. Locate or create canonical BSAIS program
-  select id into v_canonical_id
-  from public.programs
-  where trim(upper(code)) = 'BSAIS'
-     or trim(upper(name)) in (
+  -- Prefer an exact canonical code, then increasingly normalized candidates.
+  -- The final UUID tie-breaker keeps selection deterministic.
+  select p.id
+  into v_canonical_id
+  from public.programs p
+  where p.code = 'BSAIS'
+     or lower(p.code) = 'bsais'
+     or trim(lower(p.code)) = 'bsais'
+     or trim(upper(p.name)) in (
        'BACHELOR OF SCIENCE IN ACCOUNTING INFORMATION SYSTEMS',
        'BACHELOR OF SCIENCE IN ACCOUNTING INFORMATION SYSTEM',
        'ACCOUNTING INFORMATION SYSTEM',
        'ACCOUNTING INFORMATION SYSTEMS'
      )
-  order by (case when trim(upper(code)) = 'BSAIS' then 1 else 2 end)
+     or trim(upper(p.code)) = 'AIS'
+     or trim(upper(p.name)) = 'AIS'
+  order by case
+    when p.code = 'BSAIS' then 1
+    when lower(p.code) = 'bsais' then 2
+    when trim(lower(p.code)) = 'bsais' then 3
+    when trim(upper(p.name)) in (
+      'BACHELOR OF SCIENCE IN ACCOUNTING INFORMATION SYSTEMS',
+      'BACHELOR OF SCIENCE IN ACCOUNTING INFORMATION SYSTEM',
+      'ACCOUNTING INFORMATION SYSTEM',
+      'ACCOUNTING INFORMATION SYSTEMS'
+    ) then 4
+    when trim(upper(p.code)) = 'AIS' or trim(upper(p.name)) = 'AIS' then 5
+    else 6
+  end,
+  p.id
   limit 1;
 
   if v_canonical_id is null then
     insert into public.programs (name, code)
     values ('Bachelor of Science in Accounting Information Systems', 'BSAIS')
     returning id into v_canonical_id;
+  elsif exists (
+    select 1
+    from public.programs p
+    where p.code = 'BSAIS'
+      and p.id <> v_canonical_id
+  ) then
+    raise exception 'BSAIS normalization refused duplicate exact canonical program rows';
   else
     update public.programs
     set name = 'Bachelor of Science in Accounting Information Systems',
@@ -38,12 +64,12 @@ begin
     where id = v_canonical_id;
   end if;
 
-  -- 2. Identify all alias program IDs (case-insensitive & whitespace trimmed)
-  select array_agg(id) into v_alias_ids
-  from public.programs
+  select array_agg(p.id order by p.id)
+  into v_alias_ids
+  from public.programs p
   where (
-      trim(upper(code)) in ('AIS', 'BSAIS')
-      or trim(upper(name)) in (
+      trim(upper(p.code)) in ('AIS', 'BSAIS')
+      or trim(upper(p.name)) in (
         'AIS',
         'BSAIS',
         'ACCOUNTING INFORMATION SYSTEM',
@@ -52,169 +78,182 @@ begin
         'BACHELOR OF SCIENCE IN ACCOUNTING INFORMATION SYSTEMS'
       )
     )
-    and id <> v_canonical_id;
+    and p.id <> v_canonical_id;
 
-  if v_alias_ids is not null and array_length(v_alias_ids, 1) > 0 then
+  v_alias_ids := coalesce(v_alias_ids, array[]::uuid[]);
+  v_target_ids := array_append(v_alias_ids, v_canonical_id);
 
-    -- 3. Repoint foreign keys for students, official_student_records, enrollments
-    update public.students set program_id = v_canonical_id where program_id = any(v_alias_ids);
-    update public.official_student_records set program_id = v_canonical_id where program_id = any(v_alias_ids);
-    update public.enrollments set program_id = v_canonical_id where program_id = any(v_alias_ids);
+  update public.students
+  set program_id = v_canonical_id
+  where program_id = any(v_alias_ids);
 
-    -- 4. Deduplicate subjects by (course_code, year_level, semester).
-    --    For each alias subject that has an exact match under the canonical program,
-    --    repoint ALL dependent references (enrollment_subjects, grades, class_schedules)
-    --    to the canonical subject, then delete the alias subject.
-    for v_rec in
-      select s_alias.id as alias_subject_id, s_canonical.id as canonical_subject_id
-      from public.subjects s_alias
-      join public.subjects s_canonical
-        on s_canonical.program_id = v_canonical_id
-       and s_canonical.course_code = s_alias.course_code
-       and s_canonical.year_level = s_alias.year_level
-       and s_canonical.semester = s_alias.semester
-      where s_alias.program_id = any(v_alias_ids)
-    loop
-      -- Handle enrollment_subjects uniqueness: if the same enrollment already references
-      -- the canonical subject, delete the alias row (safe because on delete cascade is on enrollment_subjects FK).
-      delete from public.enrollment_subjects
-      where subject_id = v_rec.alias_subject_id
-        and enrollment_id in (
-          select es.enrollment_id
-          from public.enrollment_subjects es
-          where es.subject_id = v_rec.canonical_subject_id
-        );
+  update public.official_student_records
+  set program_id = v_canonical_id
+  where program_id = any(v_alias_ids);
 
-      update public.enrollment_subjects
-      set subject_id = v_rec.canonical_subject_id
-      where subject_id = v_rec.alias_subject_id;
+  update public.enrollments
+  set program_id = v_canonical_id
+  where program_id = any(v_alias_ids);
 
-      -- Handle grades uniqueness constraint (student_id, subject_id).
-      -- Merge: keep the better (lower numeric) grade from alias subjects,
-      -- then repoint remaining alias-only grades to the canonical subject.
-      update public.grades
-      set grade = least(grades.grade, alias_grade.grade)
-      from public.grades alias_grade
-      where grades.subject_id = v_rec.canonical_subject_id
-        and grades.student_id = alias_grade.student_id
-        and alias_grade.subject_id = v_rec.alias_subject_id;
+  -- Build one direct remove_id -> survivor_id map for every subject key.
+  -- Canonical-program rows win; otherwise the lowest UUID wins.
+  drop table if exists pg_temp.bsais_subject_map;
+  create temporary table bsais_subject_map (
+    remove_id uuid primary key,
+    survivor_id uuid not null
+  ) on commit drop;
 
-      delete from public.grades
-      where subject_id = v_rec.alias_subject_id
-        and student_id in (
-          select g.student_id
-          from public.grades g
-          where g.subject_id = v_rec.canonical_subject_id
-        );
+  insert into bsais_subject_map (remove_id, survivor_id)
+  with ranked_subjects as (
+    select
+      s.id,
+      first_value(s.id) over (
+        partition by s.course_code, s.year_level, s.semester
+        order by case when s.program_id = v_canonical_id then 0 else 1 end, s.id
+      ) as survivor_id
+    from public.subjects s
+    where s.program_id = any(v_target_ids)
+  )
+  select id, survivor_id
+  from ranked_subjects
+  where id <> survivor_id;
 
-      update public.grades
-      set subject_id = v_rec.canonical_subject_id
-      where subject_id = v_rec.alias_subject_id;
+  -- Validate academic-record conflicts before changing any subject references.
+  drop table if exists pg_temp.bsais_grade_merge;
+  create temporary table bsais_grade_merge on commit drop as
+  select
+    g.id as grade_id,
+    g.student_id,
+    g.subject_id,
+    coalesce(m.survivor_id, g.subject_id) as survivor_id,
+    g.grade,
+    g.remarks,
+    g.created_at,
+    g.updated_at
+  from public.grades g
+  left join bsais_subject_map m on m.remove_id = g.subject_id
+  where g.subject_id in (
+    select survivor_id from bsais_subject_map
+    union
+    select remove_id from bsais_subject_map
+  );
 
-      -- Repoint class_schedules
-      update public.class_schedules
-      set subject_id = v_rec.canonical_subject_id
-      where subject_id = v_rec.alias_subject_id;
+  if exists (
+    select 1
+    from bsais_grade_merge
+    group by student_id, survivor_id
+    having count(distinct grade) filter (where grade is not null) > 1
+  ) then
+    raise exception 'BSAIS normalization refused conflicting academic grades; Registrar resolution is required';
+  end if;
 
-      delete from public.subjects where id = v_rec.alias_subject_id;
-    end loop;
+  if exists (
+    select 1
+    from bsais_grade_merge
+    group by student_id, survivor_id
+    having count(distinct remarks) filter (where remarks is not null) > 1
+  ) then
+    raise exception 'BSAIS normalization refused conflicting academic remarks; Registrar resolution is required';
+  end if;
 
-    -- 4b. Handle alias-vs-alias subject collisions (same course_code/year_level/semester
-    --     across different alias programs, where no canonical subject exists yet).
-    --     Pick the lowest UUID to keep, repoint references to it, delete duplicates.
-    for v_rec in
-      select s1.id as keep_id, s2.id as remove_id
-      from public.subjects s1
-      join public.subjects s2
-        on s2.course_code = s1.course_code
-       and s2.year_level = s1.year_level
-       and s2.semester = s1.semester
-       and s2.program_id = any(v_alias_ids)
-       and s1.program_id = any(v_alias_ids)
-       and s2.id > s1.id
-    loop
-      select count(*) into v_subject_found
-      from public.subjects
-      where program_id = v_canonical_id
-        and course_code = (select course_code from public.subjects where id = v_rec.keep_id)
-        and year_level = (select year_level from public.subjects where id = v_rec.keep_id)
-        and semester = (select semester from public.subjects where id = v_rec.keep_id);
-
-      if not v_subject_found then
-        delete from public.enrollment_subjects
-        where subject_id = v_rec.remove_id
-          and enrollment_id in (
-            select es.enrollment_id
-            from public.enrollment_subjects es
-            where es.subject_id = v_rec.keep_id
-          );
-
-        update public.enrollment_subjects
-        set subject_id = v_rec.keep_id
-        where subject_id = v_rec.remove_id;
-
-        -- Merge grades: keep the better (lower numeric) grade, then repoint.
-        update public.grades
-        set grade = least(grades.grade, alias_grade.grade)
-        from public.grades alias_grade
-        where grades.subject_id = v_rec.keep_id
-          and grades.student_id = alias_grade.student_id
-          and alias_grade.subject_id = v_rec.remove_id;
-
-        delete from public.grades
-        where subject_id = v_rec.remove_id
-          and student_id in (
-            select g.student_id
-            from public.grades g
-            where g.subject_id = v_rec.keep_id
-          );
-
-        update public.grades
-        set subject_id = v_rec.keep_id
-        where subject_id = v_rec.remove_id;
-
-        update public.class_schedules
-        set subject_id = v_rec.keep_id
-        where subject_id = v_rec.remove_id;
-
-        delete from public.subjects where id = v_rec.remove_id;
-      end if;
-    end loop;
-
-    -- Repoint remaining non-colliding subjects to v_canonical_id
-    update public.subjects
-    set program_id = v_canonical_id
-    where program_id = any(v_alias_ids);
-
-    -- 5. Course-offerings deduplication using complete unique key.
-    --    Remove duplicates across ALL aliases (not only those matching canonical).
-    delete from public.course_offerings co_remove
-    where co_remove.program_id = any(v_alias_ids)
+  for v_subject in
+    select remove_id, survivor_id
+    from bsais_subject_map
+    order by remove_id
+  loop
+    delete from public.enrollment_subjects removed_enrollment_subject
+    where removed_enrollment_subject.subject_id = v_subject.remove_id
       and exists (
-        select 1 from public.course_offerings co_keep
-        where co_keep.id <> co_remove.id
-          and (
-            (co_keep.program_id = v_canonical_id and co_keep.academic_year = co_remove.academic_year and co_keep.semester = co_remove.semester and co_keep.year_level = co_remove.year_level and co_keep.course_code = co_remove.course_code and co_keep.course_description = co_remove.course_description and co_keep.units = co_remove.units and co_keep.source_document = co_remove.source_document)
-            or
-            (co_keep.program_id = any(v_alias_ids) and co_keep.program_id <> co_remove.program_id and co_keep.id < co_remove.id and co_keep.academic_year = co_remove.academic_year and co_keep.semester = co_remove.semester and co_keep.year_level = co_remove.year_level and co_keep.course_code = co_remove.course_code and co_keep.course_description = co_remove.course_description and co_keep.units = co_remove.units and co_keep.source_document = co_remove.source_document)
-          )
+        select 1
+        from public.enrollment_subjects survivor_enrollment_subject
+        where survivor_enrollment_subject.enrollment_id = removed_enrollment_subject.enrollment_id
+          and survivor_enrollment_subject.subject_id = v_subject.survivor_id
       );
 
-    -- Repoint distinct course_offerings to v_canonical_id
-    update public.course_offerings
-    set program_id = v_canonical_id
-    where program_id = any(v_alias_ids);
+    update public.enrollment_subjects
+    set subject_id = v_subject.survivor_id
+    where subject_id = v_subject.remove_id;
+  end loop;
 
-    -- 6. Delete repointed duplicate program rows
-    delete from public.programs
-    where id = any(v_alias_ids);
+  -- Merge compatible duplicate grade rows. Populated values are retained,
+  -- while timestamps preserve the earliest creation and latest update.
+  for v_grade in
+    select
+      student_id,
+      survivor_id,
+      (array_agg(grade_id order by (subject_id = survivor_id) desc, created_at, grade_id))[1] as keep_grade_id,
+      max(grade) filter (where grade is not null) as merged_grade,
+      max(remarks) filter (where remarks is not null) as merged_remarks,
+      min(created_at) as merged_created_at,
+      max(updated_at) as merged_updated_at
+    from bsais_grade_merge
+    group by student_id, survivor_id
+    order by student_id, survivor_id
+  loop
+    update public.grades
+    set subject_id = v_grade.survivor_id,
+        grade = v_grade.merged_grade,
+        remarks = v_grade.merged_remarks,
+        created_at = v_grade.merged_created_at,
+        updated_at = v_grade.merged_updated_at
+    where id = v_grade.keep_grade_id;
 
-  end if;
+    delete from public.grades
+    where student_id = v_grade.student_id
+      and subject_id in (
+        select remove_id from bsais_subject_map where survivor_id = v_grade.survivor_id
+      )
+      and id <> v_grade.keep_grade_id;
+  end loop;
+
+  update public.class_schedules schedule
+  set subject_id = subject_map.survivor_id
+  from bsais_subject_map subject_map
+  where schedule.subject_id = subject_map.remove_id;
+
+  delete from public.subjects
+  where id in (select remove_id from bsais_subject_map);
+
+  update public.subjects
+  set program_id = v_canonical_id
+  where program_id = any(v_alias_ids);
+
+  -- Course offerings use their complete source key. Exact duplicates collapse
+  -- once; distinct offerings sharing a course code remain distinct.
+  drop table if exists pg_temp.bsais_offering_map;
+  create temporary table bsais_offering_map (
+    remove_id uuid primary key,
+    survivor_id uuid not null
+  ) on commit drop;
+
+  insert into bsais_offering_map (remove_id, survivor_id)
+  with ranked_offerings as (
+    select
+      co.id,
+      first_value(co.id) over (
+        partition by co.academic_year, co.semester, co.year_level,
+          co.course_code, co.course_description, co.units, co.source_document
+        order by case when co.program_id = v_canonical_id then 0 else 1 end, co.id
+      ) as survivor_id
+    from public.course_offerings co
+    where co.program_id = any(v_target_ids)
+  )
+  select id, survivor_id
+  from ranked_offerings
+  where id <> survivor_id;
+
+  delete from public.course_offerings
+  where id in (select remove_id from bsais_offering_map);
+
+  update public.course_offerings
+  set program_id = v_canonical_id
+  where program_id = any(v_alias_ids);
+
+  delete from public.programs
+  where id = any(v_alias_ids);
 end;
 $$;
 
--- Execute the normalization
 select private.normalize_bsais_programs();
 
--- Revoke execute from public roles; admins can still run via migration context
 revoke all on function private.normalize_bsais_programs() from public, anon, authenticated;

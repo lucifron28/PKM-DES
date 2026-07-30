@@ -39,11 +39,22 @@ function Invoke-ParallelLocalSql {
 $adminId = "00000000-0000-4000-8000-000000000010"
 $studentId = "00000000-0000-4000-8000-000000000020"
 $resendId = "00000000-0000-4000-8000-000000000030"
-$programId = "10000000-0000-4000-8000-000000000010"
+$programId = $null
 $studentRecordId = "20000000-0000-4000-8000-000000000010"
 $enrollmentId = "40000000-0000-4000-8000-000000000010"
 
 try {
+  $programLookup = Invoke-LocalSql @"
+insert into public.programs (id, name, code)
+values ('10000000-0000-4000-8000-000000000010', 'Bachelor of Science in Accounting Information System', 'BSAIS')
+on conflict (code) do nothing;
+select id from public.programs where code = 'BSAIS' limit 1;
+"@
+  $programId = ($programLookup | Select-Object -Last 1).ToString().Trim()
+  if (-not $programId) {
+    throw "No canonical BSAIS program was available for the concurrency fixture."
+  }
+
   Invoke-LocalSql @"
 insert into auth.users (id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -56,10 +67,6 @@ values
   ('$adminId', 'admin', 'Concurrent', 'Registrar', 'concurrent.registrar@example.test', 'ACTIVE'),
   ('$studentId', 'student', 'Concurrent', 'Student', 'concurrent.student@example.test', 'ACTIVE'),
   ('$resendId', 'student', 'Concurrent', 'Resend', 'concurrent.resend@example.test', 'SETUP');
-
-insert into public.programs (id, name, code)
-values ('$programId', 'Bachelor of Science in Accounting Information System', 'BSAIS')
-on conflict (code) do update set id = excluded.id;
 
 insert into public.students (id, profile_id, student_id_number, program_id, year_level, student_type, enrollment_status)
 values ('$studentRecordId', '$studentId', '26-00010', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED');
