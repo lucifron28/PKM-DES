@@ -8,7 +8,7 @@ import {
   sortRegistrationSubjects
 } from "@/lib/registration-form/presentation";
 import { formatDate, formatName } from "@/lib/utils/format";
-import type { Enrollment, Profile, Student, Subject } from "@/types/database";
+import type { Enrollment, OfficialStudentRecord, Profile, Student, Subject } from "@/types/database";
 
 type EnrollmentSubjectRow = {
   id: string;
@@ -16,7 +16,7 @@ type EnrollmentSubjectRow = {
 };
 
 export type PrintableEnrollment = Enrollment & {
-  students?: (Student & { profiles?: Profile | null }) | null;
+  students?: (Student & { profiles?: Profile | null; official_student_records?: OfficialStudentRecord | null }) | null;
   enrollment_subjects?: EnrollmentSubjectRow[] | null;
 };
 
@@ -116,7 +116,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
           <FormField label="Year Level" value={enrollment.year_level} />
           <FormField label="Section" value="Pending official section assignment" />
           <FormField label="Semester / Academic Year" value={semesterAcademicYear} />
-          <FormField label="Address" value="Not available in the current student record" />
+          <FormField label="Address" value={student?.official_student_records?.address ?? "Not available in the current student record"} />
           <FormField label="Academic Classification" value={getAcademicClassificationLabel(student?.student_type)} className="sm:col-span-2" />
         </section>
 
