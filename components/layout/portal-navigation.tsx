@@ -4,6 +4,12 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { NavigationItem } from "@/lib/constants/navigation";
 import { buttonClassName } from "@/components/ui/button";
+import {
+  focusFirstControl,
+  lockBodyScroll,
+  resolveFocusTrapAction,
+  restoreFocus
+} from "@/lib/domain/focus-trap";
 import { LogoutButton } from "./logout-button";
 import { PkmMark } from "./pkm-mark";
 import { SideNav } from "./side-nav";
@@ -32,43 +38,55 @@ export function PortalNavigation({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && open) {
+      if (!open || !mobileNavRef.current) return;
+
+      const focusableElements = Array.from(
+        mobileNavRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+      const activeElement = document.activeElement as HTMLElement | null;
+
+      const ctx = {
+        activeElementIndex: activeElement ? focusableElements.indexOf(activeElement) : -1,
+        isActiveElementOnContainer: activeElement === mobileNavRef.current,
+        isActiveElementOutside: !activeElement || !mobileNavRef.current.contains(activeElement),
+        focusableCount: focusableElements.length
+      };
+
+      const action = resolveFocusTrapAction(event.key, event.shiftKey, ctx);
+
+      if (action === "CLOSE") {
         setOpen(false);
         return;
       }
 
-      if (event.key === "Tab" && open && mobileNavRef.current) {
-        const focusables = mobileNavRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (!focusables.length) return;
-
-        const firstElement = focusables[0];
-        const lastElement = focusables[focusables.length - 1];
-
-        if (event.shiftKey && document.activeElement === firstElement) {
-          event.preventDefault();
-          lastElement.focus();
-        } else if (!event.shiftKey && document.activeElement === lastElement) {
-          event.preventDefault();
-          firstElement.focus();
-        }
+      if (typeof action === "number" && focusableElements[action]) {
+        event.preventDefault();
+        focusableElements[action].focus();
       }
     }
 
+    let restoreBodyScroll: (() => void) | null = null;
+
     if (open) {
-      document.body.style.overflow = "hidden";
+      restoreBodyScroll = lockBodyScroll(document.body);
       window.addEventListener("keydown", handleKeyDown);
       requestAnimationFrame(() => {
-        mobileNavRef.current?.focus();
+        if (mobileNavRef.current) {
+          const focusables = mobileNavRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          focusFirstControl(focusables, mobileNavRef.current);
+        }
       });
     } else {
-      document.body.style.overflow = "";
-      menuButtonRef.current?.focus();
+      restoreFocus(menuButtonRef.current);
     }
 
     return () => {
-      document.body.style.overflow = "";
+      restoreBodyScroll?.();
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);

@@ -4,21 +4,21 @@ export type StudentPasswordResetState = {
 };
 
 export function validateStudentPasswordResetInput({
-  password,
-  confirmPassword
+  temporary_password,
+  confirm_temporary_password
 }: {
-  password: string;
-  confirmPassword: string;
+  temporary_password: string;
+  confirm_temporary_password: string;
 }): StudentPasswordResetState {
-  if (!password || !confirmPassword) {
+  if (!temporary_password || !confirm_temporary_password) {
     return { message: "Please complete both password fields." };
   }
 
-  if (password.length < 8) {
+  if (temporary_password.length < 8) {
     return { message: "Temporary password must be at least 8 characters." };
   }
 
-  if (password !== confirmPassword) {
+  if (temporary_password !== confirm_temporary_password) {
     return { message: "Temporary password and confirmation do not match." };
   }
 
@@ -31,7 +31,9 @@ export function isExactActiveStudentAccount({
   accountEmail,
   accountStudentId,
   accountRole,
-  accountStatus
+  accountStatus,
+  linkedRecordId,
+  expectedRecordId
 }: {
   officialEmail: string;
   officialStudentId: string | null;
@@ -39,9 +41,15 @@ export function isExactActiveStudentAccount({
   accountStudentId: string | null;
   accountRole: string | null;
   accountStatus: string | null;
+  linkedRecordId?: string | null;
+  expectedRecordId?: string | null;
 }) {
+  const linkageValid =
+    linkedRecordId === undefined || expectedRecordId === undefined || linkedRecordId === expectedRecordId;
+
   return Boolean(
-    officialStudentId &&
+    linkageValid &&
+      officialStudentId &&
       accountEmail?.trim().toLowerCase() === officialEmail.trim().toLowerCase() &&
       accountStudentId?.trim() === officialStudentId.trim() &&
       accountRole === "student" &&

@@ -6,47 +6,55 @@ This document details the functional quality assurance gates, testing layers, an
 
 The repository workflow (`.github/workflows/ci.yml`) runs automatically on pull requests and pushes to `main`. It uses Node.js 20 and requires no live credentials or secrets.
 
-### Automated Checks Run by CI:
-- **Dependency installation**: `npm ci`
-- **TypeScript type checking**: `npm run typecheck` (`tsc --noEmit`)
-- **ESLint validation**: `npm run lint` (`eslint .`)
-- **Unit & Domain test suites**:
+### Automated Gates Run in Hosted CI:
+- **Dependency Installation**: `npm ci`
+- **Git Diff & Whitespace Verification**: `git diff --check`
+- **TypeScript Type Checking**: `npm run typecheck` (`tsc --noEmit`)
+- **ESLint Code Quality**: `npm run lint` (`eslint .`)
+- **Unit & Domain Test Suites**:
   - `npm run test:smoke-env`
   - `npm run test:account-claim`
   - `npm run test:admin-enrollment-review`
-  - `npx tsx --test lib/account-claim/*.test.ts`
+  - `npm run test:admin-student-records`
+  - `npm run test:student-enrollment`
+  - `npm run test:registration-form`
   - `npx tsx --test lib/account-setup/*.test.ts`
-  - `npx tsx --test lib/admin-student-records/*.test.ts`
   - `npx tsx --test lib/course-offerings/*.test.ts`
   - `npx tsx --test lib/email/*.test.ts`
-  - `npx tsx --test lib/enrollment/*.test.ts`
-  - `npx tsx --test lib/registration-form/*.test.ts`
   - `npx tsx --test lib/requirements/*.test.ts`
   - `npx tsx --test lib/auth/*.test.ts`
   - `npx tsx --test components/ui/*.test.ts`
 - **Production Next.js Build**: `npm run build`
 
-## 2. Local Supabase Database Integration Testing
+*Note: TypeScript unit tests validate application business logic, state transformations, and input sanitization. They do not validate PostgreSQL database migrations, RLS policies, RPC execution, or database concurrency.*
 
-Database migrations, RLS policies, atomic RPCs (`submit_standard_student_enrollment`, `review_pending_enrollment`, `update_official_student_record_and_sync`, `reserve_student_setup_email_delivery`, `release_student_setup_email_delivery`), and unique indexes are validated against a disposable local Supabase instance.
+## 2. Local Supabase Database & Concurrency Verification (Separate Local/Manual Gate)
+
+Database migrations, RLS policies, atomic RPCs (`submit_standard_student_enrollment`, `review_pending_enrollment`, `update_official_student_record_and_sync`, `reserve_student_setup_email_delivery`, `release_student_setup_email_delivery`), and unique indexes are separate gates executed against a disposable local Supabase deployment.
 
 ### Prerequisites:
 - Docker Desktop running locally.
-- Supabase CLI installed.
+- Supabase CLI installed (`npx supabase`).
 
-### Commands:
+### Execution Commands for Local Database Verification:
 ```bash
-# Start local Supabase containers
+# 1. Start local Supabase containers
 npx supabase start
 
-# Reset local database and apply all migrations
+# 2. Reset local database and apply all forward-only migrations
 npx supabase db reset --local --no-seed --yes
 
-# Execute database workflow and SQL integration scripts
-npx tsx --test lib/enrollment/*.test.ts
-npx tsx --test lib/admin-student-records/*.test.ts
+# 3. Run the SQL workflow and RLS verification script
+# (Executes scripts/integration/verify-local-supabase-workflows.sql inside local Postgres)
+psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify-local-supabase-workflows.sql
 
-# Stop local Supabase containers when finished
+# 4. Run the BSAIS program alias migration collision verification script
+psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify-bsais-migration-collision.sql
+
+# 5. Run the concurrency verification script
+powershell -ExecutionPolicy Bypass -File scripts/integration/verify-local-supabase-concurrency.ps1
+
+# 6. Stop local Supabase containers when finished
 npx supabase stop
 ```
 
@@ -61,10 +69,10 @@ Browser scenarios validate user-facing flows using fictional demonstration crede
 
 ### Commands:
 ```bash
-# Execute public smoke tests
+# Execute public smoke tests (does not require secrets or live services)
 npm run test:smoke:public
 
-# Execute full demo workflow smoke tests
+# Execute full demo workflow smoke tests (requires local server running)
 npm run test:smoke:workflow
 ```
 
@@ -73,4 +81,4 @@ npm run test:smoke:workflow
 After executing manual or automated testing cycles on local environments:
 1. Reset local database state: `npx supabase db reset --local --no-seed --yes`
 2. Stop background containers: `npx supabase stop`
-3. Ensure no local secrets or `.env` files are tracked by git (`git status --short`).
+3. Ensure no local secrets, `.env` files, or temporary artifacts are tracked by git (`git status --short`).

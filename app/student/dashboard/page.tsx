@@ -4,8 +4,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
-import { getStudentForProfile, requireRole } from "@/lib/auth/session";
-import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
+import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
+import { getDisplayedEnrollmentStatus, separateEnrollmentsByTerm } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { EnrollmentReviewStatus } from "@/types/database";
@@ -21,11 +21,22 @@ type DashboardEnrollment = {
 
 export default async function StudentDashboardPage() {
   const { profile, supabase } = await requireRole("student");
-  const student = await getStudentForProfile(profile.id);
+  const studentResult = await getStudentQueryResult(profile.id);
 
-  if (!student) {
+  if (studentResult.status === "query_failed") {
+    return (
+      <EmptyState
+        title="Student record could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  if (studentResult.status === "not_found") {
     return <EmptyState title="Student record not found." description="Please contact an administrator." />;
   }
+
+  const student = studentResult.student;
 
   const [activeTermResult, enrollmentsResponse] = await Promise.all([
     getActiveEnrollmentTermResult(supabase),
@@ -36,29 +47,36 @@ export default async function StudentDashboardPage() {
       .order("submitted_at", { ascending: false })
   ]);
 
-  if (enrollmentsResponse.error) {
-    console.error("student_dashboard:enrollments_load", enrollmentsResponse.error);
+  // Fail closed: active term query failure renders distinct error, never NOT ENROLLED.
+  if (!activeTermResult.ok) {
+    return (
+      <EmptyState
+        title="Current academic term information could not be loaded."
+        description="Please try again. Dashboard information is unavailable until the active term can be determined."
+      />
+    );
   }
 
+  // Fail closed: enrollment query failure renders distinct error, never NOT ENROLLED.
+  if (enrollmentsResponse.error) {
+    console.error("student_dashboard:enrollments_load", enrollmentsResponse.error);
+    return (
+      <EmptyState
+        title="Enrollment records could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  const activeTerm = activeTermResult.term;
   const allEnrollments = (enrollmentsResponse.data as DashboardEnrollment[] | null) ?? [];
-  const activeTerm = activeTermResult.ok ? activeTermResult.term : null;
 
-  const currentTermRequest = activeTerm
-    ? allEnrollments.find(
-        (e) => e.academic_year === activeTerm.academicYear && e.semester === activeTerm.semester
-      ) ?? null
-    : null;
-
-  const previousEnrollments = activeTerm
-    ? allEnrollments.filter(
-        (e) => e.academic_year !== activeTerm.academicYear || e.semester !== activeTerm.semester
-      )
-    : allEnrollments;
-
-  const status = getDisplayedEnrollmentStatus(
-    currentTermRequest?.status ?? null,
-    student.enrollment_status
+  const { currentTermEnrollment, historicalEnrollments } = separateEnrollmentsByTerm(
+    allEnrollments,
+    activeTerm
   );
+
+  const status = getDisplayedEnrollmentStatus(currentTermEnrollment?.status ?? null);
 
   const primaryAction = status === "ENROLLED"
     ? { href: "/student/cor", label: "Print Draft Registration Form", icon: FileText, variant: "secondary" as const }
@@ -90,8 +108,8 @@ export default async function StudentDashboardPage() {
           value={<Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>}
           helper={
             activeTerm
-              ? currentTermRequest
-                ? `${currentTermRequest.academic_year} | ${currentTermRequest.semester}`
+              ? currentTermEnrollment
+                ? `${currentTermEnrollment.academic_year} | ${currentTermEnrollment.semester}`
                 : `No request submitted for ${activeTerm.label}`
               : "No active enrollment term configured."
           }
@@ -141,7 +159,7 @@ export default async function StudentDashboardPage() {
         </Card>
       </div>
 
-      {previousEnrollments.length > 0 ? (
+      {historicalEnrollments.length > 0 ? (
         <Card className="border-t-4 border-t-slate-600">
           <CardHeader
             title="Previous Enrollment History"
@@ -157,7 +175,7 @@ export default async function StudentDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slateui-border">
-                {previousEnrollments.map((record) => (
+                {historicalEnrollments.map((record) => (
                   <tr key={record.id}>
                     <td className="px-4 py-3 font-semibold text-slateui-text">
                       {record.academic_year} – {record.semester}

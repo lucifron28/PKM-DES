@@ -45,6 +45,6 @@ export async function resetStudentPasswordAction(
   _previousState: StudentPasswordResetState,
   formData: FormData
 ): Promise<StudentPasswordResetState> {
-  const { supabase } = await requireRole("admin");
-  return resetStudentPasswordService(supabase, formData);
+  const { supabase, profile } = await requireRole("admin");
+  return resetStudentPasswordService(supabase, formData, profile.id);
 }

@@ -23,31 +23,49 @@ values
   ('00000000-0000-4000-8000-000000000005', 'student', 'Resend', 'Student', 'resend.student@example.test', 'SETUP'),
   ('00000000-0000-4000-8000-000000000006', 'student', 'Gate', 'Student', 'gate.student@example.test', 'ACTIVE');
 
-insert into public.programs (id, name, code)
-values ('10000000-0000-4000-8000-000000000001', 'Bachelor of Science in Accounting Information System', 'BSAIS');
+do $program_fixture$
+declare
+  v_program_id uuid;
+begin
+  insert into public.programs (id, name, code)
+  values ('10000000-0000-4000-8000-000000000001', 'Bachelor of Science in Accounting Information System', 'BSAIS')
+  on conflict (code) do nothing
+  returning id into v_program_id;
+
+  if v_program_id is null then
+    select id into v_program_id from public.programs where code = 'BSAIS' limit 1;
+  end if;
+
+  if v_program_id is null then
+    raise exception 'FAIL: no BSAIS program available for local workflow fixture';
+  end if;
+
+  perform set_config('pkm.fixture.bsais_id', v_program_id::text, true);
+end;
+$program_fixture$;
 
 insert into public.students (id, profile_id, student_id_number, program_id, year_level, student_type, enrollment_status)
 values
-  ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002', '26-00001', '10000000-0000-4000-8000-000000000001', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
-  ('20000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000003', '26-00002', '10000000-0000-4000-8000-000000000001', '1st Year', 'Old Student', 'NOT ENROLLED'),
-  ('20000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000006', '26-00003', '10000000-0000-4000-8000-000000000001', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED');
+  ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002', '26-00001', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
+  ('20000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000003', '26-00002', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', 'Old Student', 'NOT ENROLLED'),
+  ('20000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000006', '26-00003', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED');
 
 insert into public.official_student_records (
   student_id_number, first_name, last_name, email, program_id, year_level, student_type, gender_sex, enrollment_status
 )
 values
-  ('26-00001', 'Applicable', 'Student', 'applicable.student@example.test', '10000000-0000-4000-8000-000000000001', '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED'),
-  ('26-00002', 'Nonapplicable', 'Student', 'nonapplicable.student@example.test', '10000000-0000-4000-8000-000000000001', '1st Year', 'Old Student', null, 'NOT ENROLLED'),
-  ('26-00003', 'Gate', 'Student', 'gate.student@example.test', '10000000-0000-4000-8000-000000000001', '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED');
+  ('26-00001', 'Applicable', 'Student', 'applicable.student@example.test', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED'),
+  ('26-00002', 'Nonapplicable', 'Student', 'nonapplicable.student@example.test', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', 'Old Student', null, 'NOT ENROLLED'),
+  ('26-00003', 'Gate', 'Student', 'gate.student@example.test', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED');
 
 insert into public.subjects (id, program_id, course_code, course_description, units, year_level, semester)
-values ('30000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'TEST-101', 'Local verification subject', 3, '1st Year', '1st Semester');
+values ('30000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, 'TEST-101', 'Local verification subject', 3, '1st Year', '1st Semester');
 
 insert into public.enrollments (id, student_id, program_id, year_level, academic_year, semester, status)
 values
-  ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', '1st Year', '2026-2027', '1st Semester', 'PENDING'),
-  ('40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', '1st Year', '2026-2027', '1st Semester', 'PENDING'),
-  ('40000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', '1st Year', '2026-2027', '1st Semester', 'PENDING');
+  ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2026-2027', '1st Semester', 'PENDING'),
+  ('40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2026-2027', '1st Semester', 'PENDING'),
+  ('40000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2026-2027', '1st Semester', 'PENDING');
 
 insert into public.student_requirements (
   student_id, requirement_code, academic_year, semester, applicability, status, verified_at, verified_by

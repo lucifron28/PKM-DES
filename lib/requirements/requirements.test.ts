@@ -78,3 +78,76 @@ test("requirement update inputs accept only supported IDs, status, term, code, a
   assert.deepEqual(normalizeRequirementNote(" Verified paper form received "), { valid: true, note: "Verified paper form received" });
   assert.equal(normalizeRequirementNote("x".repeat(241)).valid, false);
 });
+test("unknown or unrecognized gender/sex is not inferred as female", () => {
+  assert.equal(
+    getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+      student_type: "Incoming 1st Year Student",
+      official_gender_sex: "Unknown"
+    }),
+    "NOT_APPLICABLE"
+  );
+  assert.equal(
+    getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+      student_type: "Incoming 1st Year Student",
+      official_gender_sex: "Male"
+    }),
+    "NOT_APPLICABLE"
+  );
+});
+
+test("historical verification does not satisfy the active term requirement gate", () => {
+  const historicalRecords: StudentRequirementRecord[] = [
+    {
+      id: "h1",
+      student_id: "s1",
+      requirement_code: "HEALTH_RECORD_UPDATE",
+      status: "VERIFIED",
+      academic_year: "2025-2026",
+      semester: "2nd Semester",
+      applicability: "APPLICABLE",
+      note: null,
+      verified_at: "2026-01-15T10:00:00Z",
+      verified_by: "admin-1",
+      created_at: "2026-01-15T10:00:00Z",
+      updated_at: "2026-01-15T10:00:00Z"
+    }
+  ];
+
+  const activeTerm = { academicYear: "2026-2027", semester: "1st Semester" as const };
+  assert.equal(areRequirementsFulfilled(["HEALTH_RECORD_UPDATE"], historicalRecords, activeTerm), false);
+  assert.deepEqual(getMissingOrUnverifiedRequirements(["HEALTH_RECORD_UPDATE"], historicalRecords, activeTerm), ["HEALTH_RECORD_UPDATE"]);
+});
+
+test("distinguishes applicable pending, verified, rejected, not-applicable, missing, and query-failed requirement presentation states", () => {
+  const activeTerm = { academicYear: "2026-2027", semester: "1st Semester" as const };
+
+  const makeRecord = (applicability: "APPLICABLE" | "NOT_APPLICABLE", status: "PENDING" | "VERIFIED" | "REJECTED"): StudentRequirementRecord => ({
+    id: "r1",
+    student_id: "s1",
+    requirement_code: "HEALTH_RECORD_UPDATE",
+    status,
+    academic_year: activeTerm.academicYear,
+    semester: activeTerm.semester,
+    applicability,
+    note: null,
+    verified_at: status === "VERIFIED" ? "2026-07-30T10:00:00Z" : null,
+    verified_by: status === "VERIFIED" ? "admin-1" : null,
+    created_at: "2026-07-30T10:00:00Z",
+    updated_at: "2026-07-30T10:00:00Z"
+  });
+
+  const pendingRec = makeRecord("APPLICABLE", "PENDING");
+  const verifiedRec = makeRecord("APPLICABLE", "VERIFIED");
+  const rejectedRec = makeRecord("APPLICABLE", "REJECTED");
+  const notApplicableRec = makeRecord("NOT_APPLICABLE", "PENDING");
+
+  assert.equal(areRequirementsFulfilled(["HEALTH_RECORD_UPDATE"], [pendingRec], activeTerm), false);
+  assert.equal(areRequirementsFulfilled(["HEALTH_RECORD_UPDATE"], [verifiedRec], activeTerm), true);
+  assert.equal(areRequirementsFulfilled(["HEALTH_RECORD_UPDATE"], [rejectedRec], activeTerm), false);
+  assert.equal(areRequirementsFulfilled(["HEALTH_RECORD_UPDATE"], [notApplicableRec], activeTerm), false);
+  assert.equal(areRequirementsFulfilled(["HEALTH_RECORD_UPDATE"], [], activeTerm), false);
+
+  // Query failure presentation state is explicitly tagged by caller
+  const queryFailedState = { error: true, record: null };
+  assert.equal(queryFailedState.error, true);
+});

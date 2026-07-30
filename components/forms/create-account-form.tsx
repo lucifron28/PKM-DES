@@ -145,7 +145,9 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
           <div>
             <p className="text-sm font-semibold text-green-800">Official record found</p>
             <p className="mt-1 text-sm text-slateui-muted">
-              Review these official details, then set your password to create the account.
+              {emailEnabled
+                ? "Review these official details, then request an account setup link."
+                : "Review these official details, then set your password to create the account."}
             </p>
           </div>
           <DetailGrid record={matchedRecord} />
@@ -163,7 +165,9 @@ export function CreateAccountForm({ claimExpired = false, emailEnabled = false }
       ) : null}
 
       <p className="border-l-4 border-secondary-600 bg-secondary-100 px-3 py-2.5 text-sm leading-6 text-slateui-text">
-        You may change your password after first login. The official generated-password email workflow remains pending.
+        {emailEnabled
+          ? "An email containing a secure setup link will be sent to your registered email address."
+          : "After creating your account, you may immediately log in using your email address and password."}
       </p>
       <ButtonLink href="/" variant="outline">
         Cancel

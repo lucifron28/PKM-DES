@@ -3,7 +3,7 @@ import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { formatDate } from "@/lib/utils/format";
 import type { EnrollmentReviewStatus } from "@/types/database";
@@ -18,11 +18,22 @@ type ApprovedEnrollmentRow = {
 
 export default async function StudentCorPage() {
   const { supabase, profile } = await requireRole("student");
-  const student = await getStudentForProfile(profile.id);
+  const studentResult = await getStudentQueryResult(profile.id);
 
-  if (!student) {
+  if (studentResult.status === "query_failed") {
+    return (
+      <EmptyState
+        title="Student record could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  if (studentResult.status === "not_found") {
     return <EmptyState title="Student record not found." description="Please contact an administrator." />;
   }
+
+  const student = studentResult.student;
 
   const [activeTermResult, approvedResponse] = await Promise.all([
     getActiveEnrollmentTermResult(supabase),

@@ -32,17 +32,17 @@ The demonstration does not validate real admission requirements, financial oblig
 
 ### Student
 
-- Dashboard with profile-derived information, enrollment status, and quick actions.
+- Dashboard with profile-derived information, term-specific enrollment status result, and quick actions. Current-term status is derived only from an enrollment record matching the active academic term; `students.enrollment_status` is not the current-term source of truth.
 - View-only subject list grouped by year level and semester.
 - Trusted server-derived online enrollment request submission for eligible BSAIS standard loads in the configured MVP term.
-- Enrollment status result, including free-text rejection remarks when entered.
+- Term-specific enrollment status result, including free-text rejection remarks when entered.
 - Account information display and signed-in password change.
 
 ### Registrar/Admin
 
 - Admin dashboard enrollment-status overview.
 - Manual creation, search, filtering, and editing of official student records.
-- Registrar/Admin reset of an exact active student account password from the linked official-record edit page. The temporary password is shared privately; no password-reset email or forced-change rule is implemented.
+- Registrar/Admin reset of an exact active student account password from the linked official-record edit page. The temporary password is set by the admin and shared privately; no password-reset email, forced change, or expiry rule is implemented. Supabase Auth password update and PostgreSQL audit log insertion are not one atomic cross-system transaction: if the Auth update succeeds but audit log insertion fails, the password update remains in effect in Auth while a server-side audit failure is logged.
 - Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, and audit row commit atomically. The queue includes only a status-only, current-term Health Record Update check when it applies; it is not a full document or requirements checklist.
 - Enrollment masterlist and browser-printable report views.
 

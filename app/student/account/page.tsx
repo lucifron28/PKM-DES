@@ -4,7 +4,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChangePasswordForm } from "@/components/forms/change-password-form";
 import { changePasswordAction } from "./actions";
-import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { OfficialStudentRecord } from "@/types/database";
 
@@ -66,11 +66,22 @@ async function getMatchingOfficialRecord({
 
 export default async function StudentAccountPage() {
   const { profile } = await requireRole("student");
-  const student = await getStudentForProfile(profile.id);
+  const studentResult = await getStudentQueryResult(profile.id);
 
-  if (!student) {
+  if (studentResult.status === "query_failed") {
+    return (
+      <EmptyState
+        title="Student record could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  if (studentResult.status === "not_found") {
     return <EmptyState title="Student record not found." description="Please contact an administrator." />;
   }
+
+  const student = studentResult.student;
 
   const officialRecord = await getMatchingOfficialRecord({
     email: profile.email,

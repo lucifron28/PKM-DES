@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,6 +25,14 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Check Git Diff Whitespace & Conflicts (PR vs base)
+        if: github.event_name == 'pull_request'
+        run: git diff --check ${{ github.event.pull_request.base.sha }}...HEAD
+
+      - name: Check Git Diff Whitespace & Conflicts (push to main)
+        if: github.event_name == 'push'
+        run: git show --check --format= HEAD
 
       - name: Typecheck
         run: npm run typecheck
@@ -35,17 +45,16 @@ jobs:
           npm run test:smoke-env
           npm run test:account-claim
           npm run test:admin-enrollment-review
-          npx tsx --test lib/account-claim/*.test.ts
+          npm run test:admin-student-records
+          npm run test:student-enrollment
+          npm run test:registration-form
+          npm run test:portal-navigation
           npx tsx --test lib/account-setup/*.test.ts
-          npx tsx --test lib/admin-student-records/*.test.ts
           npx tsx --test lib/course-offerings/*.test.ts
           npx tsx --test lib/email/*.test.ts
-          npx tsx --test lib/enrollment/*.test.ts
-          npx tsx --test lib/registration-form/*.test.ts
           npx tsx --test lib/requirements/*.test.ts
           npx tsx --test lib/auth/*.test.ts
           npx tsx --test components/ui/*.test.ts
-
       - name: Build Application
         run: npm run build
         env:

@@ -1,7 +1,7 @@
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RegistrationForm, type PrintableEnrollment } from "@/components/print/registration-form";
-import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 
 export default async function StudentExplicitRegistrationFormPage({
   params
@@ -9,12 +9,23 @@ export default async function StudentExplicitRegistrationFormPage({
   params: Promise<{ enrollmentId: string }>;
 }) {
   const { supabase, profile } = await requireRole("student");
-  const student = await getStudentForProfile(profile.id);
+  const studentResult = await getStudentQueryResult(profile.id);
   const { enrollmentId } = await params;
 
-  if (!student) {
+  if (studentResult.status === "query_failed") {
+    return (
+      <EmptyState
+        title="Student record could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  if (studentResult.status === "not_found") {
     return <EmptyState title="Student record not found." description="Please contact an administrator." />;
   }
+
+  const student = studentResult.student;
 
   const { data, error } = await supabase
     .from("enrollments")

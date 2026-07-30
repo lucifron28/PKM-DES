@@ -67,11 +67,11 @@ export default async function EditOfficialStudentRecordPage({
     );
   }
 
-  const { data: accountStudent, error: accountStudentError } = record.student_id_number
+  const { data: accountStudent, error: accountStudentError } = record.id
     ? await supabase
         .from("students")
-        .select("profile_id, student_id_number")
-        .eq("student_id_number", record.student_id_number)
+        .select("profile_id, student_id_number, official_record_id")
+        .eq("official_record_id", record.id)
         .maybeSingle()
     : { data: null, error: null };
   const { data: accountProfile, error: accountProfileError } = accountStudent
@@ -87,7 +87,9 @@ export default async function EditOfficialStudentRecordPage({
     accountEmail: accountProfile?.email ?? null,
     accountStudentId: accountStudent?.student_id_number ?? null,
     accountRole: accountProfile?.role ?? null,
-    accountStatus: accountProfile?.account_status ?? null
+    accountStatus: accountProfile?.account_status ?? null,
+    linkedRecordId: accountStudent?.official_record_id ?? null,
+    expectedRecordId: record.id
   });
 
   if (accountStudentError || accountProfileError) {
@@ -125,7 +127,7 @@ export default async function EditOfficialStudentRecordPage({
           </div>
         ) : null}
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Email and Student ID are account-matching identifiers. Changing them does not update an existing Supabase Auth account or student account automatically. Check the records list afterward for partial matches or identity conflicts.
+          Student ID, name, program, year level, and student type synchronize to the linked student account through the synchronization RPC. Official-record email changes do not silently change Supabase Auth or profile email. Email mismatch must remain explicit. Ambiguous or unlinked legacy records are not automatically attached.
         </div>
         <OfficialStudentRecordForm
           action={updateOfficialStudentRecordAction}
