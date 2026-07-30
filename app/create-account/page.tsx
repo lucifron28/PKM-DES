@@ -25,17 +25,21 @@ export default async function CreateAccountPage({
         <section className="border-l-4 border-secondary-600 pl-5 sm:pl-6">
           <ClipboardCheck className="h-7 w-7 text-primary-800" aria-hidden="true" />
           <h1 className="public-display mt-4 text-4xl font-semibold leading-none text-primary-900 sm:text-5xl">Claim your student account.</h1>
-          <p className="mt-4 max-w-sm text-sm leading-7 text-slateui-secondary">First locate the official student record prepared by the Registrar. Then confirm it and set a password for this research MVP account.</p>
+          <p className="mt-4 max-w-sm text-sm leading-7 text-slateui-secondary">
+            {emailEnv.enabled
+              ? "First locate the official student record prepared by the Registrar. Then confirm it to request a setup link."
+              : "First locate the official student record prepared by the Registrar. Then confirm it and set a password for your account."}
+          </p>
           <ol className="mt-7 space-y-3 text-sm text-slateui-secondary">
             <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-secondary-100 font-bold text-slateui-text">1</span>Find your official record.</li>
             <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary-50 font-bold text-primary-800">2</span>Review the matched details.</li>
-            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary-50 font-bold text-primary-800">3</span>Set your password.</li>
+            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary-50 font-bold text-primary-800">3</span>{emailEnv.enabled ? "Receive setup link." : "Set your password."}</li>
           </ol>
         </section>
         <Card className="border-t-4 border-t-primary-800 sm:p-7">
           <CardHeader
             title="Create Student Account"
-            description="Verify your Registrar-managed record using your email address and Student ID, then set your password."
+            description={emailEnv.enabled ? "Verify your Registrar-managed record using your email address and Student ID, then request a setup link." : "Verify your Registrar-managed record using your email address and Student ID, then set your password."}
           />
           <CreateAccountForm claimExpired={claimExpired} emailEnabled={emailEnv.enabled} />
         </Card>

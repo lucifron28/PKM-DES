@@ -2,11 +2,9 @@ import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
-import { getRequirementApplicability } from "@/lib/requirements/rules";
-import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatDate } from "@/lib/utils/format";
 import type { EnrollmentReviewStatus } from "@/types/database";
@@ -24,11 +22,22 @@ type StatusEnrollmentRow = {
 
 export default async function EnrollmentStatusPage() {
   const { supabase, profile } = await requireRole("student");
-  const student = await getStudentForProfile(profile.id);
+  const studentResult = await getStudentQueryResult(profile.id);
 
-  if (!student) {
+  if (studentResult.status === "query_failed") {
+    return (
+      <EmptyState
+        title="Student record could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  if (studentResult.status === "not_found") {
     return <EmptyState title="Student record not found." description="Please contact an administrator." />;
   }
+
+  const student = studentResult.student;
 
   const [activeTermResult, enrollmentsResponse] = await Promise.all([
     getActiveEnrollmentTermResult(supabase),
@@ -88,37 +97,9 @@ export default async function EnrollmentStatusPage() {
     }
   }
 
-  let healthRequirementApplicability = currentTermRequirement?.applicability ?? null;
-  let officialRecordError = false;
+  const healthRequirementApplicability = currentTermRequirement?.applicability ?? null;
 
-  if (activeTerm) {
-    try {
-      const admin = createSupabaseAdminClient();
-      const { data: officialRecord, error } = await admin
-        .from("official_student_records")
-        .select("gender_sex")
-        .eq("student_id_number", student.student_id_number ?? "")
-        .maybeSingle();
-
-      if (error) {
-        officialRecordError = true;
-        console.error("student_enrollment_status:official_record_load", error);
-      } else {
-        healthRequirementApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
-          student_type: student.student_type,
-          official_gender_sex: officialRecord?.gender_sex ?? null
-        });
-      }
-    } catch {
-      officialRecordError = true;
-      console.error("student_enrollment_status:official_record_load");
-    }
-  }
-
-  const status = getDisplayedEnrollmentStatus(
-    currentTermEnrollment?.status ?? null,
-    student.enrollment_status
-  );
+  const status = getDisplayedEnrollmentStatus(currentTermEnrollment?.status ?? null);
 
   const statusPanelClass = status === "ENROLLED"
     ? "border-green-600 bg-green-50"
@@ -211,7 +192,7 @@ export default async function EnrollmentStatusPage() {
               </Badge>
             ) : healthRequirementApplicability === "NOT_APPLICABLE" ? <Badge tone="info">NOT REQUIRED</Badge> : null}
           </div>
-          {requirementError || officialRecordError ? (
+          {requirementError ? (
             <p className="mt-3 border-l-4 border-amber-500 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950">Current-term requirement information could not be loaded. Please contact the Registrar.</p>
           ) : healthRequirementApplicability === "APPLICABLE" ? (
             <div className="mt-3 space-y-2 text-sm leading-6 text-slateui-secondary">

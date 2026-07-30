@@ -38,20 +38,33 @@ export function PortalNavigation({
       }
 
       if (event.key === "Tab" && open && mobileNavRef.current) {
-        const focusables = mobileNavRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        const focusables = Array.from(
+          mobileNavRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
         );
+
         if (!focusables.length) return;
 
         const firstElement = focusables[0];
         const lastElement = focusables[focusables.length - 1];
+        const activeElement = document.activeElement as HTMLElement | null;
 
-        if (event.shiftKey && document.activeElement === firstElement) {
-          event.preventDefault();
-          lastElement.focus();
-        } else if (!event.shiftKey && document.activeElement === lastElement) {
-          event.preventDefault();
-          firstElement.focus();
+        if (event.shiftKey) {
+          if (
+            activeElement === firstElement ||
+            activeElement === mobileNavRef.current ||
+            !activeElement ||
+            !mobileNavRef.current.contains(activeElement)
+          ) {
+            event.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+          }
         }
       }
     }
@@ -60,7 +73,16 @@ export function PortalNavigation({
       document.body.style.overflow = "hidden";
       window.addEventListener("keydown", handleKeyDown);
       requestAnimationFrame(() => {
-        mobileNavRef.current?.focus();
+        if (mobileNavRef.current) {
+          const focusables = mobileNavRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusables.length > 0) {
+            focusables[0].focus();
+          } else {
+            mobileNavRef.current.focus();
+          }
+        }
       });
     } else {
       document.body.style.overflow = "";

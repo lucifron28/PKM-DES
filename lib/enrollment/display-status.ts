@@ -3,12 +3,11 @@ import type { EnrollmentReviewStatus, EnrollmentStatus } from "@/types/database"
 export type DisplayedEnrollmentStatus = EnrollmentStatus | "REJECTED";
 
 export function getDisplayedEnrollmentStatus(
-  latestEnrollmentStatus: EnrollmentReviewStatus | null,
-  fallbackStatus: EnrollmentStatus
+  currentTermStatus: EnrollmentReviewStatus | null
 ): DisplayedEnrollmentStatus {
-  if (!latestEnrollmentStatus) {
-    return fallbackStatus;
+  if (!currentTermStatus) {
+    return "NOT ENROLLED";
   }
 
-  return latestEnrollmentStatus === "APPROVED" ? "ENROLLED" : latestEnrollmentStatus;
+  return currentTermStatus === "APPROVED" ? "ENROLLED" : currentTermStatus;
 }

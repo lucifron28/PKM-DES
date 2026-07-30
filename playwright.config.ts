@@ -20,6 +20,16 @@ export default defineConfig({
     screenshot: 'off',
     video: 'off',
   },
+  webServer: {
+    command: 'npm run start',
+    url: 'http://127.0.0.1:3000',
+    reuseExistingServer: true,
+    timeout: 60 * 1000,
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'dummy-anon-key-for-smoke-test'
+    }
+  },
   projects: [
     {
       name: 'chromium',

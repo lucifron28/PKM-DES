@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { COURSE_OFFERINGS_MANIFEST } from "@/lib/course-offerings/manifest";
 import { claimOfficialRecordService } from "@/lib/account-claim/claim-service";
 import { addOfficialRecordService } from "@/lib/admin-student-records/official-record-service";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,5 +33,5 @@ test("domain services validate missing or incomplete input shapes correctly", as
   assert.equal(addResult.success ?? false, false);
   assert.ok(addResult.fieldErrors);
   assert.equal(typeof addResult.fieldErrors?.first_name, "string");
-  assert.equal(COURSE_OFFERINGS_MANIFEST.expectedTotalRows, 245);
+  assert.equal(typeof addResult.fieldErrors?.email, "string");
 });

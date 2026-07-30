@@ -151,6 +151,7 @@ export function SubjectReferenceBrowser({
     [selectedProgramCode, curriculumSubjects, selectedYear]
   );
 
+  const isUnassignedProgram = !studentProgramCode;
   const hasNoOfferingsForStudentProgram = Boolean(
     studentProgramCode &&
       !historicalOfferings.some((o) => o.program_code === studentProgramCode)
@@ -166,6 +167,14 @@ export function SubjectReferenceBrowser({
         />
       </Card>
 
+      {isUnassignedProgram ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Unassigned Program Notice</p>
+          <p className="mt-1 leading-6">
+            Your account currently has no official program assigned. Showing BSAIS course offerings as an explicitly labeled reference default. Browsing reference programs does not alter your official student record assignment.
+          </p>
+        </div>
+      ) : null}
       <Card className="border-t-4 border-t-secondary-600">
         <CardHeader
           title="Program Course Offering Reference"

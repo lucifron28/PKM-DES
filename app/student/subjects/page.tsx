@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import { SubjectReferenceBrowser, type DBOfferingRow } from "@/components/student/subject-reference-browser";
-import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import type { SubjectSeed } from "@/lib/constants/subjects";
 import type { Program, Semester, YearLevel } from "@/types/database";
 
@@ -30,11 +30,22 @@ type RawSubjectQueryRow = {
 
 export default async function SubjectListPage() {
   const { supabase, profile } = await requireRole("student");
-  const student = await getStudentForProfile(profile.id);
+  const studentResult = await getStudentQueryResult(profile.id);
 
-  if (!student) {
+  if (studentResult.status === "query_failed") {
+    return (
+      <EmptyState
+        title="Student record could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  if (studentResult.status === "not_found") {
     return <EmptyState title="Student record not found" description="Please contact the Registrar." />;
   }
+
+  const student = studentResult.student;
 
   const [programsResult, offeringsResult, curriculumResult] = await Promise.all([
     supabase

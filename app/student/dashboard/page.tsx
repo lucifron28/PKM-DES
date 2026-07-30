@@ -4,7 +4,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
-import { getStudentForProfile, requireRole } from "@/lib/auth/session";
+import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { formatDate, formatName } from "@/lib/utils/format";
@@ -21,11 +21,22 @@ type DashboardEnrollment = {
 
 export default async function StudentDashboardPage() {
   const { profile, supabase } = await requireRole("student");
-  const student = await getStudentForProfile(profile.id);
+  const studentResult = await getStudentQueryResult(profile.id);
 
-  if (!student) {
+  if (studentResult.status === "query_failed") {
+    return (
+      <EmptyState
+        title="Student record could not be loaded."
+        description="A database query error occurred. Please refresh or try again later."
+      />
+    );
+  }
+
+  if (studentResult.status === "not_found") {
     return <EmptyState title="Student record not found." description="Please contact an administrator." />;
   }
+
+  const student = studentResult.student;
 
   const [activeTermResult, enrollmentsResponse] = await Promise.all([
     getActiveEnrollmentTermResult(supabase),
@@ -55,10 +66,7 @@ export default async function StudentDashboardPage() {
       )
     : allEnrollments;
 
-  const status = getDisplayedEnrollmentStatus(
-    currentTermRequest?.status ?? null,
-    student.enrollment_status
-  );
+  const status = getDisplayedEnrollmentStatus(currentTermRequest?.status ?? null);
 
   const primaryAction = status === "ENROLLED"
     ? { href: "/student/cor", label: "Print Draft Registration Form", icon: FileText, variant: "secondary" as const }

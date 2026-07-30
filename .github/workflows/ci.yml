@@ -24,6 +24,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Check Git Diff Whitespace & Conflicts
+        run: git diff --check
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -35,17 +38,15 @@ jobs:
           npm run test:smoke-env
           npm run test:account-claim
           npm run test:admin-enrollment-review
-          npx tsx --test lib/account-claim/*.test.ts
+          npm run test:admin-student-records
+          npm run test:student-enrollment
+          npm run test:registration-form
           npx tsx --test lib/account-setup/*.test.ts
-          npx tsx --test lib/admin-student-records/*.test.ts
           npx tsx --test lib/course-offerings/*.test.ts
           npx tsx --test lib/email/*.test.ts
-          npx tsx --test lib/enrollment/*.test.ts
-          npx tsx --test lib/registration-form/*.test.ts
           npx tsx --test lib/requirements/*.test.ts
           npx tsx --test lib/auth/*.test.ts
           npx tsx --test components/ui/*.test.ts
-
       - name: Build Application
         run: npm run build
         env:

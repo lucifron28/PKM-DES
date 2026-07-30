@@ -55,17 +55,50 @@ export async function requireRole(role: UserRole) {
   };
 }
 
-export async function fetchStudentForProfile(supabase: SupabaseClient, profileId: string) {
-  const { data } = await supabase
+export type StudentQueryResult =
+  | { status: "found"; student: Student }
+  | { status: "not_found"; student: null }
+  | { status: "query_failed"; student: null; error: unknown };
+
+export async function fetchStudentQueryResult(
+  supabase: SupabaseClient,
+  profileId: string
+): Promise<StudentQueryResult> {
+  const { data, error } = await supabase
     .from("students")
     .select("*, programs(*)")
     .eq("profile_id", profileId)
     .maybeSingle();
 
-  return (data as Student | null) ?? null;
+  if (error) {
+    console.error("lib_auth_session:fetch_student_query_failed", { profileId, message: error.message });
+    return { status: "query_failed", student: null, error };
+  }
+
+  if (!data) {
+    return { status: "not_found", student: null };
+  }
+
+  return { status: "found", student: data as Student };
 }
 
-export const getStudentForProfile = cache(async function getStudentForProfile(profileId: string) {
+/**
+ * Convenience helper returning Student | null where callers intentionally treat error or missing student as null.
+ */
+export async function fetchStudentForProfile(supabase: SupabaseClient, profileId: string): Promise<Student | null> {
+  const result = await fetchStudentQueryResult(supabase, profileId);
+  return result.status === "found" ? result.student : null;
+}
+
+export const getStudentQueryResult = cache(async function getStudentQueryResult(profileId: string) {
   const supabase = await createSupabaseServerClient();
-  return fetchStudentForProfile(supabase, profileId);
+  return fetchStudentQueryResult(supabase, profileId);
+});
+
+/**
+ * Convenience cached helper returning Student | null where callers intentionally treat error or missing student as null.
+ */
+export const getStudentForProfile = cache(async function getStudentForProfile(profileId: string) {
+  const result = await getStudentQueryResult(profileId);
+  return result.status === "found" ? result.student : null;
 });

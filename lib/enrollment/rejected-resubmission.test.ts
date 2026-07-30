@@ -6,7 +6,7 @@ import { getStudentSubmissionMessage } from "@/lib/enrollment/student-submission
 import type { EnrollmentReviewStatus } from "@/types/database";
 
 test("rejected enrollment presents REJECTED status and is terminal", () => {
-  const status = getDisplayedEnrollmentStatus("REJECTED", "NOT ENROLLED");
+  const status = getDisplayedEnrollmentStatus("REJECTED");
   assert.equal(status, "REJECTED");
 });
 
