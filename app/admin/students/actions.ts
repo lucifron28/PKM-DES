@@ -35,10 +35,6 @@ function optionalGuidedValue(value: FormDataEntryValue | null, options: string[]
   return text && options.includes(text) ? text : null;
 }
 
-function isOptionalGuidedValueValid(value: FormDataEntryValue | null, options: string[]) {
-  const text = optionalValue(value);
-  return !text || options.includes(text);
-}
 
 function isValidIsoDate(value: FormDataEntryValue | null) {
   const text = optionalValue(value);
@@ -50,9 +46,23 @@ function isValidIsoDate(value: FormDataEntryValue | null) {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
-function redirectWithError(code: string, path = "/admin/students"): never {
-  redirect(`${path}?error=${code}`);
+export type OfficialRecordFormState = {
+  success?: boolean;
+  message?: string;
+  fieldErrors?: Record<string, string>;
+  submittedValues?: Record<string, string>;
+};
+
+function extractSubmittedValues(formData: FormData): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string") {
+      result[key] = value;
+    }
+  }
+  return result;
 }
+
 
 function readOfficialRecordInput(formData: FormData) {
   const studentIdNumber = normalizeStudentId(String(formData.get("student_id_number") ?? "")) || null;
@@ -76,38 +86,34 @@ function readOfficialRecordInput(formData: FormData) {
   };
 }
 
-function validateOfficialRecordInput(
+function validateOfficialRecordInputWithErrors(
   formData: FormData,
   input: ReturnType<typeof readOfficialRecordInput>
-): string | null {
+): { message: string; fieldErrors: Record<string, string> } | null {
   const { firstName, lastName, email, programId, yearLevel, studentType, enrollmentStatus } = input;
+  const fieldErrors: Record<string, string> = {};
 
-  if (!firstName || !lastName || !email || !programId || !yearLevel || !studentType || !enrollmentStatus) {
-    return "missing";
+  if (!firstName) fieldErrors.first_name = "First name is required.";
+  if (!lastName) fieldErrors.last_name = "Last name is required.";
+  if (!email) {
+    fieldErrors.email = "Active email address is required.";
+  } else if (!isValidEmail(email)) {
+    fieldErrors.email = "Please enter a valid email address.";
   }
-
-  if (!isValidEmail(email)) {
-    return "email";
-  }
-
-  if (!YEAR_LEVELS.includes(yearLevel) || !STUDENT_TYPE_TAGS.includes(studentType)) {
-    return "invalid";
-  }
-
-  if (!ENROLLMENT_STATUSES.includes(enrollmentStatus)) {
-    return "invalid";
-  }
-
-  if (
-    !isOptionalGuidedValueValid(formData.get("gender_sex"), GENDER_SEX_OPTIONS) ||
-    !isOptionalGuidedValueValid(formData.get("civil_status"), CIVIL_STATUS_OPTIONS) ||
-    !isOptionalGuidedValueValid(formData.get("admission_status"), ADMISSION_STATUS_OPTIONS)
-  ) {
-    return "invalid";
-  }
+  if (!programId) fieldErrors.program_id = "Program selection is required.";
+  if (!yearLevel || !YEAR_LEVELS.includes(yearLevel)) fieldErrors.year_level = "Valid year level selection is required.";
+  if (!studentType || !STUDENT_TYPE_TAGS.includes(studentType)) fieldErrors.student_type = "Valid student type selection is required.";
+  if (!enrollmentStatus || !ENROLLMENT_STATUSES.includes(enrollmentStatus)) fieldErrors.enrollment_status = "Valid enrollment status is required.";
 
   if (!isValidIsoDate(formData.get("birthdate"))) {
-    return "birthdate";
+    fieldErrors.birthdate = "Birthdate must be a valid YYYY-MM-DD date.";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      message: "Please correct the highlighted errors below.",
+      fieldErrors
+    };
   }
 
   return null;
@@ -139,10 +145,6 @@ async function findDuplicateOfficialRecord(
   return null;
 }
 
-function uniqueConstraintError(error: { code?: string } | null) {
-  return error?.code === "23505";
-}
-
 function buildOfficialRecordPayload(
   formData: FormData,
   input: ReturnType<typeof readOfficialRecordInput>,
@@ -172,13 +174,21 @@ function buildOfficialRecordPayload(
   };
 }
 
-export async function addOfficialStudentRecordAction(formData: FormData) {
+export async function addOfficialStudentRecordAction(
+  _previousState: OfficialRecordFormState,
+  formData: FormData
+): Promise<OfficialRecordFormState> {
   const { supabase, profile } = await requireRole("admin");
   const input = readOfficialRecordInput(formData);
+  const submittedValues = extractSubmittedValues(formData);
 
-  const validationError = validateOfficialRecordInput(formData, input);
-  if (validationError) {
-    redirectWithError(validationError);
+  const validationResult = validateOfficialRecordInputWithErrors(formData, input);
+  if (validationResult) {
+    return {
+      message: validationResult.message,
+      fieldErrors: validationResult.fieldErrors,
+      submittedValues
+    };
   }
 
   const { data: program, error: programError } = await supabase
@@ -187,18 +197,28 @@ export async function addOfficialStudentRecordAction(formData: FormData) {
     .eq("id", input.programId)
     .maybeSingle();
 
-  if (programError) {
-    console.error("official_student_records:programs_load");
-    redirectWithError("programs_load");
-  }
-
-  if (!program) {
-    redirectWithError("program");
+  if (programError || !program) {
+    return {
+      message: "Selected program is not valid.",
+      fieldErrors: { program_id: "Selected program is invalid." },
+      submittedValues
+    };
   }
 
   const duplicateError = await findDuplicateOfficialRecord(supabase, input);
-  if (duplicateError) {
-    redirectWithError(duplicateError);
+  if (duplicateError === "duplicate_email") {
+    return {
+      message: "Email address is already in use by another official record.",
+      fieldErrors: { email: "Email address is already in use." },
+      submittedValues
+    };
+  }
+  if (duplicateError === "duplicate_student_id") {
+    return {
+      message: "Student ID Number is already in use by another official record.",
+      fieldErrors: { student_id_number: "Student ID Number is already in use." },
+      submittedValues
+    };
   }
 
   const { error } = await supabase.from("official_student_records").insert({
@@ -207,26 +227,36 @@ export async function addOfficialStudentRecordAction(formData: FormData) {
   });
 
   if (error) {
-    redirectWithError(uniqueConstraintError(error) ? "duplicate_identity" : "save");
+    return {
+      message: "Official student record could not be saved. Please try again.",
+      submittedValues
+    };
   }
 
   revalidatePath("/admin/students");
   redirect("/admin/students?created=1");
 }
 
-export async function updateOfficialStudentRecordAction(formData: FormData) {
+export async function updateOfficialStudentRecordAction(
+  _previousState: OfficialRecordFormState,
+  formData: FormData
+): Promise<OfficialRecordFormState> {
   const { supabase } = await requireRole("admin");
   const recordId = String(formData.get("record_id") ?? "").trim();
-  const errorPath = recordId ? `/admin/students/${recordId}/edit` : "/admin/students";
   const input = readOfficialRecordInput(formData);
+  const submittedValues = extractSubmittedValues(formData);
 
   if (!recordId) {
-    redirectWithError("missing");
+    return { message: "Record ID is missing.", submittedValues };
   }
 
-  const validationError = validateOfficialRecordInput(formData, input);
-  if (validationError) {
-    redirectWithError(validationError, errorPath);
+  const validationResult = validateOfficialRecordInputWithErrors(formData, input);
+  if (validationResult) {
+    return {
+      message: validationResult.message,
+      fieldErrors: validationResult.fieldErrors,
+      submittedValues
+    };
   }
 
   const [{ data: program, error: programError }, { data: existingRecord, error: existingRecordError }] = await Promise.all([
@@ -234,27 +264,32 @@ export async function updateOfficialStudentRecordAction(formData: FormData) {
     supabase.from("official_student_records").select("id").eq("id", recordId).maybeSingle()
   ]);
 
-  if (existingRecordError) {
-    console.error("official_student_records:records_load");
-    redirectWithError("record_load", "/admin/students");
+  if (existingRecordError || !existingRecord) {
+    return { message: "Official student record not found.", submittedValues };
   }
 
-  if (!existingRecord) {
-    redirectWithError("not_found", "/admin/students");
-  }
-
-  if (programError) {
-    console.error("official_student_records:programs_load");
-    redirectWithError("programs_load", errorPath);
-  }
-
-  if (!program) {
-    redirectWithError("program", errorPath);
+  if (programError || !program) {
+    return {
+      message: "Selected program is not valid.",
+      fieldErrors: { program_id: "Selected program is invalid." },
+      submittedValues
+    };
   }
 
   const duplicateError = await findDuplicateOfficialRecord(supabase, input, recordId);
-  if (duplicateError) {
-    redirectWithError(duplicateError, errorPath);
+  if (duplicateError === "duplicate_email") {
+    return {
+      message: "Email address is already in use by another official record.",
+      fieldErrors: { email: "Email address is already in use." },
+      submittedValues
+    };
+  }
+  if (duplicateError === "duplicate_student_id") {
+    return {
+      message: "Student ID Number is already in use by another official record.",
+      fieldErrors: { student_id_number: "Student ID Number is already in use." },
+      submittedValues
+    };
   }
 
   type SyncRpcResult = {
@@ -289,15 +324,19 @@ export async function updateOfficialStudentRecordAction(formData: FormData) {
 
   if (syncError || !syncResult) {
     console.error("official_student_records:sync_rpc_failed", syncError);
-    redirectWithError("save", errorPath);
+    return { message: "Official student record could not be updated.", submittedValues };
   }
 
   if (syncResult.outcome === "student_id_conflict") {
-    redirectWithError("duplicate_student_id", errorPath);
+    return {
+      message: "Student ID Number is already in use by another record or student account.",
+      fieldErrors: { student_id_number: "Student ID Number is already in use." },
+      submittedValues
+    };
   }
 
   if (syncResult.outcome !== "updated") {
-    redirectWithError("save", errorPath);
+    return { message: "Official student record could not be updated.", submittedValues };
   }
 
   revalidatePath("/admin/students");
