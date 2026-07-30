@@ -37,7 +37,7 @@ function AlertMessage({ message, success }: { message?: string; success?: boolea
 
 function DetailGrid({ record }: { record: ClaimRecordSummary }) {
   const rows = [
-    ["Student ID Number", record.maskedStudentId],
+    ["Student ID Number", record.studentIdNumber],
     ["Student Name", record.displayName],
     ["Active Email Address", record.maskedEmail],
     ["Program", record.programName],
