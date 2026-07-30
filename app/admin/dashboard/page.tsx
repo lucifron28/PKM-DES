@@ -4,31 +4,34 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth/session";
 import { countEnrollmentStatuses } from "@/lib/enrollment/query";
-import { getActiveEnrollmentTerm } from "@/lib/enrollment/term-authority";
+import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import type { EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 export default async function AdminDashboardPage() {
   const { supabase } = await requireRole("admin");
-  const activeTerm = await getActiveEnrollmentTerm(supabase);
+  const activeTermResult = await getActiveEnrollmentTermResult(supabase);
 
-  let query = supabase
-    .from("enrollments")
-    .select("status");
+  const activeTerm = activeTermResult.ok ? activeTermResult.term : null;
+
+  let statusCounts = null;
 
   if (activeTerm) {
-    query = query
+    const { data: enrollmentStatuses, error: enrollmentStatusesError } = await supabase
+      .from("enrollments")
+      .select("status")
       .eq("academic_year", activeTerm.academicYear)
-      .eq("semester", activeTerm.semester);
+      .eq("semester", activeTerm.semester)
+      .returns<Array<{ status: EnrollmentReviewStatus }>>();
+
+    if (enrollmentStatusesError) {
+      console.error("enrollment_reporting:dashboard_counts", enrollmentStatusesError);
+    } else {
+      statusCounts = countEnrollmentStatuses(enrollmentStatuses ?? []);
+    }
   }
 
-  const { data: enrollmentStatuses, error: enrollmentStatusesError } = await query.returns<Array<{ status: EnrollmentReviewStatus }>>();
-
-  if (enrollmentStatusesError) {
-    console.error("enrollment_reporting:dashboard_counts");
-  }
-
-  const statusCounts = enrollmentStatusesError ? null : countEnrollmentStatuses(enrollmentStatuses ?? []);
+  const countedTermLabel = activeTerm ? activeTerm.label : "No active term configured";
 
   return (
     <div className="space-y-6">
@@ -36,28 +39,28 @@ export default async function AdminDashboardPage() {
         <StatCard
           label="Pending Enrollments"
           value={statusCounts?.PENDING ?? "Unavailable"}
-          helper={activeTerm ? `Pending for ${activeTerm.academicYear} ${activeTerm.semester}` : "Requests awaiting administrative review."}
+          helper={activeTerm ? `Pending for ${countedTermLabel}` : "No active term configured."}
           icon={<ListChecks className="h-5 w-5" />}
           tone="warning"
         />
         <StatCard
           label="Approved Enrollments"
           value={statusCounts?.APPROVED ?? "Unavailable"}
-          helper={activeTerm ? `Approved for ${activeTerm.academicYear} ${activeTerm.semester}` : "Enrollment records approved by the Registrar."}
+          helper={activeTerm ? `Approved for ${countedTermLabel}` : "No active term configured."}
           icon={<ClipboardCheck className="h-5 w-5" />}
           tone="success"
         />
         <StatCard
           label="Rejected Enrollments"
           value={statusCounts?.REJECTED ?? "Unavailable"}
-          helper={activeTerm ? `Rejected for ${activeTerm.academicYear} ${activeTerm.semester}` : "Reviewed records that were not approved."}
+          helper={activeTerm ? `Rejected for ${countedTermLabel}` : "No active term configured."}
           icon={<XCircle className="h-5 w-5" />}
           tone="danger"
         />
         <StatCard
           label="Enrollment Records"
           value={statusCounts?.total ?? "Unavailable"}
-          helper={activeTerm ? `Active Term: ${activeTerm.academicYear} ${activeTerm.semester}` : "Submitted enrollment records."}
+          helper={activeTerm ? `Active Term: ${countedTermLabel}` : "No active term configured."}
           icon={<FileText className="h-5 w-5" />}
           tone="info"
         />
@@ -67,29 +70,26 @@ export default async function AdminDashboardPage() {
         <div className="mb-5 border-l-4 border-sky-500 bg-sky-50 px-4 py-3 text-sm text-sky-900">
           <p className="font-semibold">Demo path</p>
           <p className="mt-1">
-            Add or confirm an Official Student Record, let the student claim the account, then submit Online Enrollment.
+            Review pending requests first. Search and edit official records when identity matching is required.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <ButtonLink href="/admin/enrollments" variant="primary" className="w-full">
             Review Pending Requests
           </ButtonLink>
-          <ButtonLink href="/admin/masterlist" variant="outline" className="w-full">
-            Official Masterlist
+          <ButtonLink href="/admin/students" variant="secondary" className="w-full">
+            Official Student Records
           </ButtonLink>
-          <ButtonLink href="/admin/students" variant="outline" className="w-full">
-            Student Directory
+          <ButtonLink href="/admin/masterlist" variant="outline" className="w-full">
+            Enrollment Masterlist
+          </ButtonLink>
+          <ButtonLink href="/admin/reports" variant="outline" className="w-full">
+            Enrollment Reports
           </ButtonLink>
           {ENABLE_STUB_PAGES ? (
             <>
-              <ButtonLink href="/admin/reports" variant="outline" className="w-full">
-                Summary Reports
-              </ButtonLink>
               <ButtonLink href="/admin/encode" variant="outline" className="w-full">
-                Enrollment Encoding
-              </ButtonLink>
-              <ButtonLink href="/admin/account" variant="outline" className="w-full">
-                Account Settings
+                Encode Grades / Schedule
               </ButtonLink>
             </>
           ) : null}
