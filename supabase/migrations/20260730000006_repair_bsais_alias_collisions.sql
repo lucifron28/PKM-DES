@@ -175,8 +175,9 @@ begin
     where subject_id = v_subject.remove_id;
   end loop;
 
-  -- Merge compatible duplicate grade rows. Populated values are retained,
-  -- while timestamps preserve the earliest creation and latest update.
+  -- Merge compatible duplicate grade rows. Populated values are retained and
+  -- created_at preserves the earliest creation time. The existing
+  -- set_grades_updated_at trigger assigns the migration transaction timestamp.
   for v_grade in
     select
       student_id,
@@ -184,8 +185,7 @@ begin
       (array_agg(grade_id order by (subject_id = survivor_id) desc, created_at, grade_id))[1] as keep_grade_id,
       max(grade) filter (where grade is not null) as merged_grade,
       max(remarks) filter (where remarks is not null) as merged_remarks,
-      min(created_at) as merged_created_at,
-      max(updated_at) as merged_updated_at
+      min(created_at) as merged_created_at
     from bsais_grade_merge
     group by student_id, survivor_id
     order by student_id, survivor_id
@@ -194,8 +194,7 @@ begin
     set subject_id = v_grade.survivor_id,
         grade = v_grade.merged_grade,
         remarks = v_grade.merged_remarks,
-        created_at = v_grade.merged_created_at,
-        updated_at = v_grade.merged_updated_at
+        created_at = v_grade.merged_created_at
     where id = v_grade.keep_grade_id;
 
     delete from public.grades
