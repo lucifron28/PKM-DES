@@ -8,17 +8,52 @@ import {
   sortRegistrationSubjects
 } from "@/lib/registration-form/presentation";
 import { formatDate, formatName } from "@/lib/utils/format";
-import type { Enrollment, OfficialStudentRecord, Profile, Student, Subject } from "@/types/database";
+import type { CourseOffering, Enrollment, EnrollmentSubject, OfficialStudentRecord, Profile, Student, Subject } from "@/types/database";
+import type { RegistrationLoadItem } from "@/lib/registration-form/presentation";
 
-type EnrollmentSubjectRow = {
-  id: string;
+type EnrollmentSubjectRow = Pick<EnrollmentSubject, "id" | "subject_id" | "course_offering_id" | "course_code" | "course_description" | "units"> & {
   subjects?: Subject | null;
+  course_offerings?: CourseOffering | null;
 };
 
 export type PrintableEnrollment = Enrollment & {
   students?: (Student & { profiles?: Profile | null; official_student_records?: OfficialStudentRecord | null }) | null;
   enrollment_subjects?: EnrollmentSubjectRow[] | null;
 };
+
+function getRegistrationLoadItem(row: EnrollmentSubjectRow): RegistrationLoadItem | null {
+  if (row.course_code.trim() && row.course_description.trim()) {
+    return {
+      id: row.id,
+      course_code: row.course_code,
+      course_description: row.course_description,
+      units: row.units,
+      source: row.course_offering_id ? "course_offering" : "snapshot"
+    };
+  }
+
+  if (row.course_offerings) {
+    return {
+      id: row.id,
+      course_code: row.course_offerings.course_code,
+      course_description: row.course_offerings.course_description,
+      units: row.course_offerings.units,
+      source: "course_offering"
+    };
+  }
+
+  if (row.subjects) {
+    return {
+      id: row.id,
+      course_code: row.subjects.course_code,
+      course_description: row.subjects.course_description,
+      units: row.subjects.units,
+      source: "legacy_subject"
+    };
+  }
+
+  return null;
+}
 
 function FormField({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
@@ -63,8 +98,8 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
   const profile = student?.profiles;
   const subjects = sortRegistrationSubjects(
     (enrollment.enrollment_subjects ?? [])
-      .map((row) => row.subjects)
-      .filter((subject): subject is Subject => Boolean(subject))
+      .map(getRegistrationLoadItem)
+      .filter((subject): subject is RegistrationLoadItem => Boolean(subject))
   );
   const totalUnits = getRegistrationTotalUnits(subjects);
   const marks = getRegistrationClassificationMarks(student?.student_type);

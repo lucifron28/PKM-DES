@@ -12,7 +12,7 @@ export default async function AdminRegistrationFormPage({
 
   const { data, error } = await supabase
     .from("enrollments")
-    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subjects(*))")
+    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, subjects(*), course_offerings(*))")
     .eq("id", enrollmentId)
     .maybeSingle();
 

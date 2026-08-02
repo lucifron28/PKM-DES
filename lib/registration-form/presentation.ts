@@ -1,5 +1,9 @@
 import type { EnrollmentReviewStatus, Subject } from "@/types/database";
 
+export type RegistrationLoadItem = Pick<Subject, "id" | "course_code" | "course_description" | "units"> & {
+  source?: "legacy_subject" | "course_offering" | "snapshot";
+};
+
 export type RegistrationClassificationMarks = {
   newStudent: boolean;
   oldStudent: boolean;
@@ -57,7 +61,7 @@ function compareDisplayText(left: string, right: string) {
   return normalizedLeft < normalizedRight ? -1 : 1;
 }
 
-export function sortRegistrationSubjects(subjects: Subject[]) {
+export function sortRegistrationSubjects(subjects: RegistrationLoadItem[]) {
   return [...subjects].sort((left, right) => {
     const byCode = compareDisplayText(left.course_code, right.course_code);
     if (byCode !== 0) {
@@ -73,7 +77,7 @@ export function sortRegistrationSubjects(subjects: Subject[]) {
   });
 }
 
-export function getRegistrationTotalUnits(subjects: Pick<Subject, "units">[]) {
+export function getRegistrationTotalUnits(subjects: Pick<RegistrationLoadItem, "units">[]) {
   return subjects.reduce((total, subject) => total + (Number.isFinite(subject.units) ? subject.units : 0), 0);
 }
 
