@@ -17,7 +17,7 @@ import {
   resolveOptionalReviewerId,
   resolveProgramAndSubjects,
   targetHost,
-  validateExactSubjectSet
+  validateExactOfferingSnapshotSet
 } from "./demo-utils.mjs";
 
 function check(condition, message, failures) {
@@ -68,13 +68,13 @@ async function getCurrentTermEnrollments(supabase, studentId, term) {
   return data ?? [];
 }
 
-async function getAttachmentSubjectIds(supabase, enrollmentId) {
+async function getEnrollmentAttachments(supabase, enrollmentId) {
   const { data, error } = await supabase
     .from("enrollment_subjects")
-    .select("subject_id")
+    .select("subject_id, course_offering_id, course_code, course_description, units")
     .eq("enrollment_id", enrollmentId);
-  assertNoError(error, "Could not read enrollment subjects");
-  return (data ?? []).map((attachment) => attachment.subject_id);
+  assertNoError(error, "Could not read enrollment attachments");
+  return data ?? [];
 }
 
 async function findExactAuthUsers(supabase) {
@@ -172,7 +172,7 @@ async function verifyClaimOnlyRecord(supabase, programId, failures) {
   check((students ?? []).length === 0, "Claim-only record has a student row or enrollment path.", failures);
 }
 
-async function verifyAccountRecord(supabase, record, programId, term, expectedSubjectIds, reviewerId, authUser, failures) {
+async function verifyAccountRecord(supabase, record, programId, term, expectedOfferings, reviewerId, authUser, failures) {
   const officialRecord = await getExactOfficialRecord(supabase, record);
   check(Boolean(officialRecord), `${record.key}: official record is missing.`, failures);
 
@@ -232,14 +232,14 @@ async function verifyAccountRecord(supabase, record, programId, term, expectedSu
     );
   }
 
-  const attachmentSubjectIds = await getAttachmentSubjectIds(supabase, enrollment.id);
+  const attachments = await getEnrollmentAttachments(supabase, enrollment.id);
   try {
-    validateExactSubjectSet(expectedSubjectIds, attachmentSubjectIds);
+    validateExactOfferingSnapshotSet(expectedOfferings, attachments);
   } catch (error) {
     check(false, `${record.key}: ${error.message}`, failures);
   }
 
-  return { attachmentCount: attachmentSubjectIds.length };
+  return { attachmentCount: attachments.length };
 }
 
 async function main() {
@@ -270,7 +270,7 @@ async function main() {
       record,
       program.id,
       configuration.term,
-      subjects.map((subject) => subject.id),
+      subjects,
       reviewerId,
       authUserByEmail.get(record.email),
       failures

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ACCOUNT_DEMO_RECORDS, CLAIM_ONLY_DEMO_RECORD } from "./demo-records.mjs";
-import { validateDemoStudentOwnership, validateExactSubjectSet } from "./demo-utils.mjs";
+import { validateDemoStudentOwnership, validateExactOfferingSnapshotSet, validateExactSubjectSet } from "./demo-utils.mjs";
 
 const pendingRecord = ACCOUNT_DEMO_RECORDS.find((record) => record.key === "pending");
 
@@ -53,4 +53,30 @@ test("rejects a same-size but incorrect subject set", () => {
     () => validateExactSubjectSet(["subject-1", "subject-2"], ["subject-1", "subject-3"]),
     /do not exactly match/i
   );
+});
+
+test("accepts exact offering attachment snapshots", () => {
+  const offerings = [{ id: "offering-1", course_code: "GE-1", course_description: "Self", units: 3 }];
+  const attachments = [{
+    subject_id: null,
+    course_offering_id: "offering-1",
+    course_code: "GE-1",
+    course_description: "Self",
+    units: 3
+  }];
+
+  assert.equal(validateExactOfferingSnapshotSet(offerings, attachments), 1);
+});
+
+test("rejects an offering attachment with an incorrect snapshot", () => {
+  const offerings = [{ id: "offering-1", course_code: "GE-1", course_description: "Self", units: 3 }];
+  const attachments = [{
+    subject_id: null,
+    course_offering_id: "offering-1",
+    course_code: "GE-1",
+    course_description: "Changed",
+    units: 3
+  }];
+
+  assert.throws(() => validateExactOfferingSnapshotSet(offerings, attachments), /snapshots do not exactly match/i);
 });

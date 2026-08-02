@@ -196,7 +196,7 @@ async function createOfficialRecords(supabase, programId) {
   assertNoError(error, "Could not create fictional official student records");
 }
 
-async function createAccountBackedDemoRecord(supabase, record, programId, password, term, subjectIds, reviewerId, reviewedAt) {
+async function createAccountBackedDemoRecord(supabase, record, programId, password, term, offerings, reviewerId, reviewedAt) {
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: record.email,
     password,
@@ -253,12 +253,16 @@ async function createAccountBackedDemoRecord(supabase, record, programId, passwo
   assertNoError(enrollmentError, `Could not create ${record.key} enrollment`);
 
   const { error: attachmentError } = await supabase.from("enrollment_subjects").insert(
-    subjectIds.map((subjectId) => ({
+    offerings.map((offering) => ({
       enrollment_id: enrollment.id,
-      subject_id: subjectId
+      subject_id: null,
+      course_offering_id: offering.id,
+      course_code: offering.course_code,
+      course_description: offering.course_description,
+      units: offering.units
     }))
   );
-  assertNoError(attachmentError, `Could not attach subjects for ${record.key}`);
+  assertNoError(attachmentError, `Could not attach course offerings for ${record.key}`);
 }
 
 async function main() {
@@ -287,8 +291,6 @@ async function main() {
   await createOfficialRecords(supabase, program.id);
 
   const reviewerId = await resolveOptionalReviewerId(supabase, configuration.registrarEmail);
-  const subjectIds = subjects.map((subject) => subject.id);
-
   for (const record of ACCOUNT_DEMO_RECORDS) {
     await createAccountBackedDemoRecord(
       supabase,
@@ -296,7 +298,7 @@ async function main() {
       program.id,
       configuration.password,
       configuration.term,
-      subjectIds,
+      subjects,
       reviewerId,
       reviewedAt
     );
