@@ -8,17 +8,15 @@ import {
   type StudentEnrollmentFormInput,
   type TrustedStudentEnrollmentContext
 } from "@/lib/enrollment/student-submission";
-import { PROGRAM } from "@/lib/constants/pkm";
 import type { StudentType } from "@/types/database";
 
 function context(overrides: Partial<TrustedStudentEnrollmentContext> = {}): TrustedStudentEnrollmentContext {
   return {
     studentIdNumber: "26-00001",
     programId: "program-id",
-    programCode: PROGRAM.code,
     yearLevel: "1st Year",
     studentType: "Incoming 1st Year Student",
-    matchingSubjectCount: 8,
+    standardLoadAvailability: "configured_complete",
     ...overrides
   };
 }
@@ -42,10 +40,6 @@ test("Irregular Student requires Registrar-managed loading", () => {
   assert.equal(evaluateStandardLoadEligibility(context({ studentType: "Irregular Student" })), "registrar_managed_load");
 });
 
-test("non-BSAIS program is unsupported", () => {
-  assert.equal(evaluateStandardLoadEligibility(context({ programCode: "BSMA" })), "unsupported_program");
-});
-
 test("missing Student ID is rejected", () => {
   assert.equal(evaluateStandardLoadEligibility(context({ studentIdNumber: "  " })), "missing_student_id");
 });
@@ -54,9 +48,19 @@ test("invalid stored year level is rejected", () => {
   assert.equal(evaluateStandardLoadEligibility(context({ yearLevel: "5th Year" })), "invalid_student_record");
 });
 
-test("an empty matching subject set is rejected", () => {
-  assert.equal(evaluateStandardLoadEligibility(context({ matchingSubjectCount: 0 })), "no_configured_subjects");
+test("a missing standard load is rejected", () => {
+  assert.equal(evaluateStandardLoadEligibility(context({ standardLoadAvailability: "not_configured" })), "no_configured_load");
 });
+
+test("an incomplete standard load is rejected", () => {
+  assert.equal(evaluateStandardLoadEligibility(context({ standardLoadAvailability: "incomplete" })), "incomplete_configured_load");
+});
+
+for (const programCode of ["BSAIS", "BSMA", "BEED", "ENGLISH", "FILIPINO", "MATH", "SS", "CRIM", "ACP", "FSM"]) {
+  test(`${programCode} can use a complete configured standard load`, () => {
+    assert.equal(evaluateStandardLoadEligibility(context({ programId: `${programCode}-program` })), "eligible");
+  });
+}
 
 const activeTermFixture = { academicYear: "2026-2027", semester: "1st Semester" as const };
 
@@ -89,8 +93,8 @@ test("Registrar-managed outcome maps to the Registrar notice", () => {
   assert.match(getStudentSubmissionMessage("registrar_managed_load"), /Registrar review and assignment/);
 });
 
-test("unsupported-program outcome maps to the program notice", () => {
-  assert.match(getStudentSubmissionMessage("unsupported_program"), /not yet configured for your program/);
+test("missing-load outcome maps to the configuration notice", () => {
+  assert.match(getStudentSubmissionMessage("no_configured_load"), /standard subject load/);
 });
 
 test("closed-term outcome maps to the safe term notice", () => {

@@ -1,13 +1,14 @@
-import { PROGRAM, YEAR_LEVELS } from "@/lib/constants/pkm";
+import { YEAR_LEVELS } from "@/lib/constants/pkm";
 import type { StudentType, YearLevel } from "@/types/database";
+import type { StandardLoadAvailability } from "@/lib/enrollment/standard-load";
 
 export type StandardLoadEligibility =
   | "eligible"
   | "registrar_managed_load"
-  | "unsupported_program"
   | "missing_student_id"
   | "invalid_student_record"
-  | "no_configured_subjects";
+  | "no_configured_load"
+  | "incomplete_configured_load";
 
 export type StudentSubmissionOutcome =
   | StandardLoadEligibility
@@ -20,10 +21,9 @@ export type StudentSubmissionOutcome =
 export type TrustedStudentEnrollmentContext = {
   studentIdNumber: string | null;
   programId: string;
-  programCode: string | null;
   yearLevel: string;
   studentType: StudentType;
-  matchingSubjectCount: number;
+  standardLoadAvailability: Exclude<StandardLoadAvailability, "query_failed">;
 };
 
 export type StudentEnrollmentFormInput = {
@@ -43,10 +43,10 @@ export const STUDENT_SUBMISSION_MESSAGES: Record<StudentSubmissionOutcome, strin
   eligible: "",
   registrar_managed_load:
     "Your subject load requires Registrar review and assignment. Online standard-load submission is not available for this student classification.",
-  unsupported_program: "Online enrollment submission is not yet configured for your program. Please contact the Registrar.",
   missing_student_id: "Your student record needs a Student ID before online enrollment can be submitted. Please contact the Registrar.",
   invalid_student_record: "Your student record could not be used for online enrollment. Please contact the Registrar.",
-  no_configured_subjects: "No subjects are configured for your recorded year level and the current semester.",
+  no_configured_load: "A complete standard subject load is not configured for your program and year level. Please contact the Registrar.",
+  incomplete_configured_load: "The standard subject load for your program and year level is incomplete. Please contact the Registrar.",
   term_not_open: "Online enrollment is not available for the configured academic term. Please contact the Registrar.",
   term_unavailable: "No active enrollment term is currently configured. Please contact the Registrar.",
   duplicate: "You already have an enrollment request for this academic year and semester.",
@@ -90,12 +90,12 @@ export function evaluateStandardLoadEligibility(
     return "invalid_student_record";
   }
 
-  if (context.programCode !== PROGRAM.code) {
-    return "unsupported_program";
+  if (context.standardLoadAvailability === "not_configured") {
+    return "no_configured_load";
   }
 
-  if (context.matchingSubjectCount < 1) {
-    return "no_configured_subjects";
+  if (context.standardLoadAvailability === "incomplete") {
+    return "incomplete_configured_load";
   }
 
   return "eligible";
