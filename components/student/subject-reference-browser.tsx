@@ -11,7 +11,7 @@ import { SubjectReferenceTable } from "@/components/student/subject-reference-ta
 import { COURSE_OFFERINGS_TERM_25_26 } from "@/lib/constants/course-offerings";
 import { YEAR_LEVELS } from "@/lib/constants/pkm";
 import type { SubjectSeed } from "@/lib/constants/subjects";
-import type { Semester, YearLevel, Program } from "@/types/database";
+import type { Semester, StandardLoadSet, YearLevel, Program } from "@/types/database";
 
 export interface DBOfferingRow {
   id: string;
@@ -38,6 +38,12 @@ type CurriculumGroup = {
   subjects: SubjectSeed[];
   totalUnits: number;
 };
+
+type CurriculumSubjectRow = SubjectSeed & { program_code: string };
+type ActiveStandardLoad = Pick<
+  StandardLoadSet,
+  "program_id" | "academic_year" | "semester" | "year_level" | "status" | "expected_course_count" | "expected_total_units" | "source_document"
+>;
 
 function totalUnits(rows: Array<{ units: number }>) {
   return rows.reduce((sum, row) => sum + row.units, 0);
@@ -107,16 +113,22 @@ export function SubjectReferenceBrowser({
   programs,
   historicalOfferings,
   curriculumSubjects,
+  activeStandardLoads,
+  activeTerm,
   historicalOfferingsError,
-  curriculumSubjectsError
+  curriculumSubjectsError,
+  activeStandardLoadsError
 }: {
   studentProgramCode: string | null;
   studentProgramName: string;
   programs: Array<Pick<Program, "id" | "name" | "code">>;
   historicalOfferings: DBOfferingRow[];
-  curriculumSubjects: SubjectSeed[];
+  curriculumSubjects: CurriculumSubjectRow[];
+  activeStandardLoads: ActiveStandardLoad[];
+  activeTerm: { academicYear: string; semester: Semester } | null;
   historicalOfferingsError?: boolean;
   curriculumSubjectsError?: boolean;
+  activeStandardLoadsError?: boolean;
 }) {
   const initialProgramCode = useMemo(() => {
     if (studentProgramCode && historicalOfferings.some((o) => o.program_code === studentProgramCode)) {
@@ -125,13 +137,14 @@ export function SubjectReferenceBrowser({
     if (studentProgramCode && programs.some((p) => p.code === studentProgramCode)) {
       return studentProgramCode;
     }
-    return "BSAIS";
+    return programs.find((program) => Boolean(program.code))?.code ?? "";
   }, [historicalOfferings, programs, studentProgramCode]);
 
   const [selectedProgramCode, setSelectedProgramCode] = useState<string>(initialProgramCode);
   const [selectedYear, setSelectedYear] = useState<YearLevel | "">("");
 
   const activeProgram = programs.find((p) => p.code === selectedProgramCode) ?? {
+    id: "",
     code: selectedProgramCode,
     name: studentProgramCode === selectedProgramCode ? studentProgramName : selectedProgramCode
   };
@@ -146,9 +159,23 @@ export function SubjectReferenceBrowser({
     [programOfferings, selectedYear]
   );
 
+  const programCurriculumSubjects = useMemo(
+    () => curriculumSubjects.filter((subject) => subject.program_code === selectedProgramCode),
+    [curriculumSubjects, selectedProgramCode]
+  );
+
   const curriculumGroups = useMemo(
-    () => groupCurriculumSubjects(selectedProgramCode === "BSAIS" ? curriculumSubjects : [], selectedYear),
-    [selectedProgramCode, curriculumSubjects, selectedYear]
+    () => groupCurriculumSubjects(programCurriculumSubjects, selectedYear),
+    [programCurriculumSubjects, selectedYear]
+  );
+
+  const activeProgramLoads = useMemo(
+    () => activeStandardLoads.filter((load) =>
+      load.program_id === activeProgram.id &&
+      load.academic_year === activeTerm?.academicYear &&
+      load.semester === activeTerm?.semester
+    ),
+    [activeProgram.id, activeStandardLoads, activeTerm]
   );
 
   const isUnassignedProgram = !studentProgramCode;
@@ -171,7 +198,7 @@ export function SubjectReferenceBrowser({
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <p className="font-semibold">Unassigned Program Notice</p>
           <p className="mt-1 leading-6">
-            Your account currently has no official program assigned. Showing BSAIS course offerings as an explicitly labeled reference default. Browsing reference programs does not alter your official student record assignment.
+            Your account currently has no official program assigned. Showing the first configured program as an explicitly labeled reference default. Browsing reference programs does not alter your official student record assignment.
           </p>
         </div>
       ) : null}
@@ -248,19 +275,32 @@ export function SubjectReferenceBrowser({
 
         {selectedProgramCode === "BSAIS" ? (
           <aside className="mt-5 rounded-md border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
-            <p className="font-semibold">BSAIS Historical Offering Note</p>
+            <p className="font-semibold">Historical workbook source note</p>
             <p className="mt-1">
-              The supplied course-offering workbook contains duplicate BSAIS blocks and reports six 4th Year units, but no visible 4th Year BSAIS course rows were available in the supplied sheet. No missing offering rows were invented.
+              The supplied historical course-offering workbook contains duplicate BSAIS blocks and reports six 4th Year units, but no visible 4th Year BSAIS course rows were available in the supplied sheet. No missing offering rows were invented.
             </p>
           </aside>
         ) : (
           <aside className="mt-5 rounded-md border border-slateui-border bg-slateui-surfaceAlt px-4 py-3 text-sm text-slateui-secondary">
             <p className="font-semibold text-slateui-text">Non-BSAIS Historical Reference Notice</p>
             <p className="mt-1">
-              These course offerings are historical workbook records from AY 2025-2026, 2nd Semester. A complete official curriculum has not been supplied for this program, and automatic standard-load Online Enrollment is not configured for non-BSAIS programs.
+              These course offerings are historical workbook records from AY 2025-2026, 2nd Semester. Current standard-load availability is shown separately and depends on an active Registrar configuration for the selected program and year level.
             </p>
           </aside>
         )}
+
+        <aside className="mt-4 rounded-md border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-950">
+          <p className="font-semibold">Current standard-load availability</p>
+          {activeStandardLoadsError ? (
+            <p className="mt-1">Current availability could not be loaded. Historical offerings below remain reference-only.</p>
+          ) : activeTerm && activeProgramLoads.length ? (
+            <p className="mt-1">{activeProgramLoads.length} year-level standard-load configuration{activeProgramLoads.length === 1 ? "" : "s"} available for AY {activeTerm.academicYear}, {activeTerm.semester}.</p>
+          ) : activeTerm ? (
+            <p className="mt-1">No active standard-load configuration is currently available for this program in AY {activeTerm.academicYear}, {activeTerm.semester}.</p>
+          ) : (
+            <p className="mt-1">No active enrollment term is currently configured.</p>
+          )}
+        </aside>
 
         <div className="mt-5 flex items-center justify-end">
           {selectedYear ? (
@@ -304,22 +344,22 @@ export function SubjectReferenceBrowser({
         </div>
       </Card>
 
-      {selectedProgramCode === "BSAIS" ? (
+      {selectedProgramCode && programCurriculumSubjects.length ? (
         <Card className="border-t-4 border-t-primary-800">
           <CardHeader
-            title="BSAIS Curriculum Reference"
-            description="Full BSAIS curriculum reference derived from the public.subjects database table. These curriculum rows support the research-MVP BSAIS standard-load enrollment workflow."
-            action={<Badge tone="brand">{curriculumSubjects.length} curriculum subjects</Badge>}
+            title={`${activeProgram.code ?? "Program"} Curriculum Reference`}
+            description="Curriculum rows derived from the public.subjects database table. These rows are separate from historical workbook offerings and active standard-load configuration."
+            action={<Badge tone="brand">{programCurriculumSubjects.length} curriculum subjects</Badge>}
           />
 
           <div className="mt-6">
             {curriculumSubjectsError ? (
               <EmptyState
-                title="BSAIS curriculum reference could not be loaded"
+                title="Curriculum reference could not be loaded"
                 description="Please try again. Database query for public.subjects failed."
               />
             ) : !curriculumGroups.length ? (
-              <EmptyState title="No BSAIS curriculum subjects were found for the selected year level." />
+              <EmptyState title="No curriculum subjects were found for the selected year level." />
             ) : (
               <div className="space-y-5">
                 {curriculumGroups.map((group) => (

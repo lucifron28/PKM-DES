@@ -9,6 +9,7 @@ import {
   evaluateStandardLoadEligibility,
   getStudentSubmissionMessage
 } from "@/lib/enrollment/student-submission";
+import { getStandardLoadForStudent } from "@/lib/enrollment/standard-load";
 import { formatName } from "@/lib/utils/format";
 import type { Enrollment } from "@/types/database";
 
@@ -68,13 +69,8 @@ export default async function OnlineEnrollmentPage() {
     );
   }
 
-  const [subjectResult, enrollmentResult] = await Promise.all([
-    supabase
-      .from("subjects")
-      .select("id", { count: "exact", head: true })
-      .eq("program_id", student.program_id)
-      .eq("year_level", student.year_level)
-      .eq("semester", activeTerm.semester),
+  const [standardLoad, enrollmentResult] = await Promise.all([
+    getStandardLoadForStudent(supabase, student, activeTerm),
     supabase
       .from("enrollments")
       .select("status, academic_year, semester")
@@ -83,7 +79,7 @@ export default async function OnlineEnrollmentPage() {
       .eq("semester", activeTerm.semester)
       .maybeSingle()
   ]);
-  if (subjectResult.error || enrollmentResult.error) {
+  if (standardLoad.status === "query_failed" || enrollmentResult.error) {
     console.error("Enrollment information preload failed.", { stage: "preload" });
     return (
       <EmptyState
@@ -93,17 +89,17 @@ export default async function OnlineEnrollmentPage() {
     );
   }
 
-  const matchingSubjectCount = subjectResult.count;
   const existingEnrollment = enrollmentResult.data;
 
   const eligibility = evaluateStandardLoadEligibility({
     studentIdNumber: student.student_id_number,
     programId: student.program_id,
-    programCode: student.programs?.code ?? null,
     yearLevel: student.year_level,
     studentType: student.student_type,
-    matchingSubjectCount: matchingSubjectCount ?? 0
+    standardLoadAvailability:
+      standardLoad.status === "configured_complete" ? "configured_complete" : standardLoad.status
   });
+  const eligibilityMessage = eligibility === "eligible" ? null : getStudentSubmissionMessage(eligibility);
   const termEnrollment = (existingEnrollment as TermEnrollment | null) ?? null;
 
   return (
@@ -149,11 +145,15 @@ export default async function OnlineEnrollmentPage() {
               <ButtonLink className="mt-4" href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>
             </div>
           )
-        ) : eligibility === "eligible" ? (
-          <EnrollmentForm student={student} activeTerm={activeTerm} />
+        ) : eligibility === "eligible" && standardLoad.status === "configured_complete" ? (
+          <EnrollmentForm
+            student={student}
+            activeTerm={activeTerm}
+            standardLoad={standardLoad}
+          />
         ) : (
           <div className="border-l-4 border-amber-500 bg-amber-50 p-4 text-sm text-amber-950">
-            {getStudentSubmissionMessage(eligibility)}
+            {eligibilityMessage}
           </div>
         )}
       </Card>
