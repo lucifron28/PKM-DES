@@ -111,6 +111,13 @@ create index if not exists idx_enrollment_subjects_course_offering_id
   on public.enrollment_subjects (course_offering_id)
   where course_offering_id is not null;
 
+-- Student enrollment submission now runs only through the atomic RPC. Remove
+-- the older direct insert and cleanup policies so browser callers cannot
+-- create partial enrollment records or enrollment-subject rows.
+drop policy if exists "enrollments_insert_own" on public.enrollments;
+drop policy if exists "enrollment_subjects_insert_own_pending_matching_subject" on public.enrollment_subjects;
+drop policy if exists "enrollments_delete_own_pending_without_subjects" on public.enrollments;
+
 -- Replace the old BSAIS-only function with a generic configured-load path.
 create or replace function public.submit_standard_student_enrollment(
   p_academic_year text,
