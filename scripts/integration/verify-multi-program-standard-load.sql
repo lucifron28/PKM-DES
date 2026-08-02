@@ -79,6 +79,10 @@ values
   ('30000000-0000-4100-8000-000000000002', current_setting('pkm.fixture.bsma_id')::uuid, '2026-2027', '1st Semester', '1st Year', 'ACTIVE', 2, 6, 'LOCAL_MULTI_PROGRAM_FIXTURE'),
   ('30000000-0000-4100-8000-000000000003', current_setting('pkm.fixture.beed_id')::uuid, '2026-2027', '1st Semester', '1st Year', 'ACTIVE', 2, 6, 'LOCAL_MULTI_PROGRAM_FIXTURE');
 
+-- The production migration keeps Data API grants explicit. These read grants
+-- exist only for this rolled-back authenticated verification transaction.
+grant select on public.students, public.enrollments, public.enrollment_subjects, public.course_offerings to authenticated;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4100-8000-000000000001', true);
 

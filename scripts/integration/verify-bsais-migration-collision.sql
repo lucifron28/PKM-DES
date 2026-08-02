@@ -9,6 +9,7 @@ declare
   v_bsais_id uuid;
   v_canonical_subject_count integer;
   v_canonical_offering_count integer;
+  v_all_offerings_count integer;
   v_all_programs_count integer;
 begin
   perform set_config('pkm.fixture.migration_transaction_at', now()::text, true);
@@ -25,9 +26,11 @@ begin
   perform set_config('pkm.fixture.bsais_id', v_bsais_id::text, true);
   select count(*) into v_canonical_subject_count from public.subjects where program_id = v_bsais_id;
   select count(*) into v_canonical_offering_count from public.course_offerings where program_id = v_bsais_id;
+  select count(*) into v_all_offerings_count from public.course_offerings;
   select count(*) into v_all_programs_count from public.programs;
   perform set_config('pkm.fixture.canonical_subject_count', v_canonical_subject_count::text, true);
   perform set_config('pkm.fixture.canonical_offering_count', v_canonical_offering_count::text, true);
+  perform set_config('pkm.fixture.all_offerings_count', v_all_offerings_count::text, true);
   perform set_config('pkm.fixture.all_programs_count', v_all_programs_count::text, true);
 end;
 $fixture$;
@@ -45,14 +48,14 @@ values
   ('00000000-0000-4000-8000-000000000002', 'student', 'Test', 'BEED', 'test.beed@example.test', 'ACTIVE')
 on conflict (id) do nothing;
 
--- Alias programs: 4 AIS/BSAIS variants + 1 non-BSAIS (BEED)
+-- Alias programs: 4 AIS/BSAIS variants + 1 non-BSAIS fixture program
 insert into public.programs (id, name, code)
 values
   ('aaaaaaaa-aaaa-4000-8000-000000000002', 'Accounting Information System', 'AIS'),
   ('aaaaaaaa-aaaa-4000-8000-000000000003', 'Bachelor of Science in Accounting Information System', 'bsais'),
   ('aaaaaaaa-aaaa-4000-8000-000000000004', 'Accounting Information System', ' BSAIS '),
   ('aaaaaaaa-aaaa-4000-8000-000000000005', 'Accounting Information Systems', 'AIS-LEGACY'),
-  ('aaaaaaaa-aaaa-4000-8000-000000000006', 'Bachelor of Elementary Education', 'BEED')
+  ('aaaaaaaa-aaaa-4000-8000-000000000006', 'Bachelor of Elementary Education (Fixture)', 'BEED-FIXTURE')
 on conflict (id) do nothing;
 
 -- Non-BSAIS official student record, student, enrollment (must remain unchanged)
@@ -91,16 +94,23 @@ values
   ('bbbbbbbb-bbbb-4000-8000-000000000010', 'aaaaaaaa-aaaa-4000-8000-000000000006', 'EED-101', 'Teaching Reading', 3, '1st Year', '1st Semester')
 on conflict (id) do nothing;
 
-insert into public.enrollment_subjects (id, enrollment_id, subject_id)
+insert into public.enrollment_subjects (
+  id,
+  enrollment_id,
+  subject_id,
+  course_code,
+  course_description,
+  units
+)
 values
-  ('ffffffff-ffff-4000-8000-000000000001', 'eeeeeeee-eeee-4000-8000-000000000002', 'bbbbbbbb-bbbb-4000-8000-000000000010'),
-  ('ffffffff-ffff-4000-8000-000000000002', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000001'),
-  ('ffffffff-ffff-4000-8000-000000000003', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000002'),
-  ('ffffffff-ffff-4000-8000-000000000004', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000003'),
-  ('ffffffff-ffff-4000-8000-000000000005', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000004'),
-  ('ffffffff-ffff-4000-8000-000000000006', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000005'),
-  ('ffffffff-ffff-4000-8000-000000000007', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000006'),
-  ('ffffffff-ffff-4000-8000-000000000008', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000007')
+  ('ffffffff-ffff-4000-8000-000000000001', 'eeeeeeee-eeee-4000-8000-000000000002', 'bbbbbbbb-bbbb-4000-8000-000000000010', 'EED-101', 'Teaching Reading', 3),
+  ('ffffffff-ffff-4000-8000-000000000002', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000001', 'ACT-101', 'Accounting Principles I', 3),
+  ('ffffffff-ffff-4000-8000-000000000003', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000002', 'ACT-101', 'Accounting Principles I', 3),
+  ('ffffffff-ffff-4000-8000-000000000004', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000003', 'ACT-101', 'Accounting Principles I', 3),
+  ('ffffffff-ffff-4000-8000-000000000005', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000004', 'ACT-101', 'Accounting Principles I', 3),
+  ('ffffffff-ffff-4000-8000-000000000006', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000005', 'ACT-104', 'Cost Accounting', 3),
+  ('ffffffff-ffff-4000-8000-000000000007', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000006', 'ACT-104', 'Cost Accounting', 3),
+  ('ffffffff-ffff-4000-8000-000000000008', 'eeeeeeee-eeee-4000-8000-000000000001', 'bbbbbbbb-bbbb-4000-8000-000000000007', 'ACT-104', 'Cost Accounting', 3)
 on conflict (id) do nothing;
 
 -- Grades:
@@ -211,7 +221,7 @@ begin
     raise exception 'POST-REFUSE FAIL: subjects were modified after refused normalization';
   end if;
   select count(*) into v_count from public.course_offerings;
-  if v_count <> current_setting('pkm.fixture.canonical_offering_count')::integer + 9 then
+  if v_count <> current_setting('pkm.fixture.all_offerings_count')::integer + 9 then
     raise exception 'POST-REFUSE FAIL: offerings were modified after refused normalization';
   end if;
   select count(*) into v_count from public.enrollment_subjects;
