@@ -40,7 +40,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Student pages: Dashboard, Online Enrollment, Subject List, Enrollment Status Result, Grades placeholder, Class Schedule placeholder, Balances placeholder, Account, Logout
 - Admin pages: Dashboard, Pending Enrollments, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
 - Admin reporting: Enrollment Reports with filters, status summaries, and browser-print output
-- Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, and BSAIS curriculum subject seed data
+- Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, historical course offerings, and explicit term-scoped standard-load configuration
 
 ## 5. Features Implemented
 
@@ -59,12 +59,12 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Student dashboard with student information, enrollment status, and quick actions
 - Student Account page displays core account data and matching Registrar-managed official profile details when available
 - Signed-in students can change their password from the Account page
-- Subject List separates historical workbook course-offering references from the BSAIS curriculum reference, with one working year-level filter
+- Subject List separates historical workbook course-offering references from program curriculum references, with one working year-level filter and current standard-load availability status
 - Historical workbook offerings are display-only AY 2025-2026, 2nd Semester references and are not the active AY 2026-2027 enrollment load
 - Students cannot select subjects from the Subject List; actual attached subjects come from the submitted enrollment record and Registrar review
 - Online enrollment uses the authenticated student's recorded program, year level, student type, and Student ID; the browser submits only the certification checkbox
-- Automatic standard-load submission is limited to eligible BSAIS students for the client-confirmed MVP term: AY 2026-2027, 1st Semester
-- The server action supplies `CURRENT_ENROLLMENT_TERM` to the RPC, which validates it against the database-approved term; a mismatch creates no enrollment
+- Automatic standard-load submission is available only when a complete active standard-load set exists for the student's recorded program, year level, and client-confirmed MVP term: AY 2026-2027, 1st Semester
+- The server action reads the authoritative active term from `public.enrollment_terms` and supplies it to the RPC; a mismatch creates no enrollment
 - Transferee and Irregular Student loads are directed to Registrar-managed subject assignment; no transfer-credit or adjusted-load rules are invented
 - One atomic database submission creates a `PENDING` enrollment and its complete matching `enrollment_subjects` set, while the unique student-term index handles concurrent duplicates safely
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
@@ -207,7 +207,9 @@ For Vercel, set `DATABASE_PROVIDER=supabase`. `DATABASE_PROVIDER=sqlite` is loca
 - `programs`
 - `subjects`
 - `enrollments`
-- `enrollment_subjects`
+- `enrollment_subjects` (legacy subject or course-offering source with non-null display snapshots)
+- `course_offerings` (source-labeled historical or configured course offerings)
+- `standard_load_sets` (term-scoped Registrar-managed expected count and unit configuration)
 - `official_student_records`
 - `grades`
 - `class_schedules`
@@ -238,7 +240,7 @@ Current tracked `supabase/seed.sql` definition:
 - BSAIS curriculum subjects: 56
 - BSAIS curriculum units: 167
 
-The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
+The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subject rows; online enrollment does not use those rows as a BSAIS-only fallback. It requires an active, complete `standard_load_sets` configuration and matching `course_offerings` for the student's program, term, and year level, so complete multi-program enrollment is not yet available until those configurations are supplied.
 
 SQLite development seeding is documented separately in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
 
@@ -263,7 +265,7 @@ Student:
 - Student can change password from the Account page after entering the current password.
 - Student can view subject list.
 - Student can view source-labeled historical workbook offerings for the student's actual program where configured for SY 2025-2026, 2nd Semester.
-- Student can distinguish historical course-offering references, the BSAIS curriculum reference, and actual enrollment subjects.
+- Student can distinguish historical course-offering references, program curriculum references, configured standard-load availability, and actual enrollment subjects.
 - Subject list displays separate tables by year level and semester.
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
@@ -324,11 +326,11 @@ Security:
 - Grades, schedule, balances, student records, and encode workflows are placeholders.
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
-- Subject List uses tracked source-derived constants for historical and curriculum references; actual enrollment attachments continue to use the Supabase `subjects` table.
-- The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
-- Workbook-derived offerings are historical, display-only AY 2025-2026, 2nd Semester references; they are not the active AY 2026-2027 enrollment load and do not replace database curriculum subjects used by enrollment.
+- Subject List uses source-derived historical offerings and program curriculum references; current online enrollment attachments come only from an active, complete Supabase `standard_load_sets` plus matching `course_offerings` configuration.
+- The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. The enrollment architecture is program-agnostic, but no historical workbook rows are promoted to the active AY 2026-2027 load automatically.
+- Workbook-derived offerings are historical, display-only AY 2025-2026, 2nd Semester references; they are not the active AY 2026-2027 enrollment load and do not fill missing current-term rows.
 - The source workbook contains duplicate BSAIS blocks and a 4th Year BSAIS total with no visible 4th Year BSAIS course rows.
-- Enrollment submission attaches matching BSAIS subjects from the database until PKM supplies approved curriculum and term-enrollment rules for other programs.
+- Enrollment submission attaches the exact configured current-term course-offering set for any program only after PKM supplies and activates the corresponding standard-load configuration. Transferee and Irregular Student loads remain Registrar-managed.
 - Client has confirmed First Semester AY 2026-2027 as the current MVP enrollment term, but the app still needs a full academic calendar configuration before additional terms are opened.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Student Account official-detail display depends on an exact matching Registrar-managed official record and server-only Supabase service-role configuration.

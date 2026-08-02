@@ -51,12 +51,22 @@ psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify
 # 4. Run the BSAIS program alias migration collision verification script
 psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify-bsais-migration-collision.sql
 
-# 5. Run the concurrency verification script
+# 5. Run the generic multi-program standard-load verification script
+# (Uses fictional BSAIS, BSMA, and BEED configurations, then rolls them back.)
+psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify-multi-program-standard-load.sql
+
+# 6. Run the concurrency verification script
 powershell -ExecutionPolicy Bypass -File scripts/integration/verify-local-supabase-concurrency.ps1
 
-# 6. Stop local Supabase containers when finished
+# 7. Stop local Supabase containers when finished
 npx supabase stop
 ```
+
+The multi-program fixture verifies exact offering-backed attachment IDs and
+course snapshots for multiple programs, routes Transferee records to Registrar
+handling, rejects unconfigured programs, and rolls back all fictional rows.
+Historical workbook offerings remain historical and are never relabelled as the
+current enrollment term.
 
 ## 3. Playwright End-to-End Browser Testing
 

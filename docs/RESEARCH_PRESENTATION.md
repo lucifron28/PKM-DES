@@ -9,7 +9,7 @@ The following system diagrams illustrate the architecture, domain models, and ke
 - **[Component Diagram](diagrams/pkm-des-component.puml)**: Deep dive into the internal modules, Server Actions, auth layers, and domain logic. *Show this to technical audiences to explain Next.js App Router boundaries and database interaction.*
 
 ### Database Schema
-- **[Domain Model](diagrams/pkm-des-domain-model.puml)**: Visualizes the PostgreSQL relational schema, including profiles, students, programs, subjects, enrollments, and audit logs. *Show this when explaining data structure and the separation of official records from active accounts.*
+- **[Domain Model](diagrams/pkm-des-domain-model.puml)**: Visualizes the PostgreSQL relational schema, including profiles, students, programs, curriculum subjects, historical/configured course offerings, standard-load sets, enrollments, and audit logs. *Show this when explaining data structure and the separation of official records from active accounts.*
 
 ### Key Workflows (Sequence Diagrams)
 - **[Account Claim Sequence](diagrams/pkm-des-account-claim-sequence.puml)**: Details the official record lookup, signed proof validation, and atomic Supabase user creation. *Show this when explaining the secure onboarding process.*
@@ -24,3 +24,4 @@ The following system diagrams illustrate the architecture, domain models, and ke
 - **Server-Only Email Abstraction**: Provides a pluggable `EmailAdapter` (Resend adapter when explicitly configured, Mock adapter for preview). Live delivery is disabled by default.
 - **One-Time Setup Link**: Can generate a recovery/setup link to set an account password without exposing raw secrets. It is not generated-password delivery and is not used unless PKM configures it.
 - **Requirement Verification Gate**: The database approval RPC checks status-only, current-term Health Record Update verification only when the student is an Incoming 1st Year Student and the Registrar-managed official record explicitly confirms `Female`. No medical details or uploaded forms are stored.
+- **Configured Standard Loads**: Automatic enrollment is program-agnostic but fail-closed. It uses only an active, complete term-scoped standard-load set and matching course-offering rows; the historical workbook remains a 2025-2026 reference.

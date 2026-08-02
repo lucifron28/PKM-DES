@@ -24,7 +24,7 @@ After resetting a dedicated Supabase preview project, use [PREVIEW_CREDENTIALS.m
 | Camille Garcia | `99-90003` | Approved enrollment | Demonstrate enrolled status, masterlist, reports, and draft registration-form printing. |
 | Daniel Mendoza | `99-90004` | Rejected enrollment | Demonstrate a rejected result with the neutral fictional remark recorded by the script. |
 
-All four records use BSAIS, `1st Year`, and `Incoming 1st Year Student`. The script resolves the academic year and semester with the same environment-variable convention and fallback as the application.
+All four records use BSAIS, `1st Year`, and `Incoming 1st Year Student`. The script resolves the academic year and semester with the same environment-variable convention and fallback as the application. Pre-seeded review examples remain readable with legacy or offering-backed snapshots; a live post-claim submission additionally requires an active, complete BSAIS standard-load configuration for the configured term.
 
 ## Expected Dashboard State
 

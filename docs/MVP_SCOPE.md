@@ -13,7 +13,7 @@ The hosted deployment is a client preview environment. It demonstrates a propose
 3. The student logs in.
 4. The student views the dashboard and available subjects.
 5. The student submits an enrollment request for the configured MVP term.
-6. For an eligible BSAIS standard load, the server saves the request with `PENDING` status and atomically attaches matching curriculum subjects.
+6. For an eligible student with a complete active standard-load configuration, the server saves the request with `PENDING` status and atomically attaches the configured course-offering set.
 7. The Registrar/Admin opens Pending Enrollments and reviews the request.
 8. The Registrar/Admin approves or rejects the request and may add free-text rejection remarks.
 9. The student views the updated enrollment-status result.
@@ -34,7 +34,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Dashboard with profile-derived information, term-specific enrollment status result, and quick actions. Current-term status is derived only from an enrollment record matching the active academic term; `students.enrollment_status` is not the current-term source of truth.
 - View-only subject list grouped by year level and semester.
-- Trusted server-derived online enrollment request submission for eligible BSAIS standard loads in the configured MVP term.
+- Trusted server-derived online enrollment request submission for any program with a complete active standard-load configuration in the configured MVP term. The current repository does not activate a current-term load without an approved configuration.
 - Term-specific enrollment status result, including free-text rejection remarks when entered.
 - Account information display and signed-in password change.
 
@@ -62,8 +62,8 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - The current registration output is a browser-print **draft registration form**, not final official COR generation.
 - The deployment is a temporary client preview and should use limited demonstration data.
-- The program catalog contains ten canonical programs (with case/whitespace normalized BSAIS aliases), and the Subject List includes historical workbook-derived offerings for all ten programs. BSAIS curriculum subjects are loaded directly from `public.subjects` for standard-load enrollment; complete standard-load automatic enrollment for non-BSAIS programs remains unsupported until official curricula are supplied.
-- Subject List workbook rows are historical AY 2025-2026, 2nd Semester display-only references, not the active enrollment load. BSAIS curriculum rows from `public.subjects` are a separate reference; actual subject attachments belong to submitted enrollment records and cannot be selected by students on the Subject List page.
+- The program catalog contains ten canonical programs (with case/whitespace normalized BSAIS aliases), and the Subject List includes historical workbook-derived offerings for all ten programs. The enrollment architecture is program-agnostic, but current automatic enrollment requires an active, complete `standard_load_sets` row and exact matching `course_offerings`; no current-term configuration is invented in this repository.
+- Subject List workbook rows are historical AY 2025-2026, 2nd Semester display-only references, not the active enrollment load. Curriculum rows from `public.subjects` are a separate reference; actual current-term subject attachments come from configured offering rows and cannot be selected by students on the Subject List page.
 - The browser cannot choose a student's program, year level, student type, term, status, or subjects. The current term is fixed to AY 2026-2027, 1st Semester until an approved academic-calendar module exists.
 - Transferee and Irregular Student records require Registrar-managed subject assignment. The MVP does not invent transfer-credit, irregular-load, full requirement-checklist, or subject-adjustment rules.
 - Registrar review is limited to submitted pending requests. Stale concurrent review attempts cannot overwrite the first decision. A rejected automatic enrollment request is terminal for that academic year and semester; students cannot automatically resubmit for the same term under the existing database term-unique index. Note: This terminal rejection behavior is a provisional project-owner MVP rule, not confirmed institutional policy; any future return-for-correction or versioned resubmission workflow requires explicit PKM approval.
@@ -97,7 +97,7 @@ The draft registration form also contains non-operational placeholders for sched
 - Electronic signatures.
 - Complete institutional audit and compliance implementation.
 - Full production security certification.
-- Complete support for every academic program.
+- Complete support for every academic program before approved current-term standard-load configurations are supplied.
 - Replacement of the official Registrar process.
 
 ## 7. Demonstration Data Policy
