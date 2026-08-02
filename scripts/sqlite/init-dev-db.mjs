@@ -8,20 +8,36 @@ const databasePath = resolve(workspaceRoot, "data/sqlite/pkm-des.dev.sqlite");
 const schemaPath = resolve(workspaceRoot, "db/sqlite/schema.sql");
 const subjectsPath = resolve(workspaceRoot, "lib/constants/subjects.ts");
 
-mkdirSync(dirname(databasePath), { recursive: true });
-
-const db = new DatabaseSync(databasePath);
-db.exec("pragma foreign_keys = on");
-db.exec(readFileSync(schemaPath, "utf8"));
-
-// Keep an existing local development database compatible with the dual-source
-// enrollment attachment columns introduced after the initial SQLite schema.
-for (const column of [
+const enrollmentSubjectColumns = [
   ["course_offering_id", "text"],
   ["course_code", "text"],
   ["course_description", "text"],
   ["units", "integer"]
-]) {
+];
+
+mkdirSync(dirname(databasePath), { recursive: true });
+
+const db = new DatabaseSync(databasePath);
+db.exec("pragma foreign_keys = on");
+
+// Upgrade an existing local database before the schema creates indexes that
+// reference the new dual-source attachment columns.
+for (const column of enrollmentSubjectColumns) {
+  try {
+    db.exec(`alter table enrollment_subjects add column ${column[0]} ${column[1]}`);
+  } catch (error) {
+    const message = String(error).toLowerCase();
+    if (!message.includes("no such table") && !message.includes("duplicate column")) {
+      throw error;
+    }
+  }
+}
+
+db.exec(readFileSync(schemaPath, "utf8"));
+
+// Keep an existing local development database compatible with the dual-source
+// enrollment attachment columns introduced after the initial SQLite schema.
+for (const column of enrollmentSubjectColumns) {
   try {
     db.exec(`alter table enrollment_subjects add column ${column[0]} ${column[1]}`);
   } catch (error) {

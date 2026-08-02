@@ -49,17 +49,21 @@ The SQLite init script:
 - Creates local development tables equivalent to the current MVP schema.
 - Seeds a separate local-development catalog of 10 programs.
 - Seeds 56 BSAIS curriculum subjects from `lib/constants/subjects.ts`.
+- Creates `course_offerings` and `standard_load_sets` tables for parity with Supabase, but does not invent current-term load rows.
+- Keeps `enrollment_subjects` compatible with legacy subject-backed rows and course-offering-backed snapshot rows.
 - Enforces one enrollment record per student, academic year, and semester.
-- Verifies the expected local totals:
+- A fresh local database has these expected totals:
   - Programs: 10
   - Subjects: 56
   - Total units: 167
+- Re-running the initializer preserves compatible local rows, so an existing
+  development database may report additional records from earlier tests.
 
 This local seed is independent from the deployed Supabase environment. Refer to [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for the current Supabase seed definition and deployment guidance.
 
 ## Current Boundary
 
-This branch adds the local SQLite database foundation and provider guard.
+The SQLite init script does not import the ignored client workbook. Historical workbook rows and active standard-load sets must be supplied through an explicit local fixture when a safe test needs them; the script never relabels historical rows as the current term.
 
 Current app routes still use Supabase clients. Moving individual app flows to a database adapter should happen in later small branches, one workflow at a time.
 
