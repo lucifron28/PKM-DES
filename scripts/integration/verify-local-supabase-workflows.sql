@@ -59,13 +59,13 @@ values
   ('26-00003', 'Gate', 'Student', 'gate.student@example.test', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED');
 
 insert into public.subjects (id, program_id, course_code, course_description, units, year_level, semester)
-values ('30000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, 'TEST-101', 'Local verification subject', 3, '1st Year', '1st Semester');
+values ('30000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, 'TEST-101', 'Local verification subject', 3, '1st Year', '2nd Semester');
 
 insert into public.enrollments (id, student_id, program_id, year_level, academic_year, semester, status)
 values
-  ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2026-2027', '1st Semester', 'PENDING'),
-  ('40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2026-2027', '1st Semester', 'PENDING'),
-  ('40000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2026-2027', '1st Semester', 'PENDING');
+  ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2025-2026', '2nd Semester', 'PENDING'),
+  ('40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2025-2026', '2nd Semester', 'PENDING'),
+  ('40000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2025-2026', '2nd Semester', 'PENDING');
 
 insert into public.student_requirements (
   student_id, requirement_code, academic_year, semester, applicability, status, verified_at, verified_by
@@ -73,8 +73,8 @@ insert into public.student_requirements (
 values (
   '20000000-0000-4000-8000-000000000001',
   'HEALTH_RECORD_UPDATE',
-  '2026-2027',
-  '1st Semester',
+  '2025-2026',
+  '2nd Semester',
   'APPLICABLE',
   'PENDING',
   null,
@@ -130,8 +130,8 @@ begin
   from public.student_requirements
   where student_id = '20000000-0000-4000-8000-000000000001'
     and requirement_code = 'HEALTH_RECORD_UPDATE'
-    and academic_year = '2026-2027'
-    and semester = '1st Semester';
+    and academic_year = '2025-2026'
+    and semester = '2nd Semester';
   if visible_count <> 1 then
     raise exception 'owning student could not select exactly their requirement row';
   end if;
@@ -141,8 +141,8 @@ begin
   from public.student_requirements
   where student_id = '20000000-0000-4000-8000-000000000001'
     and requirement_code = 'HEALTH_RECORD_UPDATE'
-    and academic_year = '2026-2027'
-    and semester = '1st Semester';
+    and academic_year = '2025-2026'
+    and semester = '2nd Semester';
   if visible_count <> 0 then
     raise exception 'another student selected a private requirement row';
   end if;
@@ -152,8 +152,8 @@ begin
   set status = 'VERIFIED'
   where student_id = '20000000-0000-4000-8000-000000000001'
     and requirement_code = 'HEALTH_RECORD_UPDATE'
-    and academic_year = '2026-2027'
-    and semester = '1st Semester';
+    and academic_year = '2025-2026'
+    and semester = '2nd Semester';
   get diagnostics changed_count = row_count;
   if changed_count <> 0 then
     raise exception 'student bypassed requirement update RLS';
@@ -161,8 +161,8 @@ begin
   if (select status from public.student_requirements
     where student_id = '20000000-0000-4000-8000-000000000001'
       and requirement_code = 'HEALTH_RECORD_UPDATE'
-      and academic_year = '2026-2027'
-      and semester = '1st Semester') <> 'PENDING' then
+      and academic_year = '2025-2026'
+      and semester = '2nd Semester') <> 'PENDING' then
     raise exception 'student direct update changed requirement status';
   end if;
   if (select outcome from public.update_enrollment_requirement_status(
@@ -191,30 +191,30 @@ begin
   if (select status from public.student_requirements
     where student_id = '20000000-0000-4000-8000-000000000001'
       and requirement_code = 'HEALTH_RECORD_UPDATE'
-      and academic_year = '2026-2027'
-      and semester = '1st Semester') <> 'VERIFIED' then
+      and academic_year = '2025-2026'
+      and semester = '2nd Semester') <> 'VERIFIED' then
     raise exception 'admin requirement verification did not persist';
   end if;
   if (select verified_at from public.student_requirements
     where student_id = '20000000-0000-4000-8000-000000000001'
       and requirement_code = 'HEALTH_RECORD_UPDATE'
-      and academic_year = '2026-2027'
-      and semester = '1st Semester') is null then
+      and academic_year = '2025-2026'
+      and semester = '2nd Semester') is null then
     raise exception 'admin requirement verification did not set verified_at';
   end if;
   if (select verified_by from public.student_requirements
     where student_id = '20000000-0000-4000-8000-000000000001'
       and requirement_code = 'HEALTH_RECORD_UPDATE'
-      and academic_year = '2026-2027'
-      and semester = '1st Semester') <> '00000000-0000-4000-8000-000000000001' then
+      and academic_year = '2025-2026'
+      and semester = '2nd Semester') <> '00000000-0000-4000-8000-000000000001' then
     raise exception 'admin requirement verification did not set verified_by';
   end if;
   if (select count(*) from public.audit_logs
     where target_id = (select id from public.student_requirements
       where student_id = '20000000-0000-4000-8000-000000000001'
         and requirement_code = 'HEALTH_RECORD_UPDATE'
-        and academic_year = '2026-2027'
-        and semester = '1st Semester')
+        and academic_year = '2025-2026'
+        and semester = '2nd Semester')
       and action = 'UPDATE_STUDENT_REQUIREMENT_STATUS'
   ) <> 1 then
     raise exception 'requirement status audit count was not one';
