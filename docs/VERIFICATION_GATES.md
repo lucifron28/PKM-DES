@@ -52,7 +52,7 @@ psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify
 psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify-bsais-migration-collision.sql
 
 # 5. Run the generic multi-program standard-load verification script
-# (Uses fictional BSAIS, BSMA, and BEED configurations, then rolls them back.)
+# (Verifies the ten programs and active workbook-backed standard-load configurations.)
 psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f scripts/integration/verify-multi-program-standard-load.sql
 
 # 6. Run the concurrency verification script
@@ -62,11 +62,12 @@ powershell -ExecutionPolicy Bypass -File scripts/integration/verify-local-supaba
 npx supabase stop
 ```
 
-The multi-program fixture verifies exact offering-backed attachment IDs and
-course snapshots for multiple programs, routes Transferee records to Registrar
-handling, rejects unconfigured programs, and rolls back all fictional rows.
-Historical workbook offerings remain historical and are never relabelled as the
-current enrollment term.
+The multi-program fixture verifies the client-provided AY 2025-2026, 2nd
+Semester workbook rows and all ten program catalogs against their active
+standard-load configurations. It verifies exact offering-backed attachment IDs
+and course snapshots, routes Transferee and Irregular Student records to
+Registrar handling, rejects the four incomplete program/year combinations, and
+rolls back all fictional rows.
 
 ## 3. Playwright End-to-End Browser Testing
 

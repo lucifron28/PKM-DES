@@ -58,7 +58,7 @@
 
 ## 3. Existing Strengths
 
-1. **Clear MVP & Institutional Scope Framing**: The UI explicitly informs users when data is historical reference (e.g. BSAIS course offering notes), when forms are draft-only (Registration Form), and when features are out of scope (Fee Assessment, Official COR generation).
+1. **Clear MVP & Institutional Scope Framing**: The UI explicitly distinguishes the client-provided term course load from curriculum references, preserves factual historical-workbook source notes (such as the BSAIS 4th Year gap), identifies draft-only forms (Registration Form), and marks features that remain out of scope (Fee Assessment, Official COR generation).
 2. **Strict Server/Client Boundaries**: Client components (`"use client"`) are restricted to interactive forms, filters, and state toggles. Data loading and authorization remain strictly server-side.
 3. **Consistent Brand Color Hierarchy**: Brand Blue (`#004aad`) and Brand Yellow (`#f9d818`) are used purposefully for primary actions and highlights, while neutral slates (`#0f172a`, `#334155`, `#64748b`) maintain readability without visual clutter.
 4. **Comprehensive Form Feedback & Disclaimers**: Submission buttons show clear pending state labels ("Submitting...", "Approving...", "Finding..."), and success/error messages use semantic callouts (`AlertMessage`).

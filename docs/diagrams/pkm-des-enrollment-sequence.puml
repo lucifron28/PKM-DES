@@ -31,7 +31,7 @@ DB --> Supabase : Success
 Supabase --> Action : Enrollment ID
 
 note right of DB
-  Historical AY 2025-2026 / 2nd Semester
+  Client-provided active load: AY 2025-2026 / 2nd Semester
   workbook offerings are display reference data.
   They do not become the current load without
   an approved standard-load configuration.

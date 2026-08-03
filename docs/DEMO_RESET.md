@@ -32,7 +32,7 @@ Run only against a dedicated preview or test Supabase project that contains no l
 npm run demo:reset
 ```
 
-The script deletes and recreates only exact, account-backed fictional identities whose Auth user, profile email, and Student ID all match the allowlisted demo record. Reserved Student IDs are collision checks only: a missing profile, non-demo profile, mismatched pair, or a student row for the claim-only ID stops the reset before any mutation. The script does not truncate tables or select records by broad date, status, program, or email-domain filters. It must find an active, complete standard-load configuration before creating attached demo enrollment snapshots; historical workbook rows are never relabelled as the active term.
+The script deletes and recreates only exact, account-backed fictional identities whose Auth user, profile email, and Student ID all match the allowlisted demo record. Reserved Student IDs are collision checks only: a missing profile, non-demo profile, mismatched pair, or a student row for the claim-only ID stops the reset before any mutation. The script does not truncate tables or select records by broad date, status, program, or email-domain filters. It must find an active, complete standard-load configuration before creating attached demo enrollment snapshots; the client-provided workbook rows are used only through that matching active configuration.
 
 ## Verify the Result
 

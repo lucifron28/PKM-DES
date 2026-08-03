@@ -52,7 +52,7 @@ entity "course_offerings" as course_offerings {
   * units : integer
   * source_document : text
   --
-  Historical or Registrar-approved term offering.
+  Client-provided or Registrar-approved term offering.
 }
 
 entity "standard_load_sets" as standard_load_sets {

@@ -249,9 +249,9 @@ supabase/migrations/20260715000000_atomic_student_enrollment_submission.sql
 
 The latest multi-program migration replaces the BSAIS-only fallback with `public.submit_standard_student_enrollment(p_academic_year text, p_semester text)`. The server action reads the authoritative active term from `public.enrollment_terms` and supplies its academic year and semester; the authenticated RPC derives the student, program, year level, and student type internally, then validates the supplied term against the database-approved active term. It permits Incoming 1st Year, Old, Continuing, and Regular Student records only when an active, complete `standard_load_sets` row and matching `course_offerings` exist for that program, term, and year level. It creates one `PENDING` enrollment and attaches the exact configured offering set in one transaction.
 
-The function accepts no browser-selected student, program, year, term, status, or subject values. A term mismatch returns `term_not_open` and creates no enrollment or student-status change. It returns controlled outcomes, handles unique-index races as a duplicate result, and rolls back entirely if attachment fails. Students retain read access to their own enrollment rows and attached subjects, while direct student inserts into `enrollments` and `enrollment_subjects` are removed. Admin management policies are unchanged.
+The function accepts no browser-selected student, program, year, term, status, or subject values. A term mismatch returns `term_not_open` and creates no enrollment or student-status change. It returns controlled outcomes, handles unique-index races as a duplicate result, and rolls back entirely if attachment fails. Students retain read access to their own enrollment rows and attached subjects, while direct student inserts into `enrollments` and `enrollment_subjects` are removed. Registrar management of enrollment-subject rows remains restricted by the admin RLS policy.
 
-The current approved MVP term is `AY 2026-2027`, `1st Semester`. Until an approved academic-calendar module exists, changing terms requires coordinated updates to the authoritative `enrollment_terms` row and the corresponding standard-load configuration. The browser cannot choose or submit the term.
+The current approved MVP term is `AY 2025-2026`, `2nd Semester`, taken from the client-provided `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`. Until an approved academic-calendar module exists, changing terms requires coordinated forward migrations for the authoritative `enrollment_terms` row, application display, and corresponding standard-load configuration. The browser cannot choose or submit the term.
 
 ## Generic Standard-Load Configuration
 
@@ -270,9 +270,16 @@ validated configuration and attached offering set stable for one submission.
 The `standard_load_sets.updated_at` column is also maintained by the shared
 update trigger.
 
-The migration intentionally does not seed or activate a current-term standard load. The supplied workbook is only `2025-2026`, `2nd Semester` historical source data, so it is not copied or relabelled as `2026-2027`, `1st Semester`. PKM must provide and approve current-term load rows before students can submit an automatic standard load for a program.
+The following follow-up migrations keep the operational path explicit:
 
-`enrollment_subjects` supports both legacy `subject_id` rows and new `course_offering_id` rows, never both in one row. Every attachment stores non-null `course_code`, `course_description`, and `units` snapshots so historical draft registration forms remain readable even if source catalog text changes.
+- `20260803000002_harden_enrollment_subject_snapshots.sql` makes legacy subject references nullable and restricts subject deletion while preserving admin attachment management.
+- `20260803000003_shared_standard_load_submission_lock.sql` uses a shared advisory lock for student submissions so configuration writes cannot race the validation-and-attachment transaction.
+- `20260803000004_grant_catalog_read_access.sql` grants authenticated catalog access required by the Subject List and Registrar program controls; RLS still limits writes to admins.
+- `20260803000005_grant_standard_load_service_role_write.sql` grants configuration tooling the service-role write privileges needed for serialized standard-load updates.
+
+Migration `20260803000001_activate_workbook_enrollment_term.sql` activates the supplied workbook term as the client-provided operational MVP load. It creates 36 ACTIVE complete standard-load configurations for the workbook's exact program/year combinations and fails closed if any configured count or unit total does not match its source rows. BSAIS 4th Year, BSMA 4th Year, and CRIM 3rd and 4th Year remain unavailable because the source has no complete course rows for them.
+
+`enrollment_subjects` supports both legacy `subject_id` rows and new `course_offering_id` rows, never both in one row. The legacy `subject_id` column is nullable and uses `ON DELETE RESTRICT` so referenced subjects cannot be removed. Every attachment stores non-null `course_code`, `course_description`, and `units` snapshots so draft registration forms remain readable even if source catalog text changes. Students can read their own rows but cannot insert, update, or delete them directly; the admin policy remains available for Registrar management.
 
 ### Read-Only Integrity Checks
 
@@ -326,9 +333,9 @@ supabase/seed.sql
 
 The current seed creates a catalog of 10 program records: `BSAIS`, `BSMA`, `BEED`, `ENGLISH`, `FILIPINO`, `MATH`, `SS`, `CRIM`, `ACP`, and `FSM`.
 
-Only `BSAIS` has 56 seeded curriculum subject rows, totaling 167 units, from the supplied subject reference. The seed does not create curriculum subject rows for the other program catalog entries. These rows are a curriculum reference and are not used as a BSAIS-only fallback by the generic standard-load RPC.
+Only `BSAIS` has 56 seeded curriculum subject rows, totaling 167 units, from the supplied subject reference. The seed does not create curriculum subject rows for the other program catalog entries. These rows remain a curriculum reference; the generic standard-load RPC uses the active workbook `course_offerings` rows instead.
 
-The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Online enrollment is program-agnostic in schema and RPC design, but complete multi-program enrollment remains unavailable until PKM supplies active, complete standard-load configurations for the relevant programs and terms.
+The program catalog contains ten canonical programs, and the Subject List includes 245 unique workbook-derived offerings for all ten. Online enrollment is program-agnostic in schema and RPC design, and the active workbook migration provides 36 complete standard-load configurations. BSAIS 4th Year, BSMA 4th Year, and CRIM 3rd and 4th Year remain fail-closed because their source combinations are incomplete.
 
 ## Term Course Offerings From Workbook
 
@@ -338,16 +345,16 @@ Source artifact:
 
 Current MVP behavior:
 
-- The app displays workbook-derived course offerings for several programs for `SY 2025-2026`, `2nd Semester`, based on the student's program.
+- The app displays the client-provided `AY 2025-2026`, `2nd Semester` course enrollment load for the student's program.
 - These display-only offerings are source-labeled on the Student Subject List page.
 - The workbook is treated as term offering data, not as a full curriculum replacement.
-- These rows are stored in `public.course_offerings` as historical source data. They are not current standard-load rows.
+- These rows are stored in `public.course_offerings` as the client-provided term source. Matching ACTIVE `standard_load_sets` rows determine which complete program/year loads can be submitted online.
 
 Source limitations:
 
 - The workbook contains two identical BSAIS blocks.
 - The workbook shows a 4th Year BSAIS total of 6 units but no visible 4th Year BSAIS course rows.
-- Enrollment submission does not promote these historical rows automatically. It requires a separate active `standard_load_sets` configuration and matching current-term offerings.
+- Enrollment submission attaches the exact matching workbook rows only when the corresponding ACTIVE `standard_load_sets` configuration has the same course count and total units.
 
 ### BSAIS Alias Repair Timestamp Behavior
 
@@ -506,7 +513,7 @@ Then log in at `/login` with the admin email and password.
 
 Current MVP term:
 
-- Online enrollment uses the authoritative open term in `public.enrollment_terms`, currently `AY 2026-2027`, `1st Semester`.
+- Online enrollment uses the authoritative open term in `public.enrollment_terms`, currently `AY 2025-2026`, `2nd Semester` from the supplied workbook.
 - The form displays that term as read-only, and the atomic database submission rule does not accept another term from the browser.
 - Additional selectable terms require PKM's official academic calendar before being opened.
 
@@ -514,7 +521,7 @@ Student submission:
 
 1. The browser submits only certification; the authenticated RPC derives the student record, program, year level, student type, and term.
 2. It accepts standard loads for Incoming 1st Year, Old, Continuing, and Regular Student records only when a complete active configuration exists for the trusted program/year/term. Transferee and Irregular Student records require Registrar-managed subject assignment.
-3. The RPC uses the server-supplied authoritative active term, currently `AY 2026-2027`, `1st Semester`, checks existing student-term rows, then resolves matching subjects.
+3. The RPC uses the server-supplied authoritative active term, currently `AY 2025-2026`, `2nd Semester`, checks existing student-term rows, then resolves matching workbook offerings.
 4. One transaction inserts the `PENDING` enrollment and the complete matching `public.enrollment_subjects` set.
 5. The unique student-term index remains the authority for duplicate races; a duplicate returns a safe user-facing message.
 6. A failed attachment rolls back the enrollment, attachment rows, and pending-status trigger update together.
@@ -667,4 +674,4 @@ order by table_name, grantee, privilege_type;
 - Official admitted-applicant matching is implemented for manual official records, but import format, sample data, and generated-password delivery remain future work. Setup-link delivery is opt-in, server-only, and disabled by default.
 - No official COR template was provided, so only an MVP draft browser-print registration form is implemented; official COR/PDF output remains future work.
 - No official grading, schedule, or balance format was provided, so those modules remain placeholders.
-- The Subject List uses source-derived curriculum and historical workbook-offering data for display. Current enrollment attachment is driven by active standard-load configuration and course-offering rows; seeded BSAIS curriculum subjects remain a separate curriculum reference.
+- The Subject List uses source-derived curriculum and client-provided workbook course-enrollment data for display. Current enrollment attachment is driven by active standard-load configuration and course-offering rows; seeded BSAIS curriculum subjects remain a separate curriculum reference.

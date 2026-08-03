@@ -34,7 +34,7 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - Dashboard with profile-derived information, term-specific enrollment status result, and quick actions. Current-term status is derived only from an enrollment record matching the active academic term; `students.enrollment_status` is not the current-term source of truth.
 - View-only subject list grouped by year level and semester.
-- Trusted server-derived online enrollment request submission for any program with a complete active standard-load configuration in the configured MVP term. The current repository does not activate a current-term load without an approved configuration.
+- Trusted server-derived online enrollment request submission for any program and year level with a complete active standard-load configuration in the client-provided workbook term: AY 2025-2026, 2nd Semester.
 - Term-specific enrollment status result, including free-text rejection remarks when entered.
 - Account information display and signed-in password change.
 
@@ -62,9 +62,10 @@ The demonstration does not validate real admission requirements, financial oblig
 
 - The current registration output is a browser-print **draft registration form**, not final official COR generation.
 - The deployment is a temporary client preview and should use limited demonstration data.
-- The program catalog contains ten canonical programs (with case/whitespace normalized BSAIS aliases), and the Subject List includes historical workbook-derived offerings for all ten programs. The enrollment architecture is program-agnostic, but current automatic enrollment requires an active, complete `standard_load_sets` row and exact matching `course_offerings`; no current-term configuration is invented in this repository.
-- Subject List workbook rows are historical AY 2025-2026, 2nd Semester display-only references, not the active enrollment load. Curriculum rows from `public.subjects` are a separate reference; actual current-term subject attachments come from configured offering rows and cannot be selected by students on the Subject List page.
-- The browser cannot choose a student's program, year level, student type, term, status, or subjects. The current term is fixed to AY 2026-2027, 1st Semester until an approved academic-calendar module exists.
+- The program catalog contains ten canonical programs, and the Subject List includes 245 unique workbook-derived offerings for all ten programs. Online enrollment uses 36 active, complete `standard_load_sets` rows and exact matching `course_offerings` for AY 2025-2026, 2nd Semester.
+- The client-provided workbook is the active MVP course-enrollment source for that term. Curriculum rows from `public.subjects` remain a separate BSAIS curriculum reference; students cannot select subjects on the Subject List page.
+- The browser cannot choose a student's program, year level, student type, term, status, or subjects. The current term is coordinated by the application configuration and the authoritative Supabase `enrollment_terms` and standard-load migrations.
+- BSAIS 4th Year, BSMA 4th Year, and CRIM 3rd and 4th Year have no ACTIVE load because the workbook does not contain complete course rows for those combinations. No missing rows are invented.
 - Transferee and Irregular Student records require Registrar-managed subject assignment. The MVP does not invent transfer-credit, irregular-load, full requirement-checklist, or subject-adjustment rules.
 - Registrar review is limited to submitted pending requests. Stale concurrent review attempts cannot overwrite the first decision. A rejected automatic enrollment request is terminal for that academic year and semester; students cannot automatically resubmit for the same term under the existing database term-unique index. Note: This terminal rejection behavior is a provisional project-owner MVP rule, not confirmed institutional policy; any future return-for-correction or versioned resubmission workflow requires explicit PKM approval.
 - Enrollment creation and subject attachment use one database transaction. The student-term unique index remains the concurrent duplicate safeguard.

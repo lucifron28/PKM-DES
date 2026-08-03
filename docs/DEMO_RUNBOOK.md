@@ -40,7 +40,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 7. Use the claim-only record's exact fictional email, Student ID, and `Incoming 1st Year Student` selection as the live account-claim example.
 8. Log in as the student and open the Student Dashboard.
 9. Open Subject List and show the year/semester grouped tables.
-10. Open Online Enrollment and point out the read-only recorded program, year level, student type, and fixed AY 2026-2027, 1st Semester. Submit using an eligible fictional student only when the isolated preview database has an active, complete standard-load configuration for that program and year level. Historical workbook offerings alone do not make a student eligible.
+10. Open Online Enrollment and point out the read-only recorded program, year level, student type, and active AY 2025-2026, 2nd Semester term. Submit using an eligible fictional student only when the isolated preview database has an active, complete standard-load configuration for that program and year level.
 11. Show Enrollment Status Result with `PENDING` status.
 12. Log back in as Registrar/Admin.
 13. Open Pending Enrollments. When the selected fictional record is applicable, show the status-only current-term Health Record Update control and mark it verified before approving; paper handling remains with PKM Health Services. Then approve or reject the submitted request.
@@ -54,7 +54,7 @@ Use [DEMO_DATA.md](./DEMO_DATA.md) for the fictional presentation states and [DE
 - Reports and Masterlist use the same submitted-request source and can filter by program, academic year, year level, semester, review status, and student identity. Overall Student Status in the Masterlist is separate from the request review status.
 - A student appears in those enrollment pages after they claim an account and submit Online Enrollment.
 - The browser does not choose academic details or subjects. Transferee and Irregular Student records require Registrar-managed subject assignment and are not used for the automatic submission demonstration.
-- Automatic submission is program-agnostic in the code, but fail-closed: the preview must contain an approved active standard-load set and matching current-term course offerings. The supplied AY 2025-2026 / 2nd Semester workbook is historical reference data and must not be copied into the current term for a demo.
+- Automatic submission is program-agnostic in the code, but fail-closed: the preview must contain an approved active standard-load set and matching current-term course offerings. This MVP activates the supplied AY 2025-2026 / 2nd Semester workbook as the client-provided enrollment load; incomplete combinations remain unavailable.
 - Rejected requests: A rejected automatic enrollment request is terminal for that academic year and semester; students cannot automatically resubmit for the same term. Note that this terminal rejection behavior is a provisional project-owner MVP rule, not confirmed institutional policy.
 
 ## Placeholder Talking Points
