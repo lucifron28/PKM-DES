@@ -1,6 +1,6 @@
 # PKM-DES Research MVP Demo Guide
 
-This guide is for research presenters, advisers, client reviewers, and authorized preview operators. It walks through the implemented PKM-DES demonstration path using fictional data.
+This guide is for research presenters, advisers, client reviewers, and authorized preview operators. It follows the implemented Registrar-first workflow using fictional or anonymized data.
 
 > PKM-DES is a research-presentation MVP and client preview. It is not an official enrollment service, a production institutional system, or a replacement for the Registrar's current process.
 
@@ -11,8 +11,8 @@ This guide is for research presenters, advisers, client reviewers, and authorize
 - Use the local development server or the authorized client-preview deployment.
 - Use only fictional or anonymized records. Never enter real student data.
 - Keep active preview credentials private. They are intentionally not printed in this guide.
-- Use a dedicated preview or test Supabase project. Do not run demo reset or mutating smoke workflows against institutional data.
-- Confirm the active academic term displayed by the application before presenting it. The current feature branch uses the client workbook term `AY 2025-2026`, `2nd Semester`; a deployed preview may show another configured term if it has not yet been redeployed from this branch.
+- Use a dedicated preview or test Supabase project. Never run demo reset or mutating smoke workflows against institutional data.
+- Confirm the academic term displayed by the application before presenting it. This feature branch uses `AY 2025-2026`, `2nd Semester`; a deployed preview may show another configured term until it is redeployed.
 
 ### Start locally
 
@@ -21,200 +21,173 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. If the port is already in use, stop the old Next.js process or use the port printed by the server. Restart the server after changing `.env.local`; Next.js reads environment variables at startup.
+Open `http://localhost:3000`. If the port is already in use, use the port printed by the server. Restart Next.js after changing `.env.local`.
 
-For local login, the machine must be able to reach the configured Supabase project over HTTPS. A local `Invalid email or password` message can also represent a failed server-side Supabase request because the MVP deliberately returns a safe generic auth error.
+For local login, the server must be able to reach the configured Supabase project over HTTPS. The MVP intentionally returns a safe generic authentication message when that request fails.
 
-## 2. Public Walkthrough
+## 2. Registrar-First Demonstration
 
-### Step 1: Open Home
+The operational flow starts with the Registrar. The Registrar creates or verifies the official student source record before a student can claim an account. Saving an official record does not create an enrollment request.
 
-Open `/` and introduce the system as a proposed digital enrollment workflow. Point out the two primary actions: login and student account creation.
+### Step 1: Registrar signs in
 
-![PKM-DES Home page](assets/01-home.png)
+Open `/login?next=/admin/dashboard` and use the authorized private Registrar/Admin credential. Never put the credential in screenshots, presentation slides, or committed documentation.
 
-*Figure 1. Public home page with the PKM and Municipality marks, account actions, and enrollment-process overview.*
+![Registrar dashboard](assets/06-admin-dashboard.png)
 
-### Step 2: Open About Us
+*Figure 1. Admin Dashboard in the desktop preview. Dashboard counts represent submitted enrollment requests, not official source records.*
 
-Select **About Us**. Show the school identity, vision, mission, goals, contact information, and approved public links supplied by the client source material.
+### Step 2: Registrar creates the official student record
 
-![PKM-DES About Us page](assets/02-about.png)
+Open `/admin/students` and select **Add Official Record**. Complete the existing form with fictional or anonymized presentation data, such as:
 
-*Figure 2. About Us page using source-grounded PKM information.*
+| Field | Example presentation value |
+| --- | --- |
+| First Name | John |
+| Last Name | Doe |
+| Student ID Number | `99-90001` |
+| Active Email Address | `john.doe@example.com` |
+| Program | Select the intended catalog program |
+| Year Level | Select the recorded year level |
+| Student Type | Select the recorded student type |
 
-### Step 3: Open Login
+Keep the remaining official-record fields consistent with the fictional record. The form supports multiple catalog programs. Choose the program supplied for the presentation; do not imply that every program has a complete automatic enrollment load.
 
-Select **Login**. Explain that the same login entry routes an active student to the Student Portal and an active Registrar/Admin account to the Admin Portal.
+![Official student record form](assets/08-admin-official-record-form.png)
 
-![PKM-DES Login page](assets/03-login.png)
+*Figure 2. Inline Add Official Record form at full desktop width. The committed image is filtered to avoid real-looking record details.*
 
-*Figure 3. Login form. Do not type or display credentials while presenting screenshots.*
+After saving, the page confirms that the official record was saved and explains the next steps: the student must claim the record, log in, and submit Online Enrollment before appearing in Pending Enrollments, the Masterlist, or dashboard counts.
 
-## 3. Student Account Claim Walkthrough
+### Step 3: Student claims the official record
 
-The student does not invent the official profile during account creation. The Registrar first creates or verifies the official student record. The student then claims that record using the exact active email address and Student ID Number.
+Open `/create-account`. Select the student type and enter both identifiers exactly as the Registrar recorded them:
 
-### Step 4: Open Create Student Account
+- Active email address
+- Student ID Number
 
-Open `/create-account`. Explain the three stages shown on the page:
-
-1. Find the official record.
-2. Review the matched details.
-3. Receive the setup link or complete the configured account path.
+The student must not invent the name, program, year level, or official status. The system looks up the Registrar-managed record, shows a masked read-only summary, and then presents the configured password or setup-link path.
 
 ![Create Student Account page](assets/04-create-account.png)
 
-*Figure 4. Account-claim instructions before a record lookup.*
+*Figure 3. Account-claim screen before lookup.*
 
-### Step 5: Enter a fictional claim record
-
-For a safe demonstration, use a fictional record prepared in the dedicated preview database. The repository's repeatable claim-only example is:
-
-| Field | Fictional value |
-| --- | --- |
-| Student Type | Incoming 1st Year Student |
-| Active Email Address | `pkm.demo.claim@example.com` |
-| Student ID Number | `99-90001` |
-
-Select the student type, enter both matching identifiers, and select **Find My Record**. Do not use email-only or Student-ID-only matching.
+For a presentation-only example, use the fictional John Doe values above. The screenshot below shows the form filled with `john.doe@example.com` and `99-90001`; it is not a claim result and should not be submitted unless the matching fictional official record exists in the dedicated preview database.
 
 ![Filled fictional account-claim form](assets/05-account-claim-filled.png)
 
-*Figure 5. Filled claim form using fictional `example.com` data. The screenshot does not contain an active credential.*
+*Figure 4. Filled claim form using a readable fictional student example. No active credential is shown.*
 
-If the official record is found, review the masked official details. Continue only when the record and selected student type agree. Do not photograph or publish real student details.
+If the record is found, review the masked details and continue only when the selected student type agrees with the official record. Email delivery is disabled by default in the research MVP; do not claim that an email was delivered unless an authorized private preview check separately confirms it.
 
-### Step 6: Complete the account path
+### Step 4: Student logs in and opens the dashboard
 
-The preview may use a private setup-link or password path depending on its environment configuration. Email delivery is disabled by default in the research MVP. Never claim that an email was delivered unless the authorized preview operator has separately verified that workflow.
+Return to `/login` and sign in with the private fictional student credential. The active student account opens `/student/dashboard`.
 
-After account setup, use the private student credential to log in. The guide does not include a password or active student identity.
+The dashboard displays the authenticated student information, current enrollment status, and the next status-based action. It does not create an enrollment request by itself.
 
-## 4. Student Portal Walkthrough
-
-These steps require an active fictional student account in the authorized preview. The student account must be created or claimed before these routes can be shown.
-
-### Step 7: Student Dashboard
-
-Open `/student/dashboard` after login. Show:
-
-- student information from the authenticated profile
-- current enrollment status
-- the status-based primary action
-- links to Subject List, Online Enrollment, Grades, Class Schedule, Balances, and Account
-
-The dashboard is not the source of truth for enrollment eligibility. Online Enrollment re-loads the authenticated student record on the server.
-
-### Step 8: Subject List
+### Step 5: Student reviews subjects
 
 Open `/student/subjects`.
 
-1. Choose a program.
-2. Choose a year level.
+1. Select a program.
+2. Select a year level.
 3. Review the tables grouped by year level and semester.
-4. Distinguish curriculum references from the client workbook's course offerings.
+4. Distinguish curriculum references from workbook-derived course offerings.
 
-The program catalog contains multiple programs. The current workbook-derived offering snapshot covers several programs, while automatic online enrollment is available only for program/year combinations with a complete active standard-load configuration. Incomplete source combinations show an unavailable state; no rows are invented.
+The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Automatic online enrollment is available only when a complete standard-load configuration exists for the student's program, year level, and active term. Students do not choose individual subjects in this MVP.
 
-Students do not pick individual subjects in this MVP.
-
-### Step 9: Online Enrollment
+### Step 6: Student submits Online Enrollment
 
 Open `/student/enrollment`.
 
 1. Confirm the read-only program, year level, student type, academic year, and semester.
-2. Review the configured standard course load when one is available.
+2. Review the configured standard load when one is available.
 3. Check **I certify that the information provided is correct**.
 4. Select **Submit Enrollment**.
 
-The browser submits only the certification. The server derives student identity, program, year level, student type, term, and subjects from trusted server-side data. The database creates the enrollment and attached subject rows atomically.
+The browser submits only the certification. The server derives the authenticated student, program, year level, student type, active term, and matching subjects. The database creates the enrollment and its subject rows atomically.
 
-Incoming 1st Year, Old, Continuing, and Regular students can use the automatic standard-load path when their program/year load is configured. Transferee and Irregular Student loads require Registrar-managed subject assignment and are not automatically submitted by this MVP.
+Incoming 1st Year, Old, Continuing, and Regular students can use the automatic standard-load path when their program/year/term configuration is complete. Transferee and Irregular Student loads require Registrar-managed subject assignment and are not automatically submitted by this MVP.
 
-### Step 10: Enrollment Status
+### Step 7: Student views the request result
 
-Open `/student/enrollment-status` after submission. Show the pending message first. After Registrar review, show the approved or rejected result and any safe rejection remarks.
+Open `/student/enrollment-status` after submission. The request first appears as **PENDING**. After Registrar review, the student sees the approved or rejected result and any permitted rejection remark.
 
-An approved request can link to the draft registration form. The form is a browser-print MVP output, not an official Certificate of Registration.
+An approved request can link to the draft registration form. The output is browser-printable, follows the supplied sample as a research draft, and is not an official Certificate of Registration.
 
-### Step 11: Student Account
+### Step 8: Registrar reviews the pending request
 
-Open `/student/account` to review the account information and use the password-change form. Students cannot reset another student's password; they must contact the Registrar.
+Return to `/admin/enrollments`.
 
-Grades, Class Schedule, and Balances are visible only as placeholders or empty states unless later data and approved institutional rules are supplied.
-
-## 5. Registrar/Admin Walkthrough
-
-Use a private active Registrar/Admin credential. Never place it in screenshots or committed documentation.
-
-### Step 12: Admin Dashboard
-
-Open `/admin/dashboard`. Start with the pending queue, then use the workflow links for official records and reporting.
-
-![Registrar dashboard](assets/06-admin-dashboard.png)
-
-*Figure 6. Registrar dashboard from the authorized deployed preview. Counts represent submitted enrollment requests, not official student records.*
-
-The dashboard count cards are scoped to the active term shown in the UI. A zero count does not mean that no official student records exist; those records are separate from enrollment requests.
-
-### Step 13: Official Student Records
-
-Open `/admin/students`.
-
-1. Use search and filters to locate a Registrar-managed official record.
-2. Use **Add Official Record** only with fictional or anonymized data in a safe preview.
-3. Confirm the program, year level, student type, and official-record status.
-4. Use the account-match signal to distinguish an official source record from an Auth-linked student account.
-
-This page is the source-record workspace. Saving an official record does not create an enrollment request or increase dashboard counts. The student must claim the record, log in, and submit Online Enrollment.
-
-Do not include record-level screenshots in public documentation when they contain a student's name, email address, Student ID, or other private information.
-
-### Step 14: Pending Enrollment Review
-
-Open `/admin/enrollments`.
-
-1. Select a pending enrollment request.
-2. Review the submitted academic details and attached course load.
+1. Select the submitted pending request.
+2. Review its academic details and attached subject load.
 3. For an applicable current-term Health Record Update requirement, use the status-only verification control. Paper handling remains with the responsible PKM office.
 4. Approve when the request and applicable requirement state satisfy the current MVP gate, or reject with the permitted free-text remark.
 
-Approval and rejection are atomic, pending-only review actions. A second concurrent decision cannot overwrite the first decision.
+Approval and rejection are atomic, pending-only review actions. A second concurrent decision cannot overwrite the first decision. Demonstrate this step only with a fictional enrollment request.
 
-### Step 15: Masterlist and Reports
+### Step 9: Registrar checks the Masterlist and Reports
 
 Open `/admin/masterlist` and `/admin/reports`.
 
-- Use program, year level, term, review status, and identity filters.
-- Explain that the pages read submitted enrollment requests.
+- Use the program, year level, term, review-status, and identity filters.
+- Explain that these pages read submitted enrollment requests, not every official source record.
 - Use the applied-criteria summary to explain what the report contains.
-- Use browser print for a report or masterlist output when needed.
+- Use browser print when a draft report or masterlist output is needed.
 
-![Enrollment reports](assets/07-admin-reports.png)
+An empty report means that no submitted request matched the current criteria; it does not mean that the Registrar has no official records. Reports and masterlist output are research-MVP outputs, not a final institutional export format.
 
-*Figure 7. Enrollment Reports from the authorized preview. An empty report means no submitted enrollment requests matched the current filters; it does not mean that official student records are missing.*
+### Step 10: View and print the draft registration form
 
-Reports and masterlist output are research-MVP reports. They are not a final institutional export format.
+Open the registration-form view from an enrollment review page or the approved student's status page. Select the browser print command.
 
-### Step 16: View and Print the Draft Registration Form
+The output contains the student and enrollment summary, attached subjects, unit totals, draft disclaimer, and supplied signature labels. It is not an official COR and does not implement digital clearance, payment processing, or electronic signatures.
 
-Open the registration-form view from an enrollment review page or from the approved student's status page. Select the browser print command.
+## 3. Public Pages And Optional Context
 
-The output follows the supplied registration-form sample as a draft. It retains a visible draft disclaimer, subject rows, unit totals, placeholders, and signature labels. It is not an official COR and does not implement digital clearance, payment processing, or electronic signatures.
+Public pages explain the proposed system, but they are not the starting point for the operational workflow. Show them before or after the Registrar-first walkthrough when useful.
 
-## 6. Placeholder And Unavailable States
+### Home
 
-Explain these states instead of filling them with invented rules:
+Open `/` to introduce the system name, PKM identity, login action, account-claim action, and the proposed enrollment-process overview.
 
-- **No configured course load:** the supplied workbook does not contain a complete automatic load for that program/year/term.
+![PKM-DES Home page](assets/01-home.png)
+
+*Figure 5. Public home page at full desktop width.*
+
+### About Us
+
+Open `/about` to show the source-grounded school identity, vision, mission, goals, contact information, and approved public links.
+
+![PKM-DES About Us page](assets/02-about.png)
+
+*Figure 6. About Us page using client-supplied PKM information.*
+
+### Login
+
+Open `/login` to explain that active student accounts route to the Student Portal and active Registrar/Admin accounts route to the Admin Portal.
+
+![PKM-DES Login page](assets/03-login.png)
+
+*Figure 7. Login entry point. Do not type or display credentials while presenting screenshots.*
+
+## 4. Account And Placeholder States
+
+- **Official record saved:** source data exists, but no enrollment request exists yet.
+- **No official record found:** the entered email, Student ID, or selected student type does not match the Registrar-managed source record.
+- **No configured course load:** the supplied curriculum or offering sources do not provide a complete automatic load for the selected program/year/term.
 - **Registrar-managed load:** Transferee and Irregular Student subject assignment is outside the automatic MVP path.
 - **No grades available:** grade encoding and official release rules are not implemented.
 - **No schedule available:** class assignment data is not encoded in this MVP.
 - **No balance records:** payment and assessment data belong to the Finance Office workflow.
 - **Draft registration form:** official COR generation is deferred until PKM approves the final template.
 
-## 7. Reset And Cleanup
+## 5. Password Reset And Account Support
+
+Students cannot reset another student's password. If a student loses access, the Registrar may open the matching official record and use the available password-reset control when an exact active student account is linked. The Registrar must provide any temporary credential privately; the student should change it after logging in.
+
+## 6. Reset And Cleanup
 
 Use the guarded fictional-data procedures only when the preview database is dedicated and disposable:
 
@@ -225,30 +198,30 @@ Use the guarded fictional-data procedures only when the preview database is dedi
 
 The reset tooling is allowlist-based and must stop when it detects a collision with non-demo data. Do not truncate tables or delete unrelated records.
 
-## 8. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom | Safe explanation | Next action |
 | --- | --- | --- |
-| Invalid email or password locally | The local server may not be able to reach Supabase, or its environment may differ from the deployed preview. | Restart Next.js after checking `.env.local`; verify outbound HTTPS access to the configured Supabase URL; never paste keys into chat. |
+| Invalid email or password locally | The local server may not reach Supabase, or its environment may differ from the deployed preview. | Restart Next.js after checking `.env.local`; verify outbound HTTPS access to the configured Supabase URL; never paste keys into chat. |
 | No official record found | The email, Student ID, or selected student type does not match the Registrar-managed source record. | Stop and ask the Registrar to verify the official record; do not invent a matching record. |
-| Enrollment unavailable | The program/year/term has no complete active standard load, or the student classification requires Registrar-managed loading. | Use the Subject List for reference and route the student to the Registrar. |
+| Enrollment unavailable | The program/year/term has no complete active standard load, or the classification requires Registrar-managed loading. | Use the Subject List for reference and route the student to the Registrar. |
 | Dashboard counts are zero | Counts represent enrollment requests, not official student records. | Claim an official record and submit Online Enrollment in the dedicated preview. |
 | Report or masterlist unavailable | The current enrollment query did not load. | Retry after confirming the preview database is reachable; do not interpret the failure as zero records. |
 
-## 9. Presentation Checklist
+## 8. Presentation Checklist
 
 - [ ] Use a dedicated preview or test database.
 - [ ] Confirm fictional data and private credentials before starting.
 - [ ] Confirm the active academic term shown in the application.
-- [ ] Show Home and About Us.
-- [ ] Show the claim flow with the fictional record or explain the Registrar prerequisite.
-- [ ] Show a student dashboard, Subject List, Online Enrollment, and Enrollment Status when a fictional student account is available.
-- [ ] Show Registrar dashboard, official records, pending review, masterlist, and reports.
-- [ ] Demonstrate approval or rejection only with a fictional enrollment request.
+- [ ] Start with Registrar login and the Admin Dashboard.
+- [ ] Create or verify the fictional official student record.
+- [ ] Show the student claim flow with matching email and Student ID.
+- [ ] Show the student dashboard, Subject List, Online Enrollment, and Enrollment Status when a fictional account is available.
+- [ ] Review the submitted request as Registrar and show the resulting Masterlist and Reports.
 - [ ] Print the draft registration form and state that it is not an official COR.
 - [ ] Call out grades, schedules, balances, email delivery, digital signatures, and clearance routing as placeholders or future work.
-- [ ] Reset or dispose of the preview data after the presentation according to the guarded procedure.
+- [ ] Reset or dispose of preview data after the presentation according to the guarded procedure.
 
 ## Screenshot Boundary
 
-The committed screenshots cover the public entry, login, account-claim, Registrar dashboard, and Reports steps. Protected student and record-level pages are intentionally documented as live walkthrough steps rather than embedded with private or real-looking identities. Capture additional protected screenshots only from a clean fictional preview session, with no credentials or personal data visible.
+The committed screenshots use a full desktop capture size and cover the Registrar Dashboard, official-record form, public entry, login, and student account-claim steps. Protected student and record-level pages are intentionally described as live walkthrough steps rather than embedded with private or real-looking identities. Capture additional protected screenshots only from a clean fictional preview session, with no credentials or personal data visible.
