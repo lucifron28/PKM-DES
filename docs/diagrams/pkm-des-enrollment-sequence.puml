@@ -15,8 +15,7 @@ Action -> Supabase : Query trusted student, program, year, and type
 Supabase --> Action : Student details (Year Level, Program, Type)
 
 Action -> Logic : evaluateStandardLoadEligibility(context)
-note right of Logic: Uses the active enrollment term
-and the configured standard-load result.
+note right of Logic: Uses the active enrollment term and the configured standard-load result.
 Logic --> Action : "eligible"
 
 Action -> Supabase : RPC submit_standard_student_enrollment(term)
