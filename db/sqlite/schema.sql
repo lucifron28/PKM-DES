@@ -58,43 +58,6 @@ create table if not exists subjects (
   unique (program_id, course_code, year_level, semester)
 );
 
-create table if not exists course_offerings (
-  id text primary key,
-  program_id text not null references programs(id) on delete restrict,
-  academic_year text not null,
-  semester text not null check (semester in ('1st Semester', '2nd Semester', 'Summer')),
-  year_level text not null check (year_level in ('1st Year', '2nd Year', '3rd Year', '4th Year')),
-  course_code text not null,
-  course_description text not null,
-  units integer not null check (units >= 0),
-  source_document text not null,
-  created_at text not null default current_timestamp,
-  updated_at text not null default current_timestamp,
-  unique (program_id, academic_year, semester, year_level, course_code, course_description, units, source_document)
-);
-
-create index if not exists course_offerings_program_term_year
-on course_offerings (program_id, academic_year, semester, year_level);
-
-create table if not exists standard_load_sets (
-  id text primary key,
-  program_id text not null references programs(id) on delete restrict,
-  academic_year text not null,
-  semester text not null check (semester in ('1st Semester', '2nd Semester', 'Summer')),
-  year_level text not null check (year_level in ('1st Year', '2nd Year', '3rd Year', '4th Year')),
-  status text not null default 'DRAFT' check (status in ('DRAFT', 'ACTIVE')),
-  expected_course_count integer not null check (expected_course_count > 0),
-  expected_total_units integer not null check (expected_total_units >= 0),
-  source_document text not null,
-  created_at text not null default current_timestamp,
-  updated_at text not null default current_timestamp,
-  unique (program_id, academic_year, semester, year_level)
-);
-
-create index if not exists standard_load_sets_active_lookup
-on standard_load_sets (program_id, academic_year, semester, year_level)
-where status = 'ACTIVE';
-
 create table if not exists official_student_records (
   id text primary key,
   student_id_number text unique,
@@ -146,21 +109,9 @@ on enrollments (student_id, academic_year, semester);
 create table if not exists enrollment_subjects (
   id text primary key,
   enrollment_id text not null references enrollments(id) on delete cascade,
-  subject_id text references subjects(id),
-  course_offering_id text references course_offerings(id) on delete restrict,
-  course_code text not null,
-  course_description text not null,
-  units integer not null check (units >= 0),
-  check ((subject_id is null) <> (course_offering_id is null))
+  subject_id text not null references subjects(id),
+  unique (enrollment_id, subject_id)
 );
-
-create unique index if not exists enrollment_subjects_legacy_subject_unique
-on enrollment_subjects (enrollment_id, subject_id)
-where subject_id is not null;
-
-create unique index if not exists enrollment_subjects_course_offering_unique
-on enrollment_subjects (enrollment_id, course_offering_id)
-where course_offering_id is not null;
 
 create table if not exists grades (
   id text primary key,
