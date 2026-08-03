@@ -263,6 +263,13 @@ supabase/migrations/20260802060000_multi_program_standard_load_enrollment.sql
 
 `standard_load_sets` is the explicit Registrar-managed configuration for a program, academic year, semester, and year level. An `ACTIVE` row records the expected course count, expected total units, and source document. The generic enrollment RPC loads matching `course_offerings` by the trusted student program/year and the configured source document, then refuses submission when the count or total units does not match the configuration.
 
+The follow-up migration `20260803000000_secure_standard_load_data_access.sql`
+serializes standard-load, course-offering, and active-term writes with the same
+transaction advisory lock acquired by the enrollment wrapper. This keeps the
+validated configuration and attached offering set stable for one submission.
+The `standard_load_sets.updated_at` column is also maintained by the shared
+update trigger.
+
 The migration intentionally does not seed or activate a current-term standard load. The supplied workbook is only `2025-2026`, `2nd Semester` historical source data, so it is not copied or relabelled as `2026-2027`, `1st Semester`. PKM must provide and approve current-term load rows before students can submit an automatic standard load for a program.
 
 `enrollment_subjects` supports both legacy `subject_id` rows and new `course_offering_id` rows, never both in one row. Every attachment stores non-null `course_code`, `course_description`, and `units` snapshots so historical draft registration forms remain readable even if source catalog text changes.
@@ -616,7 +623,7 @@ select
 
 Expected:
 
-- `programs_count`: 1
+- `programs_count`: 10
 - `subjects_count`: 56
 - `total_units`: 167
 
@@ -631,7 +638,15 @@ order by tablename;
 
 Data API exposure check:
 
-Supabase changed new-table exposure behavior in 2026. If authenticated app queries unexpectedly return table-access errors after a fresh project setup, confirm the public tables are exposed to the Data API and that RLS is enabled. Do not disable RLS to fix access.
+Supabase changed new-table exposure behavior in 2026. The migration
+`20260803000000_secure_standard_load_data_access.sql` explicitly grants the
+authenticated role read access to `standard_load_sets`, `course_offerings`, and
+`enrollment_terms`; it also grants the service role read access for trusted
+server-side tooling. The `standard_load_sets` table grants the authenticated
+role the DML privileges needed by its admin-only RLS policy. RLS remains the
+row-level authorization boundary. If authenticated app queries unexpectedly
+return table-access errors after a fresh project setup, confirm these grants
+and that RLS is enabled. Do not disable RLS to fix access.
 
 Use this SQL to inspect exposed public-table grants:
 

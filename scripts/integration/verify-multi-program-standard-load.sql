@@ -79,12 +79,42 @@ values
   ('30000000-0000-4100-8000-000000000002', current_setting('pkm.fixture.bsma_id')::uuid, '2026-2027', '1st Semester', '1st Year', 'ACTIVE', 2, 6, 'LOCAL_MULTI_PROGRAM_FIXTURE'),
   ('30000000-0000-4100-8000-000000000003', current_setting('pkm.fixture.beed_id')::uuid, '2026-2027', '1st Semester', '1st Year', 'ACTIVE', 2, 6, 'LOCAL_MULTI_PROGRAM_FIXTURE');
 
--- The production migration keeps Data API grants explicit. These read grants
--- exist only for this rolled-back authenticated verification transaction.
-grant select on public.students, public.enrollments, public.enrollment_subjects, public.course_offerings to authenticated;
+-- These legacy-table read grants exist only for this rolled-back authenticated
+-- verification transaction. New standard-load tables are checked through the
+-- production migration's explicit grants below.
+grant select on public.students, public.enrollments, public.enrollment_subjects to authenticated;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4100-8000-000000000001', true);
+
+do $verify$
+declare
+  v_load_count integer;
+  v_offering_count integer;
+begin
+  select count(*)
+  into v_load_count
+  from public.standard_load_sets
+  where academic_year = '2026-2027'
+    and semester = '1st Semester'
+    and status = 'ACTIVE';
+
+  if v_load_count <> 3 then
+    raise exception 'Standard-load Data API read access or RLS is incorrect: expected 3 active rows, found %', v_load_count;
+  end if;
+
+  select count(*)
+  into v_offering_count
+  from public.course_offerings
+  where academic_year = '2026-2027'
+    and semester = '1st Semester'
+    and source_document = 'LOCAL_MULTI_PROGRAM_FIXTURE';
+
+  if v_offering_count <> 6 then
+    raise exception 'Course-offering Data API read access or RLS is incorrect: expected 6 rows, found %', v_offering_count;
+  end if;
+end;
+$verify$;
 
 do $verify$
 declare
