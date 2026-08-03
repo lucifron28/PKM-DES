@@ -74,6 +74,16 @@ test("calculates registration units without dropping zero-unit rows", () => {
   assert.equal(getRegistrationTotalUnits([subject("fraction", "C", "Fraction", 1.5)]), 1.5);
 });
 
+test("sorts offering-backed snapshots with the same deterministic presentation rules", () => {
+  const sorted = sortRegistrationSubjects([
+    { id: "offering-2", course_code: "GE-2", course_description: "Communication", units: 3, source: "course_offering" },
+    { id: "offering-1", course_code: "GE-1", course_description: "Self", units: 3, source: "snapshot" }
+  ]);
+
+  assert.deepEqual(sorted.map((item) => item.id), ["offering-1", "offering-2"]);
+  assert.equal(getRegistrationTotalUnits(sorted), 6);
+});
+
 test("allows student printing only for approved enrollment requests", () => {
   assert.equal(canStudentPrintRegistrationForm("APPROVED"), true);
   assert.equal(canStudentPrintRegistrationForm("PENDING"), false);

@@ -35,7 +35,7 @@
   - Public: `/`, `/about`, `/login`, `/create-account`, `/setup-account`
   - Student: `/student/dashboard`, `/student/enrollment`, `/student/enrollment-status`, `/student/subjects`, `/student/cor`, `/student/account`, `/student/grades`, `/student/schedule`, `/student/balances`
   - Admin: `/admin/dashboard`, `/admin/enrollments`, `/admin/enrollments/[enrollmentId]/registration`, `/admin/masterlist`, `/admin/reports`, `/admin/students`, `/admin/students/[recordId]/edit`, `/admin/account`
-- **Documentation Consulted**: `README.md`, `docs/MVP_SCOPE.md`, `docs/FRD_TRACEABILITY.md`, `docs/RESEARCH_PRESENTATION.md`, `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`, `docs/DEMO_RUNBOOK.md`
+- **Documentation Consulted**: `README.md`, `docs/reference/MVP_SCOPE.md`, `docs/reference/FRD_TRACEABILITY.md`, `docs/architecture/RESEARCH_PRESENTATION.md`, `docs/reference/CLIENT_INPUTS_AND_OPEN_ITEMS.md`, `docs/demo/DEMO_USER_GUIDE.md`
 - **Skills Employed**: `ui-ux-pro-max` (design system & accessibility rules), `redesign-existing-projects` (code quality & visual audit guidelines)
 - **Viewports Evaluated**: 375px (mobile), 768px (tablet), 1024px (desktop/laptop), 1440px (wide desktop), Print / A4 paper
 - **Commands Executed & Verification Status**:
@@ -58,7 +58,7 @@
 
 ## 3. Existing Strengths
 
-1. **Clear MVP & Institutional Scope Framing**: The UI explicitly informs users when data is historical reference (e.g. BSAIS course offering notes), when forms are draft-only (Registration Form), and when features are out of scope (Fee Assessment, Official COR generation).
+1. **Clear MVP & Institutional Scope Framing**: The UI explicitly distinguishes the client-provided term course load from curriculum references, preserves factual historical-workbook source notes (such as the BSAIS 4th Year gap), identifies draft-only forms (Registration Form), and marks features that remain out of scope (Fee Assessment, Official COR generation).
 2. **Strict Server/Client Boundaries**: Client components (`"use client"`) are restricted to interactive forms, filters, and state toggles. Data loading and authorization remain strictly server-side.
 3. **Consistent Brand Color Hierarchy**: Brand Blue (`#004aad`) and Brand Yellow (`#f9d818`) are used purposefully for primary actions and highlights, while neutral slates (`#0f172a`, `#334155`, `#64748b`) maintain readability without visual clutter.
 4. **Comprehensive Form Feedback & Disclaimers**: Submission buttons show clear pending state labels ("Submitting...", "Approving...", "Finding..."), and success/error messages use semantic callouts (`AlertMessage`).

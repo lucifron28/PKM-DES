@@ -73,25 +73,49 @@ export async function resolveProgramAndSubjects(supabase, term) {
     .eq("code", DEMO_PROGRAM_CODE)
     .maybeSingle();
 
-  assertNoError(programError, "Could not look up the BSAIS program");
+  assertNoError(programError, "Could not look up the demo program");
 
   if (!program) {
     throw new Error(`Program code ${DEMO_PROGRAM_CODE} was not found.`);
   }
 
-  const { data: subjects, error: subjectsError } = await supabase
-    .from("subjects")
-    .select("id, course_code")
+  const { data: loadSet, error: loadSetError } = await supabase
+    .from("standard_load_sets")
+    .select("id, status, expected_course_count, expected_total_units, source_document")
     .eq("program_id", program.id)
-    .eq("year_level", DEMO_YEAR_LEVEL)
+    .eq("academic_year", term.academicYear)
     .eq("semester", term.semester)
+    .eq("year_level", DEMO_YEAR_LEVEL)
+    .maybeSingle();
+
+  assertNoError(loadSetError, "Could not look up the demo standard-load configuration");
+
+  if (!loadSet || loadSet.status !== "ACTIVE") {
+    throw new Error(
+      `No active BSAIS standard load is configured for ${term.academicYear}, ${term.semester}, ${DEMO_YEAR_LEVEL}. Demo data was not changed.`
+    );
+  }
+
+  const { data: subjects, error: subjectsError } = await supabase
+    .from("course_offerings")
+    .select("id, course_code, course_description, units, source_document")
+    .eq("program_id", program.id)
+    .eq("academic_year", term.academicYear)
+    .eq("semester", term.semester)
+    .eq("year_level", DEMO_YEAR_LEVEL)
+    .eq("source_document", loadSet.source_document)
     .order("course_code");
 
-  assertNoError(subjectsError, "Could not look up BSAIS subjects for the demo term");
+  assertNoError(subjectsError, "Could not look up configured demo course offerings");
 
-  if (!subjects?.length) {
+  const totalUnits = (subjects ?? []).reduce((total, subject) => total + subject.units, 0);
+  if (
+    !subjects?.length ||
+    subjects.length !== loadSet.expected_course_count ||
+    totalUnits !== loadSet.expected_total_units
+  ) {
     throw new Error(
-      `No BSAIS subjects are configured for ${DEMO_YEAR_LEVEL}, ${term.semester}. Demo data was not changed.`
+      `The BSAIS standard load is incomplete for ${DEMO_YEAR_LEVEL}, ${term.semester}. Demo data was not changed.`
     );
   }
 
@@ -158,6 +182,31 @@ export function validateExactSubjectSet(expectedSubjectIds, attachedSubjectIds) 
   return attached.length;
 }
 
+export function validateExactOfferingSnapshotSet(expectedOfferings, attachments) {
+  const expectedById = new Map(expectedOfferings.map((offering) => [offering.id, offering]));
+  const attachedIds = attachments.map((attachment) => attachment.course_offering_id);
+
+  validateExactSubjectSet(expectedOfferings.map((offering) => offering.id), attachedIds);
+
+  for (const attachment of attachments) {
+    if (attachment.subject_id !== null) {
+      throw new Error("A configured offering attachment unexpectedly references a legacy subject.");
+    }
+
+    const expected = expectedById.get(attachment.course_offering_id);
+    if (
+      !expected ||
+      attachment.course_code !== expected.course_code ||
+      attachment.course_description !== expected.course_description ||
+      attachment.units !== expected.units
+    ) {
+      throw new Error("Attached offering snapshots do not exactly match the configured load.");
+    }
+  }
+
+  return attachments.length;
+}
+
 export function calculateDashboardCounts(enrollments) {
   return enrollments.reduce(
     (counts, enrollment) => {
@@ -190,6 +239,6 @@ export async function resolveOptionalReviewerId(supabase, registrarEmail) {
 export function printDemoPlan({ host, term, subjectCount }) {
   console.log(`Target Supabase host: ${host}`);
   console.log(`Demo term: AY ${term.academicYear}, ${term.semester}`);
-  console.log(`Matching BSAIS subjects: ${subjectCount}`);
+  console.log(`Matching configured BSAIS course offerings: ${subjectCount}`);
   console.log("Fictional records: claim-only, pending, approved, rejected");
 }

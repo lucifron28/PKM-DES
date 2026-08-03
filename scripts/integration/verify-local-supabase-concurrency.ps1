@@ -38,10 +38,16 @@ function Invoke-ParallelLocalSql {
 
 $adminId = "00000000-0000-4000-8000-000000000010"
 $studentId = "00000000-0000-4000-8000-000000000020"
+$submitStudentAId = "00000000-0000-4000-8000-000000000021"
+$submitStudentBId = "00000000-0000-4000-8000-000000000022"
+$submitStudentCId = "00000000-0000-4000-8000-000000000023"
 $resendId = "00000000-0000-4000-8000-000000000030"
 $programId = $null
 $studentRecordId = "20000000-0000-4000-8000-000000000010"
 $enrollmentId = "40000000-0000-4000-8000-000000000010"
+$submitStudentARecordId = "20000000-0000-4000-8000-000000000021"
+$submitStudentBRecordId = "20000000-0000-4000-8000-000000000022"
+$submitStudentCRecordId = "20000000-0000-4000-8000-000000000023"
 
 try {
   $programLookup = Invoke-LocalSql @"
@@ -60,16 +66,26 @@ insert into auth.users (id, aud, role, email, encrypted_password, raw_app_meta_d
 values
   ('$adminId', 'authenticated', 'authenticated', 'concurrent.registrar@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('$studentId', 'authenticated', 'authenticated', 'concurrent.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$submitStudentAId', 'authenticated', 'authenticated', 'concurrent.submit-a@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$submitStudentBId', 'authenticated', 'authenticated', 'concurrent.submit-b@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$submitStudentCId', 'authenticated', 'authenticated', 'concurrent.submit-c@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('$resendId', 'authenticated', 'authenticated', 'concurrent.resend@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
 
 insert into public.profiles (id, role, first_name, last_name, email, account_status)
 values
   ('$adminId', 'admin', 'Concurrent', 'Registrar', 'concurrent.registrar@example.test', 'ACTIVE'),
   ('$studentId', 'student', 'Concurrent', 'Student', 'concurrent.student@example.test', 'ACTIVE'),
+  ('$submitStudentAId', 'student', 'Concurrent', 'Submit A', 'concurrent.submit-a@example.test', 'ACTIVE'),
+  ('$submitStudentBId', 'student', 'Concurrent', 'Submit B', 'concurrent.submit-b@example.test', 'ACTIVE'),
+  ('$submitStudentCId', 'student', 'Concurrent', 'Submit C', 'concurrent.submit-c@example.test', 'ACTIVE'),
   ('$resendId', 'student', 'Concurrent', 'Resend', 'concurrent.resend@example.test', 'SETUP');
 
 insert into public.students (id, profile_id, student_id_number, program_id, year_level, student_type, enrollment_status)
-values ('$studentRecordId', '$studentId', '26-00010', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED');
+values
+  ('$studentRecordId', '$studentId', '26-00010', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
+  ('$submitStudentARecordId', '$submitStudentAId', '26-00011', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
+  ('$submitStudentBRecordId', '$submitStudentBId', '26-00012', '$programId', '1st Year', 'Continuing Student', 'NOT ENROLLED'),
+  ('$submitStudentCRecordId', '$submitStudentCId', '26-00013', '$programId', '1st Year', 'Regular Student', 'NOT ENROLLED');
 
 insert into public.official_student_records (
   student_id_number, first_name, last_name, email, program_id, year_level, student_type, gender_sex, enrollment_status
@@ -77,8 +93,84 @@ insert into public.official_student_records (
 values ('26-00010', 'Concurrent', 'Student', 'concurrent.student@example.test', '$programId', '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED');
 
 insert into public.enrollments (id, student_id, program_id, year_level, academic_year, semester, status)
-values ('$enrollmentId', '$studentRecordId', '$programId', '1st Year', '2026-2027', '1st Semester', 'PENDING');
+values ('$enrollmentId', '$studentRecordId', '$programId', '1st Year', '2025-2026', '2nd Semester', 'PENDING');
 "@ | Out-Null
+
+  $distinctSubmissionSql = @"
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '$submitStudentAId', true) as jwt \gset
+select outcome from public.submit_standard_student_enrollment('2025-2026', '2nd Semester');
+commit;
+"@
+  $distinctSubmissionSqlB = $distinctSubmissionSql.Replace($submitStudentAId, $submitStudentBId)
+  $distinctOutcomes = @(Invoke-ParallelLocalSql @($distinctSubmissionSql, $distinctSubmissionSqlB) | Sort-Object)
+  if (($distinctOutcomes -join ',') -ne 'submitted,submitted') {
+    throw "Concurrent submissions by different students did not both succeed: $($distinctOutcomes -join ',')."
+  }
+
+  $sameStudentSql = @"
+begin;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '$submitStudentCId', true) as jwt \gset
+select outcome from public.submit_standard_student_enrollment('2025-2026', '2nd Semester');
+commit;
+"@
+  $sameStudentOutcomes = @(Invoke-ParallelLocalSql @($sameStudentSql, $sameStudentSql) | Sort-Object)
+  if (($sameStudentOutcomes -join ',') -ne 'duplicate,submitted') {
+    throw "Concurrent submissions by the same student did not return one submitted and one duplicate outcome: $($sameStudentOutcomes -join ',')."
+  }
+
+  $lockSql = @"
+begin;
+select pg_advisory_xact_lock_shared(pg_catalog.hashtextextended('pkm.standard-load-configuration', 0::bigint));
+select 'lock-acquired';
+select pg_sleep(2);
+commit;
+"@
+  $lockJob = Start-Job -ScriptBlock {
+    param($Sql, $DatabaseContainer)
+    $Sql | & docker exec -i $DatabaseContainer psql -U postgres -d postgres -qAt -v ON_ERROR_STOP=1
+    if ($LASTEXITCODE -ne 0) {
+      throw "Shared configuration-lock command failed."
+    }
+  } -ArgumentList $lockSql, $ContainerName
+
+  try {
+    $lockAcquired = $false
+    for ($attempt = 0; $attempt -lt 30; $attempt++) {
+      $lockOutput = @(Receive-Job $lockJob -Keep)
+      if ($lockOutput -contains 'lock-acquired') {
+        $lockAcquired = $true
+        break
+      }
+      Start-Sleep -Milliseconds 100
+    }
+    if (-not $lockAcquired) {
+      throw "Shared configuration lock was not acquired before the exclusive-write check."
+    }
+
+    $lockStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    Invoke-LocalSql @"
+begin;
+set local role service_role;
+update public.standard_load_sets
+set updated_at = updated_at
+where program_id = '$programId'
+  and academic_year = '2025-2026'
+  and semester = '2nd Semester'
+  and year_level = '1st Year';
+rollback;
+"@ | Out-Null
+    $lockStopwatch.Stop()
+
+    if ($lockStopwatch.ElapsedMilliseconds -lt 1500) {
+      throw "Exclusive configuration write did not wait for the shared submission lock."
+    }
+  } finally {
+    Wait-Job $lockJob -Timeout 10 | Out-Null
+    Remove-Job $lockJob -Force -ErrorAction SilentlyContinue
+  }
 
   Invoke-LocalSql @"
 begin;

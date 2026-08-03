@@ -30,8 +30,8 @@ export const COURSE_OFFERINGS_MANIFEST = {
     FSM: "FSM"
   },
   notes: {
-    missingBsais4thYear: "The source workbook does not contain 4th Year historical course offerings for BSAIS.",
-    missingCrimUpperYears: "The source workbook contains 1st Year and 2nd Year historical offerings only for CRIM.",
+    missingBsais4thYear: "The supplied workbook does not contain 4th Year course offerings for BSAIS.",
+    missingCrimUpperYears: "The supplied workbook contains 1st Year and 2nd Year offerings only for CRIM.",
     duplicateBsaisBlock: "The source workbook contains two repeated BSAIS blocks which collapse to 25 unique rows."
   }
 } as const;

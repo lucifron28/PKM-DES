@@ -154,7 +154,7 @@ export function parseWorkbookAndGenerateMigration(workbookPath, outputPath) {
     throw new Error(`CRIM Criminology 2 assertion failed: ${crimRow1?.courseDescription}`);
   }
 
-  const sqlHeader = `-- Migration for multi-program historical course offerings
+  const sqlHeader = `-- Migration for multi-program client-provided course offerings
 create table if not exists public.course_offerings (
   id uuid primary key default gen_random_uuid(),
   program_id uuid not null references public.programs(id) on delete cascade,
@@ -183,7 +183,7 @@ create policy "Authenticated users can read course offerings"
   to authenticated
   using (true);
 
--- Insert 245 historical workbook-derived course offerings
+-- Insert 245 unique workbook-derived course offerings
 `;
 
   const sqlInserts = uniqueOfferings.map(o => {

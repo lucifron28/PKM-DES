@@ -41,6 +41,34 @@ entity "subjects" as subjects {
   * semester : Semester
 }
 
+entity "course_offerings" as course_offerings {
+  * id : uuid [PK]
+  * program_id : uuid [FK -> programs.id]
+  * academic_year : text
+  * semester : Semester
+  * year_level : YearLevel
+  * course_code : text
+  * course_description : text
+  * units : integer
+  * source_document : text
+  --
+  Client-provided or Registrar-approved term offering.
+}
+
+entity "standard_load_sets" as standard_load_sets {
+  * id : uuid [PK]
+  * program_id : uuid [FK -> programs.id]
+  * academic_year : text
+  * semester : Semester
+  * year_level : YearLevel
+  * status : DRAFT|ACTIVE
+  * expected_course_count : integer
+  * expected_total_units : integer
+  * source_document : text
+  --
+  Explicit Registrar-approved standard-load configuration.
+}
+
 entity "enrollments" as enrollments {
   * id : uuid [PK]
   * student_id : uuid [FK -> students.id]
@@ -58,7 +86,11 @@ entity "enrollments" as enrollments {
 entity "enrollment_subjects" as enrollment_subjects {
   * id : uuid [PK]
   * enrollment_id : uuid [FK -> enrollments.id]
-  * subject_id : uuid [FK -> subjects.id]
+  subject_id : uuid [FK -> subjects.id, nullable]
+  course_offering_id : uuid [FK -> course_offerings.id, nullable]
+  * course_code : text [snapshot]
+  * course_description : text [snapshot]
+  * units : integer [snapshot]
 }
 
 entity "official_student_records" as official_student_records {
@@ -101,18 +133,28 @@ entity "audit_logs" as audit_logs {
 profiles "1" -- "0..1" students : has
 programs "1" -- "0..*" students : belongs to
 programs "1" -- "0..*" subjects : contains
+programs "1" -- "0..*" course_offerings : offers
+programs "1" -- "0..*" standard_load_sets : configures
 students "1" -- "0..*" enrollments : creates
 students "1" -- "0..*" student_requirements : has
 profiles "1" -- "0..*" student_requirements : verifies
 enrollments "1" -- "0..*" enrollment_subjects : includes
 subjects "1" -- "0..*" enrollment_subjects : included in
+course_offerings "1" -- "0..*" enrollment_subjects : attached as snapshot
 programs "1" -- "0..*" official_student_records : defines
 profiles "1" -- "0..*" enrollments : reviews (admin)
 
 note bottom of enrollments
-  Unique index ensures one PENDING/APPROVED
-  enrollment per student per term.
+  Unique index ensures one enrollment
+  per student per term.
   (academic_year, semester, student_id)
+end note
+
+note bottom of standard_load_sets
+  Automatic submission reads only an ACTIVE,
+  complete set with matching current-term
+  course_offerings. Historical workbook rows
+  are not promoted automatically.
 end note
 
 note right of official_student_records

@@ -61,6 +61,10 @@ This local seed is independent from the deployed Supabase environment. Refer to 
 
 This branch adds the local SQLite database foundation and provider guard.
 
+SQLite does not currently mirror Supabase's client-provided course-offering
+catalog or standard-load configuration. SQLite parity for that workflow is
+deferred; the active workbook-backed enrollment path uses Supabase only.
+
 Current app routes still use Supabase clients. Moving individual app flows to a database adapter should happen in later small branches, one workflow at a time.
 
 Recommended next adapter slices:

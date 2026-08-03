@@ -12,9 +12,9 @@ Manual enrollment background from the FRD: students receive four registration-fo
 
 PKM-DES is a research-presentation MVP. The online deployment is a temporary client preview that demonstrates the proposed student-to-Registrar enrollment workflow. It is not ready for real institutional data, official enrollment operations, or replacement of the current PKM Registrar process.
 
-Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/FRD_TRACEABILITY.md). The formal research MVP boundary is documented in [docs/MVP_SCOPE.md](./docs/MVP_SCOPE.md), and the system diagrams for presentations are available in [docs/RESEARCH_PRESENTATION.md](./docs/RESEARCH_PRESENTATION.md).
+Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/reference/FRD_TRACEABILITY.md). The formal research MVP boundary, presenter guide, and system diagrams are indexed in [docs/README.md](./docs/README.md).
 
-Client source artifacts and their tracked implementation references are listed in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
+Client source artifacts and their tracked implementation references are listed in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/reference/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
 
 ## 2. Tech Stack
 
@@ -30,9 +30,9 @@ Client source artifacts and their tracked implementation references are listed i
 
 ## 3. Source Documents Used
 
-Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`, `Joshua.pdf`, `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`, and `REGISTRATION FORM 4G.xlsx`, are documented in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/SOURCE_DOCUMENT_REGISTER.md). Their original files are intentionally excluded from the public repository.
+Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`, `Joshua.pdf`, `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`, and `REGISTRATION FORM 4G.xlsx`, are documented in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/reference/SOURCE_DOCUMENT_REGISTER.md). Their original files are intentionally excluded from the public repository.
 
-- `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files or decisions
+- `docs/reference/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files or decisions
 
 ## 4. Current MVP Scope
 
@@ -40,7 +40,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Student pages: Dashboard, Online Enrollment, Subject List, Enrollment Status Result, Grades placeholder, Class Schedule placeholder, Balances placeholder, Account, Logout
 - Admin pages: Dashboard, Pending Enrollments, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
 - Admin reporting: Enrollment Reports with filters, status summaries, and browser-print output
-- Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, and BSAIS curriculum subject seed data
+- Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, client-provided term offerings, and explicit term-scoped standard-load configuration
 
 ## 5. Features Implemented
 
@@ -59,12 +59,12 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Student dashboard with student information, enrollment status, and quick actions
 - Student Account page displays core account data and matching Registrar-managed official profile details when available
 - Signed-in students can change their password from the Account page
-- Subject List separates historical workbook course-offering references from the BSAIS curriculum reference, with one working year-level filter
-- Historical workbook offerings are display-only AY 2025-2026, 2nd Semester references and are not the active AY 2026-2027 enrollment load
+- Subject List separates the client-provided term course enrollment load from program curriculum references, with one working year-level filter and current standard-load availability status
+- The client-provided `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx` supplies the active MVP term: AY 2025-2026, 2nd Semester
 - Students cannot select subjects from the Subject List; actual attached subjects come from the submitted enrollment record and Registrar review
 - Online enrollment uses the authenticated student's recorded program, year level, student type, and Student ID; the browser submits only the certification checkbox
-- Automatic standard-load submission is limited to eligible BSAIS students for the client-confirmed MVP term: AY 2026-2027, 1st Semester
-- The server action supplies `CURRENT_ENROLLMENT_TERM` to the RPC, which validates it against the database-approved term; a mismatch creates no enrollment
+- Automatic standard-load submission is available only when a complete active standard-load set exists for the student's recorded program, year level, and workbook term: AY 2025-2026, 2nd Semester
+- The server action reads the authoritative active term from `public.enrollment_terms` and supplies it to the RPC; a mismatch creates no enrollment
 - Transferee and Irregular Student loads are directed to Registrar-managed subject assignment; no transfer-credit or adjusted-load rules are invented
 - One atomic database submission creates a `PENDING` enrollment and its complete matching `enrollment_subjects` set, while the unique student-term index handles concurrent duplicates safely
 - Database trigger that marks the student `enrollment_status` as `PENDING` after enrollment submission
@@ -118,23 +118,7 @@ Missing Information / Future Inputs Needed:
 
 ## 8. Supabase Setup Instructions
 
-Detailed Supabase documentation is in [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md).
-
-SQLite local development notes are in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md).
-
-Development sample accounts are in [docs/SAMPLE_ACCOUNTS.md](./docs/SAMPLE_ACCOUNTS.md).
-
-Demo walkthrough instructions are in [docs/DEMO_RUNBOOK.md](./docs/DEMO_RUNBOOK.md).
-
-The automated browser smoke tests are documented in [docs/DEMO_WORKFLOW_SMOKE_TESTS.md](./docs/DEMO_WORKFLOW_SMOKE_TESTS.md).
-
-Fictional presentation data and the guarded reset procedure are documented in [docs/DEMO_DATA.md](./docs/DEMO_DATA.md) and [docs/DEMO_RESET.md](./docs/DEMO_RESET.md).
-
-Private preview credential preparation, verification, and handoff are documented in [docs/PREVIEW_CREDENTIALS.md](./docs/PREVIEW_CREDENTIALS.md). Active preview credentials are never committed or included in project documentation.
-
-Temporary fictional-data client-preview deployment safeguards and runbook are documented in [docs/CLIENT_PREVIEW_DEPLOYMENT.md](./docs/CLIENT_PREVIEW_DEPLOYMENT.md).
-
-Registration form sample scope notes are in [docs/REGISTRATION_FORM_SAMPLE_SCOPE.md](./docs/REGISTRATION_FORM_SAMPLE_SCOPE.md).
+All supplemental documentation is grouped and indexed in [docs/README.md](./docs/README.md). Active preview credentials are distributed privately and are never documented in the repository.
 
 Short setup:
 
@@ -207,14 +191,16 @@ For Vercel, set `DATABASE_PROVIDER=supabase`. `DATABASE_PROVIDER=sqlite` is loca
 - `programs`
 - `subjects`
 - `enrollments`
-- `enrollment_subjects`
+- `enrollment_subjects` (legacy subject or course-offering source with non-null display snapshots)
+- `course_offerings` (source-labeled client-provided term course offerings)
+- `standard_load_sets` (term-scoped Registrar-managed expected count and unit configuration)
 - `official_student_records`
 - `grades`
 - `class_schedules`
 - `balances`
 - `audit_logs`
 
-RLS policies are included for student-owned records, admin review access, authenticated subject/schedule reads, and admin audit-log access. See [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md) for the policy summary.
+RLS policies are included for student-owned records, admin review access, authenticated subject/schedule reads, and admin audit-log access. See [docs/setup/SUPABASE_SETUP.md](./docs/setup/SUPABASE_SETUP.md) for the policy summary.
 
 ## 12. Seed Data
 
@@ -238,9 +224,9 @@ Current tracked `supabase/seed.sql` definition:
 - BSAIS curriculum subjects: 56
 - BSAIS curriculum units: 167
 
-The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
+The program catalog contains ten canonical programs, and the Subject List includes the 245 unique workbook-derived offerings for all ten programs. Only BSAIS has seeded curriculum subject rows in `public.subjects`; online enrollment uses the configured workbook offerings instead. The active Supabase configuration contains 36 complete standard loads for AY 2025-2026, 2nd Semester. BSAIS 4th Year, BSMA 4th Year, and CRIM 3rd and 4th Year remain unavailable because the supplied workbook does not contain complete course rows for those combinations.
 
-SQLite development seeding is documented separately in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
+SQLite development seeding is documented separately in [docs/setup/SQLITE_DEVELOPMENT.md](./docs/setup/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
 
 ## 13. Manual Test Checklist
 
@@ -262,12 +248,12 @@ Student:
 - Student account page displays confirmed official profile fields when a matching official record exists.
 - Student can change password from the Account page after entering the current password.
 - Student can view subject list.
-- Student can view source-labeled historical workbook offerings for the student's actual program where configured for SY 2025-2026, 2nd Semester.
-- Student can distinguish historical course-offering references, the BSAIS curriculum reference, and actual enrollment subjects.
+- Student can view the client-provided AY 2025-2026, 2nd Semester course enrollment load for the student's actual program.
+- Student can distinguish client-provided term offerings, program curriculum references, configured standard-load availability, and actual enrollment snapshots.
 - Subject list displays separate tables by year level and semester.
 - Student can filter subjects by year level and reset the filter.
 - Student can submit enrollment form.
-- Enrollment form defaults to AY 2026-2027, 1st Semester.
+- Enrollment form displays the active workbook term: AY 2025-2026, 2nd Semester.
 - Duplicate enrollment submission for the same academic year and semester is blocked.
 - Rejected enrollment records cannot be resubmitted for the same academic year and semester (provisional project-owner MVP rule; terminal rejection closes same-term resubmission).
 - Successful enrollment submission creates matching `enrollment_subjects` rows.
@@ -324,12 +310,11 @@ Security:
 - Grades, schedule, balances, student records, and encode workflows are placeholders.
 - Admin accounts are created internally through Supabase setup instructions, not public registration.
 - The academic-year dropdown uses MVP options and needs the official academic calendar.
-- Subject List uses tracked source-derived constants for historical and curriculum references; actual enrollment attachments continue to use the Supabase `subjects` table.
-- The program catalog contains multiple programs, and the Subject List includes workbook-derived offerings for several programs. Only BSAIS currently has seeded curriculum subjects used by online enrollment, so complete multi-program enrollment is not supported.
-- Workbook-derived offerings are historical, display-only AY 2025-2026, 2nd Semester references; they are not the active AY 2026-2027 enrollment load and do not replace database curriculum subjects used by enrollment.
-- The source workbook contains duplicate BSAIS blocks and a 4th Year BSAIS total with no visible 4th Year BSAIS course rows.
-- Enrollment submission attaches matching BSAIS subjects from the database until PKM supplies approved curriculum and term-enrollment rules for other programs.
-- Client has confirmed First Semester AY 2026-2027 as the current MVP enrollment term, but the app still needs a full academic calendar configuration before additional terms are opened.
+- Subject List uses the client-provided AY 2025-2026, 2nd Semester course enrollment load and separate BSAIS curriculum references; current online enrollment attachments come only from an active, complete Supabase `standard_load_sets` plus matching `course_offerings` configuration.
+- The active workbook configuration is program-agnostic across ten canonical programs, with 36 complete standard loads. The source workbook's duplicate BSAIS blocks are deduplicated to 25 unique BSAIS rows.
+- BSAIS 4th Year, BSMA 4th Year, and CRIM 3rd and 4th Year are intentionally unavailable because the workbook lacks complete course rows. No missing courses are invented.
+- Enrollment submission attaches the exact configured workbook course-offering set for the student's program and year level. Transferee and Irregular Student loads remain Registrar-managed.
+- The current term is coordinated across the authoritative Supabase `enrollment_terms` row, application display, and standard-load migration. Changing it requires a forward migration and corresponding approved configuration update.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Student Account official-detail display depends on an exact matching Registrar-managed official record and server-only Supabase service-role configuration.
 - Generated-password email delivery is not implemented. A one-time account setup-link path exists only when explicitly enabled and configured; it remains disabled by default.

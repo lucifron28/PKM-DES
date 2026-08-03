@@ -11,22 +11,31 @@ Student -> Browser : Clicks "Submit Enrollment"
 Browser -> Action : submitEnrollmentAction()
 Action -> Supabase : Get current Session & Profile
 Supabase --> Action : Student ID
-Action -> Supabase : Query student details & program
+Action -> Supabase : Query trusted student, program, year, and type
 Supabase --> Action : Student details (Year Level, Program, Type)
 
 Action -> Logic : evaluateStandardLoadEligibility(context)
-note right of Logic: Uses fixed enrollment term config
+note right of Logic: Uses the active enrollment term
+and the configured standard-load result.
 Logic --> Action : "eligible"
 
-Action -> Supabase : RPC submit_standard_enrollment(...)
-note right of Supabase: Passes derived student details,\nfixed term, subject matching.
+Action -> Supabase : RPC submit_standard_student_enrollment(term)
+note right of Supabase: The server supplies the term;\nthe database derives identity and load.
 
 Supabase -> DB : Executes atomic RPC
 DB -> DB : Checks unique student-term index (Duplicate protection)
+DB -> DB : Resolves ACTIVE standard_load_sets and matching course_offerings
 DB -> DB : Inserts PENDING enrollment
-DB -> DB : Inserts enrollment_subjects for matching subjects
+DB -> DB : Inserts offering-backed enrollment_subjects with snapshots
 DB --> Supabase : Success
 Supabase --> Action : Enrollment ID
+
+note right of DB
+  Client-provided active load: AY 2025-2026 / 2nd Semester
+  workbook offerings are display reference data.
+  They do not become the current load without
+  an approved standard-load configuration.
+end note
 
 Action --> Browser : Redirect to Enrollment Status Page
 

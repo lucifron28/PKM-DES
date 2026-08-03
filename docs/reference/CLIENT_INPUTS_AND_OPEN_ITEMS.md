@@ -21,7 +21,7 @@ This document records client-provided answers received after reviewing the FRD g
 
 ### Academic Calendar
 
-- Current confirmed academic term: First Semester, Academic Year 2026-2027
+- Earlier client input identified First Semester, Academic Year 2026-2027 as the academic-calendar direction. For this research MVP branch, the supplied `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx` is the operational client-provided load for AY 2025-2026, 2nd Semester. Changing the active term still requires coordinated Registrar confirmation and application/database configuration.
 
 ### Enrollment Approval and Rejection
 

@@ -2,6 +2,7 @@ export type UserRole = "student" | "admin";
 export type AccountStatus = "ACTIVE" | "PENDING" | "SETUP";
 export type EnrollmentStatus = "NOT ENROLLED" | "PENDING" | "ENROLLED";
 export type EnrollmentReviewStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type StandardLoadStatus = "DRAFT" | "ACTIVE";
 export type StudentType =
   | "Incoming 1st Year Student"
   | "Transferee"
@@ -59,6 +60,48 @@ export type Subject = {
   programs?: Program | null;
 };
 
+export type CourseOffering = {
+  id: string;
+  program_id: string;
+  academic_year: string;
+  semester: Semester;
+  year_level: YearLevel;
+  course_code: string;
+  course_description: string;
+  units: number;
+  source_document: string;
+  created_at: string;
+  updated_at: string;
+  programs?: Program | null;
+};
+
+export type StandardLoadSet = {
+  id: string;
+  program_id: string;
+  academic_year: string;
+  semester: Semester;
+  year_level: YearLevel;
+  status: StandardLoadStatus;
+  expected_course_count: number;
+  expected_total_units: number;
+  source_document: string;
+  created_at: string;
+  updated_at: string;
+  programs?: Program | null;
+};
+
+export type EnrollmentSubject = {
+  id: string;
+  enrollment_id: string;
+  subject_id: string | null;
+  course_offering_id: string | null;
+  course_code: string;
+  course_description: string;
+  units: number;
+  subjects?: Subject | null;
+  course_offerings?: CourseOffering | null;
+};
+
 export type Enrollment = {
   id: string;
   student_id: string;
@@ -73,6 +116,7 @@ export type Enrollment = {
   remarks: string | null;
   students?: Student | null;
   programs?: Program | null;
+  enrollment_subjects?: EnrollmentSubject[] | null;
 };
 
 
