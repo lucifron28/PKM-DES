@@ -12,7 +12,7 @@ Manual enrollment background from the FRD: students receive four registration-fo
 
 PKM-DES is a research-presentation MVP. The online deployment is a temporary client preview that demonstrates the proposed student-to-Registrar enrollment workflow. It is not ready for real institutional data, official enrollment operations, or replacement of the current PKM Registrar process.
 
-Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/FRD_TRACEABILITY.md). The formal research MVP boundary is documented in [docs/MVP_SCOPE.md](./docs/MVP_SCOPE.md), and the system diagrams for presentations are available in [docs/RESEARCH_PRESENTATION.md](./docs/RESEARCH_PRESENTATION.md).
+Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/FRD_TRACEABILITY.md). The formal research MVP boundary is documented in [docs/MVP_SCOPE.md](./docs/MVP_SCOPE.md), and the step-by-step presenter guide is available in [docs/DEMO_USER_GUIDE.md](./docs/DEMO_USER_GUIDE.md). The system diagrams for presentations are available in [docs/RESEARCH_PRESENTATION.md](./docs/RESEARCH_PRESENTATION.md).
 
 Client source artifacts and their tracked implementation references are listed in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
 
@@ -122,13 +122,11 @@ Detailed Supabase documentation is in [docs/SUPABASE_SETUP.md](./docs/SUPABASE_S
 
 SQLite local development notes are in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md).
 
-Development sample accounts are in [docs/SAMPLE_ACCOUNTS.md](./docs/SAMPLE_ACCOUNTS.md).
-
-Demo walkthrough instructions are in [docs/DEMO_RUNBOOK.md](./docs/DEMO_RUNBOOK.md).
+The screenshot-led demo walkthrough is in [docs/DEMO_USER_GUIDE.md](./docs/DEMO_USER_GUIDE.md). Active preview credentials are distributed privately and are not documented in the repository.
 
 The automated browser smoke tests are documented in [docs/DEMO_WORKFLOW_SMOKE_TESTS.md](./docs/DEMO_WORKFLOW_SMOKE_TESTS.md).
 
-Fictional presentation data and the guarded reset procedure are documented in [docs/DEMO_DATA.md](./docs/DEMO_DATA.md) and [docs/DEMO_RESET.md](./docs/DEMO_RESET.md).
+The guarded fictional-data reset procedure is documented in [docs/DEMO_RESET.md](./docs/DEMO_RESET.md). The demo guide includes the fictional presentation states and the safe walkthrough order.
 
 Private preview credential preparation, verification, and handoff are documented in [docs/PREVIEW_CREDENTIALS.md](./docs/PREVIEW_CREDENTIALS.md). Active preview credentials are never committed or included in project documentation.
 

@@ -89,7 +89,7 @@ The optional `demo:reset` and `demo:verify` commands prepare and inspect fiction
 - `npm run demo:reset` requires `SUPABASE_SERVICE_ROLE_KEY`, `DEMO_STUDENT_PASSWORD`, and the exact `DEMO_RESET_CONFIRM=RESET_PKM_DES_DEMO` value.
 - `npm run demo:verify` is read-only.
 
-Run these commands only against a dedicated preview or test database with no live institutional data. See [DEMO_DATA.md](./DEMO_DATA.md) and [DEMO_RESET.md](./DEMO_RESET.md).
+Run these commands only against a dedicated preview or test database with no live institutional data. See [DEMO_USER_GUIDE.md](./DEMO_USER_GUIDE.md) and [DEMO_RESET.md](./DEMO_RESET.md).
 
 ## Migration Files
 

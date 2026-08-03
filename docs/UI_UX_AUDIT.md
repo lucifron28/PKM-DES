@@ -35,7 +35,7 @@
   - Public: `/`, `/about`, `/login`, `/create-account`, `/setup-account`
   - Student: `/student/dashboard`, `/student/enrollment`, `/student/enrollment-status`, `/student/subjects`, `/student/cor`, `/student/account`, `/student/grades`, `/student/schedule`, `/student/balances`
   - Admin: `/admin/dashboard`, `/admin/enrollments`, `/admin/enrollments/[enrollmentId]/registration`, `/admin/masterlist`, `/admin/reports`, `/admin/students`, `/admin/students/[recordId]/edit`, `/admin/account`
-- **Documentation Consulted**: `README.md`, `docs/MVP_SCOPE.md`, `docs/FRD_TRACEABILITY.md`, `docs/RESEARCH_PRESENTATION.md`, `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`, `docs/DEMO_RUNBOOK.md`
+- **Documentation Consulted**: `README.md`, `docs/MVP_SCOPE.md`, `docs/FRD_TRACEABILITY.md`, `docs/RESEARCH_PRESENTATION.md`, `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`, `docs/DEMO_USER_GUIDE.md`
 - **Skills Employed**: `ui-ux-pro-max` (design system & accessibility rules), `redesign-existing-projects` (code quality & visual audit guidelines)
 - **Viewports Evaluated**: 375px (mobile), 768px (tablet), 1024px (desktop/laptop), 1440px (wide desktop), Print / A4 paper
 - **Commands Executed & Verification Status**:
