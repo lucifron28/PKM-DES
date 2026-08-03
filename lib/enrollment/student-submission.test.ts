@@ -62,7 +62,7 @@ for (const programCode of ["BSAIS", "BSMA", "BEED", "ENGLISH", "FILIPINO", "MATH
   });
 }
 
-const activeTermFixture = { academicYear: "2026-2027", semester: "1st Semester" as const };
+const activeTermFixture = { academicYear: "2025-2026", semester: "2nd Semester" as const };
 
 test("the configured term is accepted", () => {
   assert.equal(isCurrentEnrollmentTerm(activeTermFixture, activeTermFixture), true);
@@ -94,7 +94,11 @@ test("Registrar-managed outcome maps to the Registrar notice", () => {
 });
 
 test("missing-load outcome maps to the configuration notice", () => {
-  assert.match(getStudentSubmissionMessage("no_configured_load"), /standard subject load/);
+  assert.match(getStudentSubmissionMessage("no_configured_load"), /complete standard load/);
+  assert.equal(
+    getStudentSubmissionMessage("no_configured_load"),
+    "The supplied course list does not contain a complete standard load for your program and year level. Please contact the Registrar."
+  );
 });
 
 test("closed-term outcome maps to the safe term notice", () => {

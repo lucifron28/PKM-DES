@@ -49,6 +49,25 @@ function totalUnits(rows: Array<{ units: number }>) {
   return rows.reduce((sum, row) => sum + row.units, 0);
 }
 
+function isCompleteActiveStandardLoad(
+  load: ActiveStandardLoad,
+  offerings: DBOfferingRow[]
+) {
+  const matchingOfferings = offerings.filter((offering) =>
+    offering.program_id === load.program_id &&
+    offering.academic_year === load.academic_year &&
+    offering.semester === load.semester &&
+    offering.year_level === load.year_level &&
+    offering.source_document === load.source_document
+  );
+
+  return (
+    load.status === "ACTIVE" &&
+    matchingOfferings.length === load.expected_course_count &&
+    totalUnits(matchingOfferings) === load.expected_total_units
+  );
+}
+
 function groupHistoricalOfferings(rows: DBOfferingRow[], selectedYear: YearLevel | ""): HistoricalOfferingGroup[] {
   const yearsToGroup: YearLevel[] = selectedYear ? [selectedYear] : ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 
@@ -137,7 +156,9 @@ export function SubjectReferenceBrowser({
     if (studentProgramCode && programs.some((p) => p.code === studentProgramCode)) {
       return studentProgramCode;
     }
-    return programs.find((program) => Boolean(program.code))?.code ?? "";
+    return programs.find((program) => program.code === "BSAIS")?.code
+      ?? programs.find((program) => Boolean(program.code))?.code
+      ?? "";
   }, [historicalOfferings, programs, studentProgramCode]);
 
   const [selectedProgramCode, setSelectedProgramCode] = useState<string>(initialProgramCode);
@@ -173,9 +194,10 @@ export function SubjectReferenceBrowser({
     () => activeStandardLoads.filter((load) =>
       load.program_id === activeProgram.id &&
       load.academic_year === activeTerm?.academicYear &&
-      load.semester === activeTerm?.semester
+      load.semester === activeTerm?.semester &&
+      isCompleteActiveStandardLoad(load, historicalOfferings)
     ),
-    [activeProgram.id, activeStandardLoads, activeTerm]
+    [activeProgram.id, activeStandardLoads, activeTerm, historicalOfferings]
   );
 
   const isUnassignedProgram = !studentProgramCode;
@@ -189,7 +211,7 @@ export function SubjectReferenceBrowser({
       <Card className="border-t-4 border-t-primary-800">
         <CardHeader
           title="Subject List & Course Offering Reference"
-          description="This page provides source-based academic references across all institutional programs. Your actual enrollment subjects are determined by your submitted enrollment record and Registrar review."
+          description="This page provides curriculum references and the client-provided course enrollment load across all institutional programs. Your submitted enrollment remains subject to Registrar review."
           action={<ButtonLink href="/student/enrollment-status" variant="outline">View Enrollment Status</ButtonLink>}
         />
       </Card>
@@ -205,11 +227,11 @@ export function SubjectReferenceBrowser({
       <Card className="border-t-4 border-t-secondary-600">
         <CardHeader
           title="Program Course Offering Reference"
-          description="Course offerings recorded in the client-provided workbook for AY 2025-2026, 2nd Semester. This is historical reference information and is not your current enrollment subject load."
+          description="Client-provided AY 2025-2026, 2nd Semester course enrollment load. Complete program and year-level combinations are used by online enrollment when the matching ACTIVE configuration is available."
           action={
             <div className="flex flex-wrap gap-2">
               <Badge tone="brand">
-                Client-provided AY {COURSE_OFFERINGS_TERM_25_26.academic_year} course-offering workbook
+                Client-provided AY {COURSE_OFFERINGS_TERM_25_26.academic_year}, {COURSE_OFFERINGS_TERM_25_26.semester} course enrollment load
               </Badge>
               <Badge tone="info">{COURSE_OFFERINGS_TERM_25_26.semester}</Badge>
             </div>
@@ -245,7 +267,7 @@ export function SubjectReferenceBrowser({
 
         {hasNoOfferingsForStudentProgram && selectedProgramCode === studentProgramCode ? (
           <aside className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            <p className="font-semibold">No Historical Course Offerings Recorded</p>
+            <p className="font-semibold">No Client-Provided Course Load Recorded</p>
             <p className="mt-1">
               Your official recorded student program is <strong>{studentProgramName} ({studentProgramCode})</strong>.
               The supplied AY 2025-2026, 2nd Semester workbook does not include course offerings for this program. Select another program above to browse available offerings.
@@ -282,21 +304,21 @@ export function SubjectReferenceBrowser({
           </aside>
         ) : (
           <aside className="mt-5 rounded-md border border-slateui-border bg-slateui-surfaceAlt px-4 py-3 text-sm text-slateui-secondary">
-            <p className="font-semibold text-slateui-text">Non-BSAIS Historical Reference Notice</p>
+            <p className="font-semibold text-slateui-text">Client Course Load Source Notice</p>
             <p className="mt-1">
-              These course offerings are historical workbook records from AY 2025-2026, 2nd Semester. Current standard-load availability is shown separately and depends on an active Registrar configuration for the selected program and year level.
+              These course offerings are taken from the client-provided AY 2025-2026, 2nd Semester workbook. Current enrollment availability is shown separately and depends on an ACTIVE configuration for the selected program and year level.
             </p>
           </aside>
         )}
 
         <aside className="mt-4 rounded-md border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-950">
-          <p className="font-semibold">Current standard-load availability</p>
+          <p className="font-semibold">Configured enrollment-load availability</p>
           {activeStandardLoadsError ? (
-            <p className="mt-1">Current availability could not be loaded. Historical offerings below remain reference-only.</p>
+            <p className="mt-1">Configured enrollment-load availability could not be loaded. The client-provided course rows below remain source reference data.</p>
           ) : activeTerm && activeProgramLoads.length ? (
             <p className="mt-1">{activeProgramLoads.length} year-level standard-load configuration{activeProgramLoads.length === 1 ? "" : "s"} available for AY {activeTerm.academicYear}, {activeTerm.semester}.</p>
           ) : activeTerm ? (
-            <p className="mt-1">No active standard-load configuration is currently available for this program in AY {activeTerm.academicYear}, {activeTerm.semester}.</p>
+            <p className="mt-1">No ACTIVE enrollment-load configuration is currently available for this program in AY {activeTerm.academicYear}, {activeTerm.semester}.</p>
           ) : (
             <p className="mt-1">No active enrollment term is currently configured.</p>
           )}
@@ -314,22 +336,22 @@ export function SubjectReferenceBrowser({
         <div className="mt-6">
           {historicalOfferingsError ? (
             <EmptyState
-              title="Historical course offerings could not be loaded"
-              description="Please try again. Historical course offerings failed to load from the database."
+              title="Client-provided course load could not be loaded"
+              description="Please try again. The client-provided course enrollment rows failed to load from the database."
             />
           ) : !programOfferings.length ? (
             <EmptyState
-              title="No historical offering reference is available"
+              title="No client-provided course load is available"
               description="The supplied AY 2025-2026, 2nd Semester workbook does not include course rows for this program."
             />
           ) : !historicalGroups.length ? (
-            <EmptyState title="No historical course offerings were listed for the selected year level." />
+            <EmptyState title="No client-provided course rows were listed for the selected year level." />
           ) : (
             <div className="space-y-5">
               {historicalGroups.map((group) => (
                 <div key={`historical-${group.yearLevel}`} className="overflow-hidden rounded-md border border-slateui-border">
                   <GroupHeading
-                    title={`${group.yearLevel} historical offerings`}
+                    title={`${group.yearLevel} course enrollment load`}
                     count={group.offerings.length}
                     total={group.totalUnits}
                     itemLabel="courses"
@@ -348,7 +370,7 @@ export function SubjectReferenceBrowser({
         <Card className="border-t-4 border-t-primary-800">
           <CardHeader
             title={`${activeProgram.code ?? "Program"} Curriculum Reference`}
-            description="Curriculum rows derived from the public.subjects database table. These rows are separate from historical workbook offerings and active standard-load configuration."
+            description="Curriculum rows derived from the public.subjects database table. These rows are separate from the client-provided term load and ACTIVE enrollment-load configuration."
             action={<Badge tone="brand">{programCurriculumSubjects.length} curriculum subjects</Badge>}
           />
 

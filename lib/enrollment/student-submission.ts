@@ -45,8 +45,10 @@ export const STUDENT_SUBMISSION_MESSAGES: Record<StudentSubmissionOutcome, strin
     "Your subject load requires Registrar review and assignment. Online standard-load submission is not available for this student classification.",
   missing_student_id: "Your student record needs a Student ID before online enrollment can be submitted. Please contact the Registrar.",
   invalid_student_record: "Your student record could not be used for online enrollment. Please contact the Registrar.",
-  no_configured_load: "A complete standard subject load is not configured for your program and year level. Please contact the Registrar.",
-  incomplete_configured_load: "The standard subject load for your program and year level is incomplete. Please contact the Registrar.",
+  no_configured_load:
+    "The supplied course list does not contain a complete standard load for your program and year level. Please contact the Registrar.",
+  incomplete_configured_load:
+    "The supplied course list does not contain a complete standard load for your program and year level. Please contact the Registrar.",
   term_not_open: "Online enrollment is not available for the configured academic term. Please contact the Registrar.",
   term_unavailable: "No active enrollment term is currently configured. Please contact the Registrar.",
   duplicate: "You already have an enrollment request for this academic year and semester.",

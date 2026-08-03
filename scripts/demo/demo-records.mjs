@@ -59,8 +59,8 @@ export const ACCOUNT_DEMO_EMAILS = ACCOUNT_DEMO_RECORDS.map((record) => record.e
 export const DEMO_STUDENT_IDS = DEMO_RECORDS.map((record) => record.studentIdNumber);
 
 export function resolveDemoTerm(environment = process.env) {
-  const academicYear = environment.NEXT_PUBLIC_CURRENT_ACADEMIC_YEAR || "2026-2027";
-  const semesterValue = environment.NEXT_PUBLIC_CURRENT_SEMESTER || "1st Semester";
+  const academicYear = environment.NEXT_PUBLIC_CURRENT_ACADEMIC_YEAR || "2025-2026";
+  const semesterValue = environment.NEXT_PUBLIC_CURRENT_SEMESTER || "2nd Semester";
 
   if (semesterValue !== "1st Semester" && semesterValue !== "2nd Semester") {
     throw new Error("NEXT_PUBLIC_CURRENT_SEMESTER must be 1st Semester or 2nd Semester.");

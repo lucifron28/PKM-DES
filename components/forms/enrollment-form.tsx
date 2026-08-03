@@ -59,13 +59,14 @@ export function EnrollmentForm({
       <section aria-labelledby="standard-load-heading" className="border-t border-slateui-border pt-5">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
           <div>
-            <h2 id="standard-load-heading" className="text-base font-bold text-slateui-text">Configured standard subject load</h2>
-            <p className="text-sm text-slateui-muted">This read-only load comes from the Registrar-approved configuration for your program, term, and year level.</p>
+            <h2 id="standard-load-heading" className="text-base font-bold text-slateui-text">Configured course enrollment load</h2>
+            <p className="text-sm text-slateui-muted">This read-only load comes from the client-provided workbook and its active configuration for your program, term, and year level.</p>
           </div>
           <p className="text-sm font-semibold tabular-nums text-slateui-text">
             {standardLoad.loadSet.expected_course_count} courses - {standardLoad.loadSet.expected_total_units} units
           </p>
         </div>
+        <p className="mt-2 text-xs text-slateui-muted">Source: {standardLoad.loadSet.source_document}</p>
         <div className="mt-3 overflow-x-auto rounded-md border border-slateui-border">
           <table className="min-w-[36rem] w-full text-left text-sm">
             <thead className="bg-slateui-surfaceAlt text-slateui-text">
