@@ -31,7 +31,7 @@ For local login, the machine must be able to reach the configured Supabase proje
 
 Open `/` and introduce the system as a proposed digital enrollment workflow. Point out the two primary actions: login and student account creation.
 
-![PKM-DES Home page](assets/demo/01-home.png)
+![PKM-DES Home page](assets/01-home.png)
 
 *Figure 1. Public home page with the PKM and Municipality marks, account actions, and enrollment-process overview.*
 
@@ -39,7 +39,7 @@ Open `/` and introduce the system as a proposed digital enrollment workflow. Poi
 
 Select **About Us**. Show the school identity, vision, mission, goals, contact information, and approved public links supplied by the client source material.
 
-![PKM-DES About Us page](assets/demo/02-about.png)
+![PKM-DES About Us page](assets/02-about.png)
 
 *Figure 2. About Us page using source-grounded PKM information.*
 
@@ -47,7 +47,7 @@ Select **About Us**. Show the school identity, vision, mission, goals, contact i
 
 Select **Login**. Explain that the same login entry routes an active student to the Student Portal and an active Registrar/Admin account to the Admin Portal.
 
-![PKM-DES Login page](assets/demo/03-login.png)
+![PKM-DES Login page](assets/03-login.png)
 
 *Figure 3. Login form. Do not type or display credentials while presenting screenshots.*
 
@@ -63,7 +63,7 @@ Open `/create-account`. Explain the three stages shown on the page:
 2. Review the matched details.
 3. Receive the setup link or complete the configured account path.
 
-![Create Student Account page](assets/demo/04-create-account.png)
+![Create Student Account page](assets/04-create-account.png)
 
 *Figure 4. Account-claim instructions before a record lookup.*
 
@@ -79,7 +79,7 @@ For a safe demonstration, use a fictional record prepared in the dedicated previ
 
 Select the student type, enter both matching identifiers, and select **Find My Record**. Do not use email-only or Student-ID-only matching.
 
-![Filled fictional account-claim form](assets/demo/05-account-claim-filled.png)
+![Filled fictional account-claim form](assets/05-account-claim-filled.png)
 
 *Figure 5. Filled claim form using fictional `example.com` data. The screenshot does not contain an active credential.*
 
@@ -152,7 +152,7 @@ Use a private active Registrar/Admin credential. Never place it in screenshots o
 
 Open `/admin/dashboard`. Start with the pending queue, then use the workflow links for official records and reporting.
 
-![Registrar dashboard](assets/demo/06-admin-dashboard.png)
+![Registrar dashboard](assets/06-admin-dashboard.png)
 
 *Figure 6. Registrar dashboard from the authorized deployed preview. Counts represent submitted enrollment requests, not official student records.*
 
@@ -191,7 +191,7 @@ Open `/admin/masterlist` and `/admin/reports`.
 - Use the applied-criteria summary to explain what the report contains.
 - Use browser print for a report or masterlist output when needed.
 
-![Enrollment reports](assets/demo/07-admin-reports.png)
+![Enrollment reports](assets/07-admin-reports.png)
 
 *Figure 7. Enrollment Reports from the authorized preview. An empty report means no submitted enrollment requests matched the current filters; it does not mean that official student records are missing.*
 

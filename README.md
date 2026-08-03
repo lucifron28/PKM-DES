@@ -12,9 +12,9 @@ Manual enrollment background from the FRD: students receive four registration-fo
 
 PKM-DES is a research-presentation MVP. The online deployment is a temporary client preview that demonstrates the proposed student-to-Registrar enrollment workflow. It is not ready for real institutional data, official enrollment operations, or replacement of the current PKM Registrar process.
 
-Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/FRD_TRACEABILITY.md). The formal research MVP boundary is documented in [docs/MVP_SCOPE.md](./docs/MVP_SCOPE.md), and the step-by-step presenter guide is available in [docs/DEMO_USER_GUIDE.md](./docs/DEMO_USER_GUIDE.md). The system diagrams for presentations are available in [docs/RESEARCH_PRESENTATION.md](./docs/RESEARCH_PRESENTATION.md).
+Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/reference/FRD_TRACEABILITY.md). The formal research MVP boundary, presenter guide, and system diagrams are indexed in [docs/README.md](./docs/README.md).
 
-Client source artifacts and their tracked implementation references are listed in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
+Client source artifacts and their tracked implementation references are listed in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/reference/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
 
 ## 2. Tech Stack
 
@@ -30,9 +30,9 @@ Client source artifacts and their tracked implementation references are listed i
 
 ## 3. Source Documents Used
 
-Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`, `Joshua.pdf`, `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`, and `REGISTRATION FORM 4G.xlsx`, are documented in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/SOURCE_DOCUMENT_REGISTER.md). Their original files are intentionally excluded from the public repository.
+Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`, `Joshua.pdf`, `LIST OF COURSES FOR 2ND SEM AY 25-26.xlsx`, and `REGISTRATION FORM 4G.xlsx`, are documented in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/reference/SOURCE_DOCUMENT_REGISTER.md). Their original files are intentionally excluded from the public repository.
 
-- `docs/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files or decisions
+- `docs/reference/CLIENT_INPUTS_AND_OPEN_ITEMS.md`: client-provided answers to FRD gaps and remaining required files or decisions
 
 ## 4. Current MVP Scope
 
@@ -118,21 +118,7 @@ Missing Information / Future Inputs Needed:
 
 ## 8. Supabase Setup Instructions
 
-Detailed Supabase documentation is in [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md).
-
-SQLite local development notes are in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md).
-
-The screenshot-led demo walkthrough is in [docs/DEMO_USER_GUIDE.md](./docs/DEMO_USER_GUIDE.md). Active preview credentials are distributed privately and are not documented in the repository.
-
-The automated browser smoke tests are documented in [docs/DEMO_WORKFLOW_SMOKE_TESTS.md](./docs/DEMO_WORKFLOW_SMOKE_TESTS.md).
-
-The guarded fictional-data reset procedure is documented in [docs/DEMO_RESET.md](./docs/DEMO_RESET.md). The demo guide includes the fictional presentation states and the safe walkthrough order.
-
-Private preview credential preparation, verification, and handoff are documented in [docs/PREVIEW_CREDENTIALS.md](./docs/PREVIEW_CREDENTIALS.md). Active preview credentials are never committed or included in project documentation.
-
-Temporary fictional-data client-preview deployment safeguards and runbook are documented in [docs/CLIENT_PREVIEW_DEPLOYMENT.md](./docs/CLIENT_PREVIEW_DEPLOYMENT.md).
-
-Registration form sample scope notes are in [docs/REGISTRATION_FORM_SAMPLE_SCOPE.md](./docs/REGISTRATION_FORM_SAMPLE_SCOPE.md).
+All supplemental documentation is grouped and indexed in [docs/README.md](./docs/README.md). Active preview credentials are distributed privately and are never documented in the repository.
 
 Short setup:
 
@@ -214,7 +200,7 @@ For Vercel, set `DATABASE_PROVIDER=supabase`. `DATABASE_PROVIDER=sqlite` is loca
 - `balances`
 - `audit_logs`
 
-RLS policies are included for student-owned records, admin review access, authenticated subject/schedule reads, and admin audit-log access. See [docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md) for the policy summary.
+RLS policies are included for student-owned records, admin review access, authenticated subject/schedule reads, and admin audit-log access. See [docs/setup/SUPABASE_SETUP.md](./docs/setup/SUPABASE_SETUP.md) for the policy summary.
 
 ## 12. Seed Data
 
@@ -240,7 +226,7 @@ Current tracked `supabase/seed.sql` definition:
 
 The program catalog contains ten canonical programs, and the Subject List includes the 245 unique workbook-derived offerings for all ten programs. Only BSAIS has seeded curriculum subject rows in `public.subjects`; online enrollment uses the configured workbook offerings instead. The active Supabase configuration contains 36 complete standard loads for AY 2025-2026, 2nd Semester. BSAIS 4th Year, BSMA 4th Year, and CRIM 3rd and 4th Year remain unavailable because the supplied workbook does not contain complete course rows for those combinations.
 
-SQLite development seeding is documented separately in [docs/SQLITE_DEVELOPMENT.md](./docs/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
+SQLite development seeding is documented separately in [docs/setup/SQLITE_DEVELOPMENT.md](./docs/setup/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
 
 ## 13. Manual Test Checklist
 
