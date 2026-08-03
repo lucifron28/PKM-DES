@@ -10,9 +10,6 @@ The demonstration always starts with the Registrar. The Registrar first enters t
 
 - Open the deployed PKM-DES website: [pkm-des.vercel.app](https://pkm-des.vercel.app/)
 - Have the private Registrar login details ready.
-- Use a fictional student such as **John Doe**.
-- Use a test email address that you control, such as `john.doe@example.com`.
-- Use a fictional Student ID such as `99-90001`.
 
 Do not place passwords or private email addresses in screenshots, presentations, or shared documents.
 
