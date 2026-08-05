@@ -90,14 +90,14 @@ The examples were given with names, but the likely ID pattern is the two-digit y
 ### Provisional Email Decisions
 
 These are provisional implementation boundaries. They do not constitute formal institutional policy.
-- Use Resend through a server-only adapter.
+- Use Gmail SMTP through a server-only adapter and an authorized PKM mailbox.
 - Use a one-time password-setup or recovery link.
 - Never email or log a plaintext password.
 - Keep email delivery disabled by default; actual delivery requires explicit server configuration.
 - Preserve generic responses to avoid email/account enumeration.
 - Preserve existing official-record claim and duplicate-account protections.
 - Failed delivery must not leave an active usable account without a completed setup flow.
-- Support safe resend with cooldown or idempotency protection.
+- Support safe setup-email re-delivery with cooldown or idempotency protection.
 - Enrollment approval/rejection notices use a durable status-only outbox; rejection remarks remain in the student portal and are not included in email.
 - A notification failure must not reverse the Registrar's saved enrollment decision; an authorized Registrar may retry a failed notification.
 

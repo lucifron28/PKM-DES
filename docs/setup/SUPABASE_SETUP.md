@@ -53,7 +53,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ACCOUNT_CLAIM_SECRET=
 EMAIL_DELIVERY_ENABLED=false
-RESEND_API_KEY=
+GMAIL_SMTP_USER=
+GMAIL_SMTP_APP_PASSWORD=
 EMAIL_FROM=
 APP_BASE_URL=http://localhost:3000
 ```
@@ -77,7 +78,7 @@ Important:
 - The service-role key is required for the MVP Create Student Account flow because the app creates Supabase Auth users server-side.
 - `ACCOUNT_CLAIM_SECRET` must be a private random value of at least 32 characters. It signs the short-lived account-claim proof and must never use a `NEXT_PUBLIC_` name.
 - `EMAIL_DELIVERY_ENABLED` remains `false` unless PKM has approved the sender and notification wording.
-- `RESEND_API_KEY` and `EMAIL_FROM` are server-only delivery configuration; do not commit them.
+- `GMAIL_SMTP_USER`, `GMAIL_SMTP_APP_PASSWORD`, and `EMAIL_FROM` are server-only delivery configuration; do not commit them. The mailbox owner must create a dedicated Google App Password after enabling 2-Step Verification; do not use the ordinary mailbox password.
 - `APP_BASE_URL` is the trusted application origin used in email links. It is not derived from the request `Host` header.
 - Vercel deployments must set `DATABASE_PROVIDER=supabase`.
 - `.env.local` is ignored by git and should stay local.
@@ -469,7 +470,7 @@ Get-Content -Raw scripts/integration/verify-local-supabase-workflows.sql |
 .\scripts\integration\verify-local-supabase-concurrency.ps1
 ```
 
-The concurrency runner creates separate fictional records for parallel review and resend calls, then resets the local stack when it finishes. Do not run either verification script against a linked, preview, or institutional database.
+The concurrency runner creates separate fictional records for parallel review and setup-email delivery calls, then resets the local stack when it finishes. Do not run either verification script against a linked, preview, or institutional database.
 
 The transactional fixture grants `authenticated` read access to `public.students` only for the duration of its local rollback transaction because the existing requirement ownership policy resolves through that table. This test-only grant does not change a migration or production permissions.
 
@@ -477,9 +478,9 @@ Current client direction:
 
 - Every student type is matched against official Registrar-provided data before account access.
 - The target workflow is system-generated passwords sent by email, with students allowed to change passwords later.
-- PKM-DES does not generate passwords. Its default MVP path uses a self-selected password; an optional server-only one-time setup-link path can be enabled only with `EMAIL_DELIVERY_ENABLED=true`, `RESEND_API_KEY`, `EMAIL_FROM`, and a trusted `APP_BASE_URL`.
+- PKM-DES does not generate passwords. Its default MVP path uses a self-selected password; an optional server-only one-time setup-link path can be enabled only with `EMAIL_DELIVERY_ENABLED=true`, `GMAIL_SMTP_USER`, `GMAIL_SMTP_APP_PASSWORD`, `EMAIL_FROM`, and a trusted `APP_BASE_URL`.
 - The setup-link path is disabled by default and requires the Supabase Auth redirect allowlist to include `${APP_BASE_URL}/auth/callback` before it is used.
-- Setup-link delivery has a five-minute server-side resend cooldown. It is reserved before email delivery so concurrent resend requests do not send multiple links.
+- Setup-link delivery has a five-minute server-side delivery cooldown. It is reserved before email delivery so concurrent requests do not send multiple links.
 - After a successful Registrar approval or rejection, the server loads the student's recipient address from the enrollment record and can send a decision notification through the same adapter. Rejection remarks are not included in the email; students can view them in the authenticated portal.
 - Decision notifications are disabled by default. If delivery is not configured or the provider fails, the enrollment decision remains saved and the Pending Enrollments page shows a manual-contact warning. Delivery failure does not roll back the Registrar decision.
 
