@@ -94,6 +94,32 @@ values ('26-00010', 'Concurrent', 'Student', 'concurrent.student@example.test', 
 
 insert into public.enrollments (id, student_id, program_id, year_level, academic_year, semester, status)
 values ('$enrollmentId', '$studentRecordId', '$programId', '1st Year', '2025-2026', '2nd Semester', 'PENDING');
+
+insert into public.enrollment_subjects (
+  enrollment_id, subject_id, course_offering_id, course_code, course_description, units
+)
+select
+  '$enrollmentId',
+  null,
+  co.id,
+  co.course_code,
+  co.course_description,
+  co.units
+from public.course_offerings co
+where co.program_id = '$programId'
+  and co.academic_year = '2025-2026'
+  and co.semester = '2nd Semester'
+  and co.year_level = '1st Year'
+order by co.id
+limit 1;
+
+do `$verify`$
+begin
+  if not exists (select 1 from public.enrollment_subjects where enrollment_id = '$enrollmentId') then
+    raise exception 'Concurrency fixture could not attach a valid course offering snapshot.';
+  end if;
+end;
+`$verify`$;
 "@ | Out-Null
 
   $distinctSubmissionSql = @"
@@ -203,6 +229,11 @@ begin
   end if;
   if (select count(*) from public.audit_logs where target_id = '$enrollmentId' and action = 'APPROVE_ENROLLMENT') <> 1 then
     raise exception 'concurrent review wrote an unexpected audit count';
+  end if;
+  if (select count(*) from public.enrollment_decision_notifications
+    where enrollment_id = '$enrollmentId' and decision = 'APPROVED'
+  ) <> 1 then
+    raise exception 'concurrent review wrote an unexpected notification count';
   end if;
 end;
 `$verify`$;

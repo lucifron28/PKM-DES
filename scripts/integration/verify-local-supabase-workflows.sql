@@ -65,7 +65,16 @@ insert into public.enrollments (id, student_id, program_id, year_level, academic
 values
   ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2025-2026', '2nd Semester', 'PENDING'),
   ('40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2025-2026', '2nd Semester', 'PENDING'),
-  ('40000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2025-2026', '2nd Semester', 'PENDING');
+  ('40000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2025-2026', '2nd Semester', 'PENDING'),
+  ('40000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', current_setting('pkm.fixture.bsais_id')::uuid, '1st Year', '2024-2025', '1st Semester', 'PENDING');
+
+insert into public.enrollment_subjects (
+  id, enrollment_id, subject_id, course_code, course_description, units
+)
+values
+  ('50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 'TEST-101', 'Local verification subject', 3),
+  ('50000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001', 'TEST-101', 'Local verification subject', 3),
+  ('50000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000001', 'TEST-101', 'Local verification subject', 3);
 
 insert into public.student_requirements (
   student_id, requirement_code, academic_year, semester, applicability, status, verified_at, verified_by
@@ -96,6 +105,30 @@ begin
   end if;
   if (select outcome from public.complete_student_account_setup()) <> 'invalid_setup' then
     raise exception 'ACTIVE student completed setup again';
+  end if;
+end;
+$verify$;
+
+-- Approval refuses an empty or malformed subject load without mutating the request.
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
+do $verify$
+declare
+  before_status text;
+  before_student_status text;
+begin
+  select status into before_status from public.enrollments where id = '40000000-0000-4000-8000-000000000004';
+  select enrollment_status into before_student_status from public.students where id = '20000000-0000-4000-8000-000000000001';
+  if (select outcome from public.review_pending_enrollment(
+    '40000000-0000-4000-8000-000000000004', 'APPROVED', null
+  )) <> 'invalid_enrollment_load' then
+    raise exception 'empty enrollment load was approved';
+  end if;
+  if (select status from public.enrollments where id = '40000000-0000-4000-8000-000000000004') <> before_status
+    or (select enrollment_status from public.students where id = '20000000-0000-4000-8000-000000000001') <> before_student_status
+    or (select count(*) from public.audit_logs where target_id = '40000000-0000-4000-8000-000000000004') <> 0
+    or (select count(*) from public.enrollment_decision_notifications where enrollment_id = '40000000-0000-4000-8000-000000000004') <> 0 then
+    raise exception 'invalid load review mutated protected records';
   end if;
 end;
 $verify$;
@@ -261,6 +294,13 @@ begin
   ) <> 1 then
     raise exception 'approval audit count was not one';
   end if;
+  if (select count(*) from public.enrollment_decision_notifications
+    where enrollment_id = '40000000-0000-4000-8000-000000000003'
+      and decision = 'APPROVED'
+      and status = 'PENDING'
+  ) <> 1 then
+    raise exception 'approved enrollment did not create one pending notification';
+  end if;
 end;
 $verify$;
 
@@ -273,6 +313,13 @@ begin
     '40000000-0000-4000-8000-000000000002', 'APPROVED', null
   )) <> 'approved' then
     raise exception 'non-applicable enrollment was blocked';
+  end if;
+  if (select count(*) from public.enrollment_decision_notifications
+    where enrollment_id = '40000000-0000-4000-8000-000000000002'
+      and decision = 'APPROVED'
+      and status = 'PENDING'
+  ) <> 1 then
+    raise exception 'approved non-applicable enrollment did not create one pending notification';
   end if;
 end;
 $verify$;
