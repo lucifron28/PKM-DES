@@ -41,7 +41,7 @@ $studentId = "00000000-0000-4000-8000-000000000020"
 $submitStudentAId = "00000000-0000-4000-8000-000000000021"
 $submitStudentBId = "00000000-0000-4000-8000-000000000022"
 $submitStudentCId = "00000000-0000-4000-8000-000000000023"
-$resendId = "00000000-0000-4000-8000-000000000030"
+$deliveryId = "00000000-0000-4000-8000-000000000030"
 $programId = $null
 $studentRecordId = "20000000-0000-4000-8000-000000000010"
 $enrollmentId = "40000000-0000-4000-8000-000000000010"
@@ -69,7 +69,7 @@ values
   ('$submitStudentAId', 'authenticated', 'authenticated', 'concurrent.submit-a@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('$submitStudentBId', 'authenticated', 'authenticated', 'concurrent.submit-b@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('$submitStudentCId', 'authenticated', 'authenticated', 'concurrent.submit-c@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('$resendId', 'authenticated', 'authenticated', 'concurrent.resend@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
+  ('$deliveryId', 'authenticated', 'authenticated', 'concurrent.delivery@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
 
 insert into public.profiles (id, role, first_name, last_name, email, account_status)
 values
@@ -78,7 +78,7 @@ values
   ('$submitStudentAId', 'student', 'Concurrent', 'Submit A', 'concurrent.submit-a@example.test', 'ACTIVE'),
   ('$submitStudentBId', 'student', 'Concurrent', 'Submit B', 'concurrent.submit-b@example.test', 'ACTIVE'),
   ('$submitStudentCId', 'student', 'Concurrent', 'Submit C', 'concurrent.submit-c@example.test', 'ACTIVE'),
-  ('$resendId', 'student', 'Concurrent', 'Resend', 'concurrent.resend@example.test', 'SETUP');
+  ('$deliveryId', 'student', 'Concurrent', 'Delivery', 'concurrent.delivery@example.test', 'SETUP');
 
 insert into public.students (id, profile_id, student_id_number, program_id, year_level, student_type, enrollment_status)
 values
@@ -239,15 +239,15 @@ end;
 `$verify`$;
 "@ | Out-Null
 
-  $resendSql = @"
+  $deliverySql = @"
 begin;
 set local role service_role;
-select outcome from public.reserve_student_setup_email_delivery('$resendId');
+select outcome from public.reserve_student_setup_email_delivery('$deliveryId');
 commit;
 "@
-  $resendOutcomes = @(Invoke-ParallelLocalSql @($resendSql, $resendSql) | Sort-Object)
-  if (($resendOutcomes -join ',') -ne 'cooldown,reserved') {
-    throw "Concurrent setup-email reservation did not return one reserved and one cooldown outcome: $($resendOutcomes -join ',')."
+  $deliveryOutcomes = @(Invoke-ParallelLocalSql @($deliverySql, $deliverySql) | Sort-Object)
+  if (($deliveryOutcomes -join ',') -ne 'cooldown,reserved') {
+    throw "Concurrent setup-email reservation did not return one reserved and one cooldown outcome: $($deliveryOutcomes -join ',')."
   }
 
   Write-Host "Local Supabase concurrency verification passed."

@@ -1,22 +1,30 @@
 import "server-only";
 
 export type EmailEnvironment = {
-  apiKey: string | undefined;
   fromAddress: string | undefined;
+  gmailUser: string | undefined;
+  gmailAppPassword: string | undefined;
   enabled: boolean;
   deliveryRequested: boolean;
   configurationError: boolean;
 };
 
 export function getEmailEnv() {
-  const apiKey = process.env.RESEND_API_KEY;
   const fromAddress = process.env.EMAIL_FROM;
+  const gmailUser = process.env.GMAIL_SMTP_USER;
+  const gmailAppPassword = process.env.GMAIL_SMTP_APP_PASSWORD;
   const deliveryRequested = process.env.EMAIL_DELIVERY_ENABLED === "true";
-  const configurationError = deliveryRequested && (!apiKey || !fromAddress || !process.env.APP_BASE_URL);
+  const configurationError = deliveryRequested && (
+    !fromAddress ||
+    !gmailUser ||
+    !gmailAppPassword ||
+    !process.env.APP_BASE_URL
+  );
 
   return {
-    apiKey,
     fromAddress,
+    gmailUser,
+    gmailAppPassword,
     enabled: deliveryRequested && !configurationError,
     deliveryRequested,
     configurationError

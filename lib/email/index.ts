@@ -1,14 +1,13 @@
 import "server-only";
 
 import { getEmailEnv } from "./env";
-import { ResendEmailAdapter } from "./resend-adapter";
+import { GmailSmtpEmailAdapter } from "./gmail-smtp-adapter";
 import { MockEmailAdapter } from "./mock-adapter";
-import type { ReactNode } from "react";
-
 export interface SendEmailOptions {
   to: string;
   subject: string;
-  react: ReactNode;
+  html: string;
+  text: string;
 }
 
 export interface EmailAdapter {
@@ -18,8 +17,12 @@ export interface EmailAdapter {
 export function getEmailAdapter(): EmailAdapter {
   const env = getEmailEnv();
   
-  if (env.enabled && env.apiKey && env.fromAddress) {
-    return new ResendEmailAdapter(env.apiKey, env.fromAddress);
+  if (env.enabled && env.gmailUser && env.gmailAppPassword && env.fromAddress) {
+    return new GmailSmtpEmailAdapter({
+      fromAddress: env.fromAddress,
+      user: env.gmailUser,
+      appPassword: env.gmailAppPassword
+    });
   }
   
   return new MockEmailAdapter();

@@ -1,8 +1,7 @@
 import "server-only";
 
-import React from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { EnrollmentDecisionEmail } from "./templates";
+import { createEnrollmentDecisionEmail } from "./templates";
 import { getAppBaseUrl, getEmailAdapter, getEmailEnv } from "./index";
 import type { EmailAdapter } from "./index";
 import type { EnrollmentReviewDecision } from "@/lib/enrollment/admin-review";
@@ -137,7 +136,7 @@ export async function processEnrollmentDecisionNotification(
   }
 
   const environment = options.environment ?? getEmailEnv();
-  if (!environment.enabled || !environment.apiKey || !environment.fromAddress) {
+  if (!environment.enabled || !environment.gmailUser || !environment.gmailAppPassword || !environment.fromAddress) {
     await recordFailure(store, reservation, "not_configured");
     logDeliveryFailure("not_configured");
     return "not_configured";
@@ -175,16 +174,18 @@ export async function processEnrollmentDecisionNotification(
   const emailAdapter = options.adapter ?? getEmailAdapter();
 
   try {
+    const emailContent = createEnrollmentDecisionEmail({
+      firstName: reservation.first_name?.trim() || "Student",
+      decision: reservation.decision,
+      academicYear: reservation.academic_year,
+      semester: reservation.semester,
+      statusLink
+    });
+
     await emailAdapter.send({
       to: recipient,
       subject: getEnrollmentDecisionEmailSubject(reservation.decision),
-      react: React.createElement(EnrollmentDecisionEmail, {
-        firstName: reservation.first_name?.trim() || "Student",
-        decision: reservation.decision,
-        academicYear: reservation.academic_year,
-        semester: reservation.semester,
-        statusLink
-      })
+      ...emailContent
     });
   } catch {
     await recordFailure(store, reservation, "provider");

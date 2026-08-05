@@ -157,7 +157,8 @@ DATABASE_PROVIDER=supabase
 SUPABASE_SERVICE_ROLE_KEY=
 ACCOUNT_CLAIM_SECRET=
 EMAIL_DELIVERY_ENABLED=false
-RESEND_API_KEY=
+GMAIL_SMTP_USER=
+GMAIL_SMTP_APP_PASSWORD=
 EMAIL_FROM=
 APP_BASE_URL=http://localhost:3000
 ```
@@ -168,7 +169,7 @@ APP_BASE_URL=http://localhost:3000
 
 Use `DATABASE_PROVIDER=sqlite` only for local development. Vercel deployment must use `DATABASE_PROVIDER=supabase`.
 
-Enrollment decision email delivery is optional and disabled by default. Enable it only with an approved `EMAIL_FROM`, a valid `RESEND_API_KEY`, and a trusted `APP_BASE_URL`. The Registrar decision is saved independently; delivery failures are recorded in the outbox and never reverse the decision.
+Enrollment decision email delivery is optional and disabled by default. Enable it only with an authorized Gmail mailbox, a dedicated Google App Password, an approved `EMAIL_FROM`, and a trusted `APP_BASE_URL`. The Registrar decision is saved independently; delivery failures are recorded in the outbox and never reverse the decision.
 
 ## 10. How to Run Locally
 
