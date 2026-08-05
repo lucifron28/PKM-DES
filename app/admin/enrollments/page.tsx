@@ -138,6 +138,7 @@ export default async function PendingEnrollmentsPage({
     already_reviewed: "This enrollment request has already been reviewed. Refresh the pending list.",
     invalid_request: "Enrollment request could not be reviewed. Please try again.",
     review_failed: "Enrollment request could not be reviewed. Please try again.",
+    invalid_enrollment_load: "This enrollment cannot be approved because its subject load is missing or invalid.",
     unverified_requirements: "Applicable Health Record Update verification is still pending for this enrollment term."
   };
 
@@ -231,17 +232,21 @@ export default async function PendingEnrollmentsPage({
       </div>
 
       {params.success ? (
-        <div className="mx-6 mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+        <div role="status" aria-live="polite" className="mx-6 mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
           {successMessages[params.success] ?? "Action completed successfully."}
         </div>
       ) : null}
       {params.email && emailMessages[params.email] ? (
-        <div className={`mx-6 mb-4 rounded-md border px-4 py-3 text-sm font-medium ${params.email === "sent" ? "border-sky-200 bg-sky-50 text-sky-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+        <div
+          role={params.email === "sent" ? "status" : "alert"}
+          aria-live={params.email === "sent" ? "polite" : undefined}
+          className={`mx-6 mb-4 rounded-md border px-4 py-3 text-sm font-medium ${params.email === "sent" ? "border-sky-200 bg-sky-50 text-sky-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+        >
           {emailMessages[params.email]}
         </div>
       ) : null}
       {params.error ? (
-        <div className="mx-6 mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <div role="alert" className="mx-6 mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {errorMessages[params.error] ?? "An error occurred."}
         </div>
       ) : null}

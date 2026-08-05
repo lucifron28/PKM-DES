@@ -18,6 +18,7 @@ import {
   normalizeRequirementNote
 } from "@/lib/requirements/rules";
 import {
+  processEnrollmentReviewNotification,
   sendEnrollmentDecisionEmailService,
   type EnrollmentDecisionEmailDelivery
 } from "@/lib/email/enrollment-decision";
@@ -80,7 +81,12 @@ async function processEnrollmentReview(formData: FormData, decision: EnrollmentR
 
     let emailDelivery: EnrollmentDecisionEmailDelivery = "failed";
     try {
-      emailDelivery = await sendEnrollmentDecisionEmailService(supabase, enrollmentId, decision);
+      emailDelivery = await processEnrollmentReviewNotification(
+        String(result?.outcome ?? ""),
+        supabase,
+        enrollmentId,
+        decision
+      ) as EnrollmentDecisionEmailDelivery;
     } catch {
       console.error("enrollment_review:notification_unexpected");
     }
@@ -102,6 +108,30 @@ export async function approveEnrollmentAction(formData: FormData) {
 
 export async function rejectEnrollmentAction(formData: FormData) {
   await processEnrollmentReview(formData, "REJECTED");
+}
+
+export async function retryEnrollmentDecisionEmailAction(formData: FormData) {
+  const { supabase } = await requireRole("admin");
+  const enrollmentId = normalizeEnrollmentReviewId(formData.get("enrollment_id"));
+  const decision = String(formData.get("decision") ?? "").trim();
+
+  if (!enrollmentId || (decision !== "APPROVED" && decision !== "REJECTED")) {
+    redirect("/admin/enrollments?error=invalid_request");
+  }
+
+  let emailDelivery: EnrollmentDecisionEmailDelivery = "failed";
+  try {
+    emailDelivery = await sendEnrollmentDecisionEmailService(
+      supabase,
+      enrollmentId,
+      decision as EnrollmentReviewDecision
+    );
+  } catch {
+    console.error("enrollment_review:notification_retry_unexpected");
+  }
+
+  revalidateEnrollmentViews(enrollmentId);
+  redirect(`/admin/enrollments/${enrollmentId}/registration?email=${emailDelivery}`);
 }
 
 export async function updateEnrollmentRequirementAction(
