@@ -133,10 +133,10 @@ Open **Enrollment Status** to see the result:
 1. Sign out of the student account.
 2. Sign in again using the private Registrar account.
 3. Select **Pending Enrollments**.
-4. Open the fictional student's enrollment request.
-5. Review the information and subjects.
+4. Select **Review request** for the fictional student.
+5. Review the student information, attached subjects, and status-only requirement information in the modal.
 6. Select **Approve** or **Reject**.
-7. If rejecting the request, enter a short explanation when requested.
+7. If rejecting the request, enter a short explanation when requested, then confirm the rejection.
 
 Only submitted enrollment requests appear here. A student who has not submitted the Online Enrollment form will not appear in this list.
 
@@ -150,6 +150,8 @@ After approval or rejection:
 4. Select the browser's print command when a paper copy is needed.
 
 The Masterlist and Reports pages show enrollment requests, not every student record entered by the Registrar.
+
+The decision is saved before any optional email delivery is attempted. In the research preview, email delivery is normally disabled. If the registration-form view shows a failed student notification and the approved delivery setup is available, the Registrar can select **Retry student notification**. Email messages do not include rejection remarks; students view those remarks in the portal.
 
 ## Part 5: Print The Registration Form
 

@@ -34,6 +34,8 @@ npm run demo:reset
 
 The script deletes and recreates only exact, account-backed fictional identities whose Auth user, profile email, and Student ID all match the allowlisted demo record. Reserved Student IDs are collision checks only: a missing profile, non-demo profile, mismatched pair, or a student row for the claim-only ID stops the reset before any mutation. The script does not truncate tables or select records by broad date, status, program, or email-domain filters. It must find an active, complete standard-load configuration before creating attached demo enrollment snapshots; the client-provided workbook rows are used only through that matching active configuration.
 
+Before removing those exact demo students, the reset removes only their exact enrollment-decision notification outbox rows so retained notification history cannot block the demo enrollment cleanup. It does not remove notification rows for unrelated students.
+
 ## Verify the Result
 
 ```bash

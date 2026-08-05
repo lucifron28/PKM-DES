@@ -5,7 +5,7 @@ This repository includes a Playwright-based browser smoke test suite for the PKM
 These browser smoke tests verify the core demonstration path:
 - Two-stage account claiming (find official record, then create account)
 - Student enrollment submission (including the certification checkbox requirement)
-- Inline Registrar approval with browser confirmation
+- Modal-based Registrar review with browser confirmation
 - Reporting and Masterlist updates
 - Registration form generation
 
