@@ -17,6 +17,10 @@ import {
   isValidRequirementTerm,
   normalizeRequirementNote
 } from "@/lib/requirements/rules";
+import {
+  sendEnrollmentDecisionEmailService,
+  type EnrollmentDecisionEmailDelivery
+} from "@/lib/email/enrollment-decision";
 import type { RequirementApplicability, RequirementStatus } from "@/lib/requirements/types";
 import type { Enrollment, Student } from "@/types/database";
 
@@ -73,7 +77,15 @@ async function processEnrollmentReview(formData: FormData, decision: EnrollmentR
     } catch {
       console.error("enrollment_review:review_revalidation");
     }
-    redirect(`/admin/enrollments?success=${redirectResult.value}`);
+
+    let emailDelivery: EnrollmentDecisionEmailDelivery = "failed";
+    try {
+      emailDelivery = await sendEnrollmentDecisionEmailService(supabase, enrollmentId, decision);
+    } catch {
+      console.error("enrollment_review:notification_unexpected");
+    }
+
+    redirect(`/admin/enrollments?success=${redirectResult.value}&email=${emailDelivery}`);
   }
 
   if (redirectResult.value === "already_reviewed") {

@@ -14,3 +14,38 @@ export function AccountSetupEmail({ setupLink }: { setupLink: string }) {
     </div>
   );
 }
+
+export function EnrollmentDecisionEmail({
+  firstName,
+  decision,
+  academicYear,
+  semester,
+  statusLink
+}: {
+  firstName: string;
+  decision: "APPROVED" | "REJECTED";
+  academicYear: string;
+  semester: string;
+  statusLink: string;
+}) {
+  const approved = decision === "APPROVED";
+
+  return (
+    <div>
+      <h1>PKM-DES Enrollment Update</h1>
+      <p>Hello {firstName},</p>
+      <p>
+        Your Online Enrollment request for AY {academicYear}, {semester} has been{" "}
+        {approved ? "approved" : "rejected"} by the Registrar.
+      </p>
+      <p>
+        <a href={statusLink}>View your enrollment status</a>
+      </p>
+      <p>
+        {approved
+          ? "Sign in to review your enrollment result and draft registration form."
+          : "Sign in to review the enrollment result and any remarks in your student portal."}
+      </p>
+    </div>
+  );
+}
