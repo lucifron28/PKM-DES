@@ -31,7 +31,7 @@ const ACADEMIC_YEAR_REGEX = /^\d{4}-\d{4}$/;
 export default async function PendingEnrollmentsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ error?: string; success?: string; academic_year?: string; semester?: string }>;
+  searchParams?: Promise<{ error?: string; success?: string; email?: string; academic_year?: string; semester?: string }>;
 }) {
   const { supabase } = await requireRole("admin");
   const params = (await searchParams) ?? {};
@@ -108,7 +108,7 @@ export default async function PendingEnrollmentsPage({
   const semester = filterSemester!;
   const query = supabase
     .from("enrollments")
-    .select("*, students(*, profiles(*)), programs(*)")
+    .select("*, students(*, profiles(*)), programs(*), enrollment_subjects(id, course_code, course_description, units)")
     .eq("status", "PENDING")
     .eq("academic_year", academicYear)
     .eq("semester", semester);
@@ -144,6 +144,12 @@ export default async function PendingEnrollmentsPage({
   const successMessages: Record<string, string> = {
     approved: "Enrollment request approved successfully.",
     rejected: "Enrollment request rejected successfully."
+  };
+
+  const emailMessages: Record<string, string> = {
+    sent: "The student notification was sent to the configured email provider.",
+    not_configured: "The decision was saved, but the student notification could not be sent. Contact the student manually.",
+    failed: "The decision was saved, but the student notification could not be sent. Contact the student manually."
   };
 
   const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.student_id))];
@@ -229,6 +235,11 @@ export default async function PendingEnrollmentsPage({
           {successMessages[params.success] ?? "Action completed successfully."}
         </div>
       ) : null}
+      {params.email && emailMessages[params.email] ? (
+        <div className={`mx-6 mb-4 rounded-md border px-4 py-3 text-sm font-medium ${params.email === "sent" ? "border-sky-200 bg-sky-50 text-sky-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+          {emailMessages[params.email]}
+        </div>
+      ) : null}
       {params.error ? (
         <div className="mx-6 mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {errorMessages[params.error] ?? "An error occurred."}
@@ -303,24 +314,30 @@ export default async function PendingEnrollmentsPage({
                             >
                               View/Print Form
                             </ButtonLink>
-                            <details className="group border border-slateui-border bg-slateui-surfaceAlt">
-                              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-bold text-primary-800 outline-none transition-colors hover:bg-primary-50 focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-inset">
-                                Review request
-                                <span className="text-xs font-semibold text-slateui-muted group-open:hidden">Open</span>
-                                <span className="hidden text-xs font-semibold text-slateui-muted group-open:inline">Close</span>
-                              </summary>
-                              <div className="border-t border-slateui-border bg-white p-3">
-                                <EnrollmentReviewControls
-                                  enrollmentId={enrollment.id}
-                                  healthRequirement={{
-                                    applicability: healthRequirementApplicability,
-                                    status: healthRequirementStatus,
-                                    note: healthRequirementApplicability === "APPLICABLE" ? requirement?.note ?? null : null,
-                                    unavailable: requirementDataUnavailable
-                                  }}
-                                />
-                              </div>
-                            </details>
+                            <EnrollmentReviewControls
+                              enrollmentId={enrollment.id}
+                              studentName={formatName(profile?.first_name, profile?.last_name)}
+                              studentId={student?.student_id_number ?? "Not provided"}
+                              email={profile?.email ?? "Not available"}
+                              program={enrollment.programs?.name ?? "Not available"}
+                              yearLevel={enrollment.year_level}
+                              studentType={student?.student_type ?? "Not available"}
+                              academicYear={enrollment.academic_year}
+                              semester={enrollment.semester}
+                              submittedAt={enrollment.submitted_at}
+                              subjects={(enrollment.enrollment_subjects ?? []).map((subject) => ({
+                                id: subject.id,
+                                course_code: subject.course_code,
+                                course_description: subject.course_description,
+                                units: subject.units
+                              }))}
+                              healthRequirement={{
+                                applicability: healthRequirementApplicability,
+                                status: healthRequirementStatus,
+                                note: healthRequirementApplicability === "APPLICABLE" ? requirement?.note ?? null : null,
+                                unavailable: requirementDataUnavailable
+                              }}
+                            />
                           </div>
                         </td>
                       </tr>
