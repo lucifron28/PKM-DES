@@ -472,6 +472,8 @@ Current client direction:
 - PKM-DES does not generate passwords. Its default MVP path uses a self-selected password; an optional server-only one-time setup-link path can be enabled only with `EMAIL_DELIVERY_ENABLED=true`, `RESEND_API_KEY`, `EMAIL_FROM`, and a trusted `APP_BASE_URL`.
 - The setup-link path is disabled by default and requires the Supabase Auth redirect allowlist to include `${APP_BASE_URL}/auth/callback` before it is used.
 - Setup-link delivery has a five-minute server-side resend cooldown. It is reserved before email delivery so concurrent resend requests do not send multiple links.
+- After a successful Registrar approval or rejection, the server loads the student's recipient address from the enrollment record and can send a decision notification through the same adapter. Rejection remarks are not included in the email; students can view them in the authenticated portal.
+- Decision notifications are disabled by default. If delivery is not configured or the provider fails, the enrollment decision remains saved and the Pending Enrollments page shows a manual-contact warning. Delivery failure does not roll back the Registrar decision.
 
 Student password changes:
 
