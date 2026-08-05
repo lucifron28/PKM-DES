@@ -43,21 +43,25 @@ const fakeAdmin = {} as SupabaseClient;
 function withDeliveryEnvironment(callback: () => Promise<void>) {
   const previous = {
     enabled: process.env.EMAIL_DELIVERY_ENABLED,
-    apiKey: process.env.RESEND_API_KEY,
+    gmailUser: process.env.GMAIL_SMTP_USER,
+    gmailAppPassword: process.env.GMAIL_SMTP_APP_PASSWORD,
     from: process.env.EMAIL_FROM,
     baseUrl: process.env.APP_BASE_URL
   };
 
   process.env.EMAIL_DELIVERY_ENABLED = "true";
-  process.env.RESEND_API_KEY = "test-key";
+  process.env.GMAIL_SMTP_USER = "registrar@example.com";
+  process.env.GMAIL_SMTP_APP_PASSWORD = "test-app-password";
   process.env.EMAIL_FROM = "noreply@example.com";
   process.env.APP_BASE_URL = "https://pkm-des.example.com";
 
   return callback().finally(() => {
     if (previous.enabled === undefined) delete process.env.EMAIL_DELIVERY_ENABLED;
     else process.env.EMAIL_DELIVERY_ENABLED = previous.enabled;
-    if (previous.apiKey === undefined) delete process.env.RESEND_API_KEY;
-    else process.env.RESEND_API_KEY = previous.apiKey;
+    if (previous.gmailUser === undefined) delete process.env.GMAIL_SMTP_USER;
+    else process.env.GMAIL_SMTP_USER = previous.gmailUser;
+    if (previous.gmailAppPassword === undefined) delete process.env.GMAIL_SMTP_APP_PASSWORD;
+    else process.env.GMAIL_SMTP_APP_PASSWORD = previous.gmailAppPassword;
     if (previous.from === undefined) delete process.env.EMAIL_FROM;
     else process.env.EMAIL_FROM = previous.from;
     if (previous.baseUrl === undefined) delete process.env.APP_BASE_URL;
@@ -75,7 +79,7 @@ test("recipient masking does not expose the full email address", () => {
 
 test("enrollment decision notification sends an approval message without exposing remarks", async () => {
   await withDeliveryEnvironment(async () => {
-    const sent: Array<{ to: string; subject: string; react: unknown }> = [];
+    const sent: Array<{ to: string; subject: string; html: string; text: string }> = [];
     const { store, calls } = fakeStore();
     const result = await sendEnrollmentDecisionEmailService(fakeAdmin, "enrollment-1", "APPROVED", {
       store,
@@ -89,17 +93,15 @@ test("enrollment decision notification sends an approval message without exposin
     assert.equal(sent.length, 1);
     assert.equal(sent[0].to, "maria@example.com");
     assert.equal(sent[0].subject, "PKM-DES Enrollment Request Approved");
-    const props = (sent[0].react as { props: Record<string, unknown> }).props;
-    assert.equal(props.decision, "APPROVED");
-    assert.equal(props.statusLink, "https://pkm-des.example.com/student/enrollment-status");
-    assert.equal("remarks" in props, false);
-    assert.doesNotMatch(JSON.stringify(props), /remarks?/i);
+    assert.match(sent[0].html, /has been approved by the Registrar\./);
+    assert.match(sent[0].html, /https:\/\/pkm-des\.example\.com\/student\/enrollment-status/);
+    assert.doesNotMatch(`${sent[0].html} ${sent[0].text}`, /specific internal rejection reason/i);
   });
 });
 
 test("enrollment decision notification sends a rejection message without exposing remarks", async () => {
   await withDeliveryEnvironment(async () => {
-    const sent: Array<{ subject: string; react: unknown }> = [];
+    const sent: Array<{ subject: string; html: string; text: string }> = [];
     const { store } = fakeStore({ ...baseReservation, decision: "REJECTED" });
     const result = await sendEnrollmentDecisionEmailService(fakeAdmin, "enrollment-1", "REJECTED", {
       store,
@@ -109,20 +111,22 @@ test("enrollment decision notification sends a rejection message without exposin
     assert.equal(result, "sent");
     assert.equal(sent.length, 1);
     assert.equal(sent[0].subject, "PKM-DES Enrollment Request Update");
-    assert.equal((sent[0].react as { props: Record<string, unknown> }).props.decision, "REJECTED");
-    assert.equal((sent[0].react as { props: Record<string, unknown> }).props.remarks, undefined);
+    assert.match(sent[0].html, /has been rejected by the Registrar\./);
+    assert.doesNotMatch(`${sent[0].html} ${sent[0].text}`, /specific internal rejection reason/i);
   });
 });
 
 test("unconfigured delivery records a retryable failure without sending", async () => {
   const previous = {
     enabled: process.env.EMAIL_DELIVERY_ENABLED,
-    apiKey: process.env.RESEND_API_KEY,
+    gmailUser: process.env.GMAIL_SMTP_USER,
+    gmailAppPassword: process.env.GMAIL_SMTP_APP_PASSWORD,
     from: process.env.EMAIL_FROM,
     baseUrl: process.env.APP_BASE_URL
   };
   delete process.env.EMAIL_DELIVERY_ENABLED;
-  delete process.env.RESEND_API_KEY;
+  delete process.env.GMAIL_SMTP_USER;
+  delete process.env.GMAIL_SMTP_APP_PASSWORD;
   delete process.env.EMAIL_FROM;
   delete process.env.APP_BASE_URL;
 
@@ -139,8 +143,10 @@ test("unconfigured delivery records a retryable failure without sending", async 
 
   if (previous.enabled === undefined) delete process.env.EMAIL_DELIVERY_ENABLED;
   else process.env.EMAIL_DELIVERY_ENABLED = previous.enabled;
-  if (previous.apiKey === undefined) delete process.env.RESEND_API_KEY;
-  else process.env.RESEND_API_KEY = previous.apiKey;
+  if (previous.gmailUser === undefined) delete process.env.GMAIL_SMTP_USER;
+  else process.env.GMAIL_SMTP_USER = previous.gmailUser;
+  if (previous.gmailAppPassword === undefined) delete process.env.GMAIL_SMTP_APP_PASSWORD;
+  else process.env.GMAIL_SMTP_APP_PASSWORD = previous.gmailAppPassword;
   if (previous.from === undefined) delete process.env.EMAIL_FROM;
   else process.env.EMAIL_FROM = previous.from;
   if (previous.baseUrl === undefined) delete process.env.APP_BASE_URL;

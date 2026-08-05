@@ -1,6 +1,5 @@
-import React from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { AccountSetupEmail, getAppBaseUrl, getEmailAdapter } from "@/lib/email";
+import { createAccountSetupEmail, getAppBaseUrl, getEmailAdapter } from "@/lib/email";
 
 export async function sendAccountSetupEmailService(
   admin: SupabaseClient,
@@ -19,12 +18,12 @@ export async function sendAccountSetupEmailService(
   }
 
   const setupLink = `${getAppBaseUrl()}/auth/callback?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}&type=magiclink`;
-  const emailElement = React.createElement(AccountSetupEmail, { setupLink });
+  const emailContent = createAccountSetupEmail(setupLink);
   const adapter = getEmailAdapter();
 
   await adapter.send({
     to: email,
     subject: "PKM-DES Student Account Setup",
-    react: emailElement
+    ...emailContent
   });
 }

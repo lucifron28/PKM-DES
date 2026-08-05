@@ -11,7 +11,7 @@ values
   ('00000000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'applicable.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('00000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'nonapplicable.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('00000000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'setup.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'resend.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'delivery.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('00000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'gate.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
 
 insert into public.profiles (id, role, first_name, last_name, email, account_status)
@@ -20,7 +20,7 @@ values
   ('00000000-0000-4000-8000-000000000002', 'student', 'Applicable', 'Student', 'applicable.student@example.test', 'ACTIVE'),
   ('00000000-0000-4000-8000-000000000003', 'student', 'Nonapplicable', 'Student', 'nonapplicable.student@example.test', 'ACTIVE'),
   ('00000000-0000-4000-8000-000000000004', 'student', 'Setup', 'Student', 'setup.student@example.test', 'SETUP'),
-  ('00000000-0000-4000-8000-000000000005', 'student', 'Resend', 'Student', 'resend.student@example.test', 'SETUP'),
+  ('00000000-0000-4000-8000-000000000005', 'student', 'Delivery', 'Student', 'delivery.student@example.test', 'SETUP'),
   ('00000000-0000-4000-8000-000000000006', 'student', 'Gate', 'Student', 'gate.student@example.test', 'ACTIVE');
 
 do $program_fixture$
@@ -324,7 +324,7 @@ begin
 end;
 $verify$;
 
--- Service-only resend reservation: first call reserves; second call is held by cooldown.
+-- Service-only setup-email reservation: first call reserves; second call is held by cooldown.
 reset role;
 set local role service_role;
 do $verify$

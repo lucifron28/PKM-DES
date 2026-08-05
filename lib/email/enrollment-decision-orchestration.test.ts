@@ -24,20 +24,23 @@ const reservation: EnrollmentNotificationReservation = {
 function withEnvironment(callback: () => Promise<void>) {
   const previous = {
     enabled: process.env.EMAIL_DELIVERY_ENABLED,
-    apiKey: process.env.RESEND_API_KEY,
+    gmailUser: process.env.GMAIL_SMTP_USER,
+    gmailAppPassword: process.env.GMAIL_SMTP_APP_PASSWORD,
     from: process.env.EMAIL_FROM,
     baseUrl: process.env.APP_BASE_URL
   };
 
   process.env.EMAIL_DELIVERY_ENABLED = "true";
-  process.env.RESEND_API_KEY = "test-key";
+  process.env.GMAIL_SMTP_USER = "registrar@example.com";
+  process.env.GMAIL_SMTP_APP_PASSWORD = "test-app-password";
   process.env.EMAIL_FROM = "noreply@example.com";
   process.env.APP_BASE_URL = "https://pkm-des.example.com";
 
   return callback().finally(() => {
     for (const [key, value] of Object.entries({
       EMAIL_DELIVERY_ENABLED: previous.enabled,
-      RESEND_API_KEY: previous.apiKey,
+      GMAIL_SMTP_USER: previous.gmailUser,
+      GMAIL_SMTP_APP_PASSWORD: previous.gmailAppPassword,
       EMAIL_FROM: previous.from,
       APP_BASE_URL: previous.baseUrl
     })) {
