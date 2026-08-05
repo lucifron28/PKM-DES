@@ -49,9 +49,10 @@ jobs:
           npm run test:student-enrollment
           npm run test:registration-form
           npm run test:portal-navigation
+          npm run test:enrollment-review-ui
           npx tsx --test lib/account-setup/*.test.ts
           npx tsx --test lib/course-offerings/*.test.ts
-          npx tsx --test lib/email/*.test.ts
+          npm run test:email
           npx tsx --test lib/requirements/*.test.ts
           npx tsx --test lib/auth/*.test.ts
           npx tsx --test components/ui/*.test.ts

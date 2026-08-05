@@ -17,6 +17,8 @@ const overrides = [
   ["portal-navigation.tsx", "./logout-button", resolve(stubDir, "logout-button.tsx")],
   ["portal-navigation.tsx", "./pkm-mark", resolve(stubDir, "pkm-mark.tsx")],
   ["portal-navigation.tsx", "./side-nav", resolve(stubDir, "side-nav.tsx")],
+  ["enrollment-review-controls.tsx", "@/app/admin/enrollments/actions", resolve(stubDir, "enrollment-review-actions.ts")],
+  ["enrollment-review-controls.tsx", "@/components/requirements/requirement-status-card", resolve(stubDir, "requirement-status-card.tsx")],
   [".tsx", "next/link", resolve(stubDir, "next-link.tsx")],
   [".tsx", "next/navigation", resolve(stubDir, "next-navigation.tsx")],
   [".tsx", "lucide-react", resolve(stubDir, "lucide-react.tsx")],

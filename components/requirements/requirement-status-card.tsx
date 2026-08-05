@@ -65,7 +65,15 @@ export function RequirementStatusCard({
         <form action={formAction} className="space-y-3 border-t border-slateui-border pt-3">
           <input type="hidden" name="enrollment_id" value={enrollmentId} />
           <input type="hidden" name="requirement_code" value="HEALTH_RECORD_UPDATE" />
-          {state.message ? <p className={state.success ? "text-sm font-medium text-green-700" : "text-sm font-medium text-red-700"}>{state.message}</p> : null}
+          {state.message ? (
+            <p
+              role={state.success ? "status" : "alert"}
+              aria-live={state.success ? "polite" : undefined}
+              className={state.success ? "text-sm font-medium text-green-700" : "text-sm font-medium text-red-700"}
+            >
+              {state.message}
+            </p>
+          ) : null}
           <TextArea
             label="Administrative note"
             name="note"

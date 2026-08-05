@@ -74,6 +74,10 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Browser-printable enrollment report table for Registrar review
 - Atomic admin approve/reject enrollment actions for pending requests only
 - Approval or rejection, the summarized student status, and one audit record commit together; concurrent stale reviews cannot overwrite the first decision
+- Approval fails closed when an enrollment has no valid attached subject load; the decision, student status, audit row, and notification outbox row remain unchanged
+- Pending-enrollment review opens in an accessible modal with student details, attached subjects, requirement status, and focused decision controls
+- Successful approval/rejection decisions create one durable notification outbox row; the server-only email adapter reserves it, prevents concurrent sends, records safe delivery outcomes, and supports Registrar retry for failed delivery
+- Optional server-only enrollment approval/rejection email notifications use the configured adapter; delivery is disabled by default and a delivery failure does not undo the saved decision
 - Rejection keeps optional free-text remarks; the MVP has only a narrow, status-only current-term Health Record Update verification for applicable students, not a full document workflow
 - Enrollment masterlist across pending, approved, and rejected submitted requests, with program, academic year, year level, semester, review-status, and student identity search filters
 - Admin Account page with internal account details and password change
@@ -99,7 +103,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Email-generated initial password workflow
 - Digital clearance/signature routing
 
-The Create Student Account page includes an MVP password setup block so local Supabase Auth testing can work. The official generated-password and email-sending workflow remains a placeholder until approved templates and rules are supplied.
+The Create Student Account page includes an MVP password setup block so local Supabase Auth testing can work. The official generated-password email workflow remains a placeholder until approved templates and rules are supplied. Enrollment decision notifications are a separate optional path, disabled by default, and do not include rejection remarks.
 
 ## 7. Missing Information / Future Inputs Needed
 
@@ -152,6 +156,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 DATABASE_PROVIDER=supabase
 SUPABASE_SERVICE_ROLE_KEY=
 ACCOUNT_CLAIM_SECRET=
+EMAIL_DELIVERY_ENABLED=false
+RESEND_API_KEY=
+EMAIL_FROM=
+APP_BASE_URL=http://localhost:3000
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only. It is used by the account creation action to create Supabase Auth users and must never be exposed in client code.
@@ -159,6 +167,8 @@ ACCOUNT_CLAIM_SECRET=
 `ACCOUNT_CLAIM_SECRET` is server-only, must contain at least 32 characters, and signs the short-lived account-claim proof stored in an HTTP-only cookie.
 
 Use `DATABASE_PROVIDER=sqlite` only for local development. Vercel deployment must use `DATABASE_PROVIDER=supabase`.
+
+Enrollment decision email delivery is optional and disabled by default. Enable it only with an approved `EMAIL_FROM`, a valid `RESEND_API_KEY`, and a trusted `APP_BASE_URL`. The Registrar decision is saved independently; delivery failures are recorded in the outbox and never reverse the decision.
 
 ## 10. How to Run Locally
 
@@ -192,6 +202,7 @@ For Vercel, set `DATABASE_PROVIDER=supabase`. `DATABASE_PROVIDER=sqlite` is loca
 - `subjects`
 - `enrollments`
 - `enrollment_subjects` (legacy subject or course-offering source with non-null display snapshots)
+- `enrollment_decision_notifications` (durable approval/rejection email-delivery outbox; no remarks or email body)
 - `course_offerings` (source-labeled client-provided term course offerings)
 - `standard_load_sets` (term-scoped Registrar-managed expected count and unit configuration)
 - `official_student_records`
@@ -317,7 +328,7 @@ Security:
 - The current term is coordinated across the authoritative Supabase `enrollment_terms` row, application display, and standard-load migration. Changing it requires a forward migration and corresponding approved configuration update.
 - Official records can be manually encoded and edited by admins, but CSV import is not implemented until PKM provides the official import format.
 - Student Account official-detail display depends on an exact matching Registrar-managed official record and server-only Supabase service-role configuration.
-- Generated-password email delivery is not implemented. A one-time account setup-link path exists only when explicitly enabled and configured; it remains disabled by default.
+- Generated-password email delivery is not implemented. A one-time account setup-link path and enrollment decision notifications exist only when explicitly enabled and configured; both remain disabled by default. Decision notifications use a durable outbox and retry path, and delivery failure does not roll back the Registrar decision.
 
 ## 15. Future Enhancements
 

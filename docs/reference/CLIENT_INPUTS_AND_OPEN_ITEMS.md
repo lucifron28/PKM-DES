@@ -98,6 +98,8 @@ These are provisional implementation boundaries. They do not constitute formal i
 - Preserve existing official-record claim and duplicate-account protections.
 - Failed delivery must not leave an active usable account without a completed setup flow.
 - Support safe resend with cooldown or idempotency protection.
+- Enrollment approval/rejection notices use a durable status-only outbox; rejection remarks remain in the student portal and are not included in email.
+- A notification failure must not reverse the Registrar's saved enrollment decision; an authorized Registrar may retry a failed notification.
 
 ### Provisional Health Record Update Decisions
 

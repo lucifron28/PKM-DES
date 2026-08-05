@@ -43,7 +43,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - Admin dashboard enrollment-status overview.
 - Manual creation, search, filtering, and editing of official student records.
 - Registrar/Admin reset of an exact active student account password from the linked official-record edit page. The temporary password is set by the admin and shared privately; no password-reset email, forced change, or expiry rule is implemented. Supabase Auth password update and PostgreSQL audit log insertion are not one atomic cross-system transaction: if the Auth update succeeds but audit log insertion fails, the password update remains in effect in Auth while a server-side audit failure is logged.
-- Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, and audit row commit atomically. The queue includes only a status-only, current-term Health Record Update check when it applies; it is not a full document or requirements checklist.
+- Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, audit row, and durable decision-notification outbox row commit atomically. Approval fails closed when the attached subject snapshot load is missing or invalid. The queue includes only a status-only, current-term Health Record Update check when it applies; it is not a full document or requirements checklist.
 - Enrollment masterlist and browser-printable report views.
 
 ### Reporting and Printing
@@ -71,6 +71,7 @@ The demonstration does not validate real admission requirements, financial oblig
 - Enrollment creation and subject attachment use one database transaction. The student-term unique index remains the concurrent duplicate safeguard.
 - Account claiming for every student type depends on manually encoded official student records; no approved import workflow exists.
 - The FRD describes generated credentials delivered by email, while the default MVP path uses a self-selected password so the account flow can be tested. A configured server-only setup-link delivery path remains disabled by default and does not send generated passwords.
+- Enrollment decision notifications are a partial, optional delivery path. A successful approval or rejection creates a durable outbox record, but email is disabled by default; when enabled, delivery uses the trusted server configuration, records safe retryable failures, and never undoes the saved Registrar decision. Rejection remarks remain in the authenticated portal and are not stored in the outbox or included in email.
 - The signed account-claim proof protects the MVP workflow state but is not production-grade institutional identity verification; account-claim rate limiting remains future hardening.
 - Official student record fields and controlled options are guided MVP inputs, not finalized institutional value lists.
 - Official student records are Registrar source data. Each claimed student account is linked via `students.official_record_id`. Official record updates by an admin automatically synchronize account-safe fields (`profiles.first_name`, `profiles.last_name`, `students.program_id`, `students.year_level`, `students.student_type`, `students.student_id_number`) through an atomic RPC, while Supabase Auth and profile email addresses require separate Auth-aware handling. Unambiguous legacy records are backfilled; ambiguous records remain unlinked. Their source enrollment-status field does not create or change an enrollment request.
@@ -94,6 +95,7 @@ The draft registration form also contains non-operational placeholders for sched
 - Official grade processing or release.
 - Official class scheduling or section assignment.
 - Email-generated password delivery. A setup-link delivery path is demonstration-only until PKM approves sender, templates, and operating rules.
+- Live enrollment-decision email delivery or proof of delivery in the public preview. The durable outbox and retry path demonstrate the boundary only; sender approval and operational monitoring remain future inputs.
 - Digital clearance routing.
 - Electronic signatures.
 - Complete institutional audit and compliance implementation.
@@ -124,5 +126,5 @@ The research MVP is successful when:
 After client validation, the next phase should prioritize production hardening, full data modeling, security redesign, institutional policy confirmation, approved data imports, official output templates, and the additional modules identified in the traceability matrix. These changes should be sequenced only after PKM validates the proposed workflow and supplies the required institutional rules, formats, and source data.
 
 ### 4. Requirements & Email Scope
-- **Email Delivery Service**: A server-only Resend adapter can send a one-time setup link only when explicitly configured. It is disabled by default in the preview environment and does not send generated passwords.
+- **Email Delivery Service**: A server-only Resend adapter can send a one-time setup link and an enrollment decision notification after a successful Registrar approval or rejection when explicitly configured. Delivery is disabled by default in the preview environment, does not send generated passwords, and does not include rejection remarks. If delivery is unavailable, the saved decision remains authoritative and the Registrar sees a manual-contact warning.
 - **Health Record Requirement**: Status-only, current-term `HEALTH_RECORD_UPDATE` verification gates approval only for Incoming 1st Year Students whose Registrar-managed official record has an explicitly confirmed `Female` value. No sensitive medical data is stored.

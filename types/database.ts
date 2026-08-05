@@ -1,7 +1,9 @@
 export type UserRole = "student" | "admin";
 export type AccountStatus = "ACTIVE" | "PENDING" | "SETUP";
 export type EnrollmentStatus = "NOT ENROLLED" | "PENDING" | "ENROLLED";
-export type EnrollmentReviewStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type EnrollmentDecision = "APPROVED" | "REJECTED";
+export type EnrollmentReviewStatus = "PENDING" | EnrollmentDecision;
+export type EnrollmentDecisionNotificationStatus = "PENDING" | "SENDING" | "SENT" | "FAILED";
 export type StandardLoadStatus = "DRAFT" | "ACTIVE";
 export type StudentType =
   | "Incoming 1st Year Student"
@@ -117,6 +119,22 @@ export type Enrollment = {
   students?: Student | null;
   programs?: Program | null;
   enrollment_subjects?: EnrollmentSubject[] | null;
+};
+
+export type EnrollmentDecisionNotification = {
+  id: string;
+  enrollment_id: string;
+  decision: EnrollmentDecision;
+  recipient_email: string;
+  academic_year: string;
+  semester: Semester;
+  status: EnrollmentDecisionNotificationStatus;
+  attempt_count: number;
+  last_error_code: string | null;
+  reserved_at: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 

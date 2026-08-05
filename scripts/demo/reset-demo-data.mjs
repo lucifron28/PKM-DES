@@ -169,6 +169,22 @@ async function removeExistingDemoData(supabase) {
     assertNoError(error, "Could not delete an exact demo Auth user");
   }
 
+  if (students.length) {
+    const { data: demoEnrollments, error: demoEnrollmentsError } = await supabase
+      .from("enrollments")
+      .select("id")
+      .in("student_id", students.map((student) => student.id));
+    assertNoError(demoEnrollmentsError, "Could not identify exact demo enrollments");
+
+    if (demoEnrollments?.length) {
+      const { error: notificationError } = await supabase
+        .from("enrollment_decision_notifications")
+        .delete()
+        .in("enrollment_id", demoEnrollments.map((enrollment) => enrollment.id));
+      assertNoError(notificationError, "Could not remove exact demo notification records");
+    }
+  }
+
   if (profiles.length) {
     const { error } = await supabase.from("profiles").delete().in("id", profiles.map((profile) => profile.id));
     assertNoError(error, "Could not remove remaining exact demo profiles");
