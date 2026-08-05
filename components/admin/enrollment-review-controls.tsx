@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { approveEnrollmentAction, rejectEnrollmentAction } from "@/app/admin/enrollments/actions";
 import { RequirementStatusCard } from "@/components/requirements/requirement-status-card";
@@ -50,6 +50,16 @@ function SummaryField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function hasValidSubjectLoad(subjects: ReviewSubject[]) {
+  return (
+    subjects.length > 0 &&
+    subjects.every(
+      (subject) => Boolean(subject.course_code.trim()) && Boolean(subject.course_description.trim()) && Number.isFinite(subject.units) && subject.units >= 0
+    ) &&
+    subjects.reduce((total, subject) => total + subject.units, 0) > 0
+  );
+}
+
 export function EnrollmentReviewControls({
   enrollmentId,
   studentName,
@@ -85,6 +95,9 @@ export function EnrollmentReviewControls({
   const [open, setOpen] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const reviewButtonRef = useRef<HTMLButtonElement>(null);
+  const rejectButtonRef = useRef<HTMLButtonElement>(null);
+  const rejectionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const wasRejectingRef = useRef(false);
   const closeReview = useCallback(() => {
     setOpen(false);
     setRejecting(false);
@@ -92,15 +105,34 @@ export function EnrollmentReviewControls({
 
   const isApprovalBlocked =
     healthRequirement.unavailable ||
-    (healthRequirement.applicability === "APPLICABLE" && healthRequirement.status !== "VERIFIED");
+    (healthRequirement.applicability === "APPLICABLE" && healthRequirement.status !== "VERIFIED") ||
+    !hasValidSubjectLoad(subjects);
 
-  const approvalBlockReason = healthRequirement.unavailable
+  const approvalBlockReason = !hasValidSubjectLoad(subjects)
+    ? "At least one valid attached subject with a positive total unit load is required."
+    : healthRequirement.unavailable
     ? "Requirement status data is currently unavailable."
     : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "PENDING"
       ? "Health Record Update verification is PENDING."
       : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "REJECTED"
         ? "Health Record Update status is REJECTED."
         : null;
+
+  useEffect(() => {
+    if (!open) {
+      wasRejectingRef.current = false;
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (rejecting) {
+        rejectionHeadingRef.current?.focus();
+      } else if (wasRejectingRef.current) {
+        rejectButtonRef.current?.focus();
+      }
+    });
+    wasRejectingRef.current = rejecting;
+  }, [open, rejecting]);
 
   return (
     <>
@@ -145,7 +177,7 @@ export function EnrollmentReviewControls({
             </dl>
           </section>
 
-          <section aria-labelledby={`${enrollmentId}-subjects`}>
+          <section aria-labelledby={`${enrollmentId}-subjects`} aria-label="Attached subjects for this enrollment request">
             <div className="flex items-end justify-between gap-3">
               <div>
                 <h3 id={`${enrollmentId}-subjects`} className="text-base font-bold text-primary-900">
@@ -206,7 +238,7 @@ export function EnrollmentReviewControls({
             <form action={rejectEnrollmentAction} className="space-y-4 border-t border-slateui-border pt-5">
               <input type="hidden" name="enrollment_id" value={enrollmentId} />
               <div>
-                <h3 className="text-base font-bold text-red-800">Reject this enrollment request</h3>
+                <h3 ref={rejectionHeadingRef} tabIndex={-1} className="text-base font-bold text-red-800 outline-none">Reject this enrollment request</h3>
                 <p className="mt-1 text-sm leading-6 text-slateui-secondary">
                   Rejection is terminal for this academic year and semester. Remarks are optional and visible to the student in the portal.
                 </p>
@@ -218,7 +250,13 @@ export function EnrollmentReviewControls({
                 maxLength={2000}
               />
               <div className="flex flex-wrap justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setRejecting(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setRejecting(false);
+                  }}
+                >
                   Back
                 </Button>
                 <ReviewSubmitButton decision="reject" enrollmentId={enrollmentId} />
@@ -226,9 +264,9 @@ export function EnrollmentReviewControls({
             </form>
           ) : (
             <div className="flex flex-wrap justify-end gap-2 border-t border-slateui-border pt-5">
-              <Button type="button" variant="danger" onClick={() => setRejecting(true)}>
+              <button ref={rejectButtonRef} type="button" className={buttonClassName("danger")} onClick={() => setRejecting(true)}>
                 Reject enrollment
-              </Button>
+              </button>
               <form action={approveEnrollmentAction}>
                 <input type="hidden" name="enrollment_id" value={enrollmentId} />
                 <ReviewSubmitButton decision="approve" enrollmentId={enrollmentId} disabled={isApprovalBlocked} />

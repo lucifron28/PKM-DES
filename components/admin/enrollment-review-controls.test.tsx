@@ -96,13 +96,13 @@ test("enrollment review opens an accessible modal and restores focus and scroll 
 
     await act(async () => trigger.click());
 
-  const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
-  assert.ok(dialog);
-  assert.equal(dialog.getAttribute("aria-modal"), "true");
-  assert.equal(body.style.overflow, "hidden");
-  assert.ok(document.activeElement === dialog.querySelector("button"), "focus enters the modal");
-  assert.match(dialog.textContent ?? "", /Maria Santos/);
-  assert.match(dialog.textContent ?? "", /AIS-101/);
+    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
+    assert.ok(dialog);
+    assert.equal(dialog.getAttribute("aria-modal"), "true");
+    assert.equal(body.style.overflow, "hidden");
+    assert.equal(document.activeElement === dialog.querySelector("button"), true, "focus enters the modal");
+    assert.match(dialog.textContent ?? "", /Maria Santos/);
+    assert.match(dialog.textContent ?? "", /AIS-101/);
 
     const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(
       'button:not([disabled]), input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -112,16 +112,16 @@ test("enrollment review opens an accessible modal and restores focus and scroll 
 
     lastControl.focus();
     dispatchKey(dom, "Tab");
-    assert.ok(document.activeElement === focusable()[0], "Tab wraps to the first modal control");
+    assert.equal(document.activeElement === focusable()[0], true, "Tab wraps to the first modal control");
 
     focusable()[0].focus();
     dispatchKey(dom, "Tab", true);
-    assert.ok(document.activeElement === focusable().at(-1), "Shift+Tab wraps to the last modal control");
+    assert.equal(document.activeElement === focusable().at(-1), true, "Shift+Tab wraps to the last modal control");
 
     await act(async () => dispatchKey(dom, "Escape"));
     assert.equal(container.querySelector('[role="dialog"]'), null);
     assert.equal(body.style.overflow, "auto");
-    assert.ok(document.activeElement === trigger, "focus returns to the review trigger");
+    assert.equal(document.activeElement === trigger, true, "focus returns to the review trigger");
 
     await act(async () => trigger.click());
     const openDialog = container.querySelector<HTMLElement>('[role="dialog"]');
@@ -131,15 +131,21 @@ test("enrollment review opens an accessible modal and restores focus and scroll 
 
     await act(async () => rejectButton.click());
     assert.ok(openDialog.querySelector("textarea[name=remarks]"));
+    assert.equal(document.activeElement?.textContent, "Reject this enrollment request");
+    assert.equal(document.activeElement?.getAttribute("tabindex"), "-1");
     const backButton = Array.from(openDialog.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Back");
     assert.ok(backButton);
     await act(async () => backButton.click());
     assert.equal(openDialog.querySelector("textarea[name=remarks]"), null);
+    const returnedRejectButton = Array.from(openDialog.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent?.includes("Reject enrollment"));
+    assert.ok(returnedRejectButton);
+    assert.equal(document.activeElement === returnedRejectButton, true, "Back returns focus to Reject enrollment");
 
+    assert.ok(container.querySelector('[role="dialog"]'));
     await act(async () => root?.unmount());
     assert.equal(body.style.overflow, "auto");
   } finally {
-    root?.unmount();
+    root = undefined;
     dom.window.close();
   }
 });
