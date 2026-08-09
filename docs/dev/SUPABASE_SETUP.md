@@ -13,9 +13,9 @@ This document records the Supabase work completed for PKM-DES and the remaining 
 
 The public URL and anon/publishable keys are safe for browser use. The service-role key is secret and must not be committed or pasted into chat.
 
-For Vercel deployment, keep `DATABASE_PROVIDER=supabase`. SQLite is local-development only and is documented separately in `docs/setup/SQLITE_DEVELOPMENT.md`.
+For Vercel deployment, keep `DATABASE_PROVIDER=supabase`. SQLite is local-development only and is documented separately in `docs/dev/SQLITE_DEVELOPMENT.md`.
 
-For the temporary fictional-data client-preview deployment boundary and Vercel runtime guidance, see [CLIENT_PREVIEW_DEPLOYMENT.md](../demo/CLIENT_PREVIEW_DEPLOYMENT.md).
+For the temporary fictional-data client-preview deployment boundary and Vercel runtime guidance, see [CLIENT_PREVIEW_DEPLOYMENT.md](./CLIENT_PREVIEW_DEPLOYMENT.md).
 
 Before a production or Vercel deployment, run:
 
@@ -97,7 +97,7 @@ The optional `demo:reset` and `demo:verify` commands prepare and inspect fiction
 - `npm run demo:reset` requires `SUPABASE_SERVICE_ROLE_KEY`, `DEMO_STUDENT_PASSWORD`, and the exact `DEMO_RESET_CONFIRM=RESET_PKM_DES_DEMO` value.
 - `npm run demo:verify` is read-only.
 
-Run these commands only against a dedicated preview or test database with no live institutional data. See [DEMO_USER_GUIDE.md](../demo/DEMO_USER_GUIDE.md) and [DEMO_RESET.md](../demo/DEMO_RESET.md).
+Run these commands only against a dedicated preview or test database with no live institutional data. See [DEMO_USER_GUIDE.md](../demo/DEMO_USER_GUIDE.md) and [DEMO_RESET.md](./DEMO_RESET.md).
 
 ## Migration Files
 
@@ -434,7 +434,7 @@ Official student records:
 
 ### Private Preview Credentials
 
-For an authorized research-demo preview, use the guarded local workflow in [PREVIEW_CREDENTIALS.md](../demo/PREVIEW_CREDENTIALS.md). It prepares unique passwords only for the allowlisted fictional student accounts, verifies the existing Registrar/Admin account without modifying it, and writes the credential manifest only under ignored `.preview/`. It is not a production account-provisioning process.
+For an authorized research-demo preview, use the guarded local workflow in [PREVIEW_CREDENTIALS.md](./PREVIEW_CREDENTIALS.md). It prepares unique passwords only for the allowlisted fictional student accounts, verifies the existing Registrar/Admin account without modifying it, and writes the credential manifest only under ignored `.preview/`. It is not a production account-provisioning process.
 
 ### Student Login
 

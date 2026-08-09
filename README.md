@@ -12,9 +12,9 @@ Manual enrollment background from the FRD: students receive four registration-fo
 
 PKM-DES is a research-presentation MVP. The online deployment is a temporary client preview that demonstrates the proposed student-to-Registrar enrollment workflow. It is not ready for real institutional data, official enrollment operations, or replacement of the current PKM Registrar process.
 
-Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [docs/FRD_TRACEABILITY.md](./docs/reference/FRD_TRACEABILITY.md). The formal research MVP boundary, presenter guide, and system diagrams are indexed in [docs/README.md](./docs/README.md).
+Functional, partial, placeholder, deferred, and client-confirmation-dependent requirements are documented in [FRD traceability](./docs/reference/FRD_TRACEABILITY.md). The formal research MVP boundary, presenter guide, and system diagrams are indexed in [docs/README.md](./docs/README.md).
 
-Client source artifacts and their tracked implementation references are listed in [docs/SOURCE_DOCUMENT_REGISTER.md](./docs/reference/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
+Client source artifacts and their tracked implementation references are listed in [the source document register](./docs/reference/SOURCE_DOCUMENT_REGISTER.md). Original client PDFs and workbooks are intentionally excluded from this public repository.
 
 ## 2. Tech Stack
 
@@ -212,7 +212,7 @@ For Vercel, set `DATABASE_PROVIDER=supabase`. `DATABASE_PROVIDER=sqlite` is loca
 - `balances`
 - `audit_logs`
 
-RLS policies are included for student-owned records, admin review access, authenticated subject/schedule reads, and admin audit-log access. See [docs/setup/SUPABASE_SETUP.md](./docs/setup/SUPABASE_SETUP.md) for the policy summary.
+RLS policies are included for student-owned records, admin review access, authenticated subject/schedule reads, and admin audit-log access. See [the Supabase setup notes](./docs/dev/SUPABASE_SETUP.md) for the policy summary.
 
 ## 12. Seed Data
 
@@ -238,7 +238,7 @@ Current tracked `supabase/seed.sql` definition:
 
 The program catalog contains ten canonical programs, and the Subject List includes the 245 unique workbook-derived offerings for all ten programs. Only BSAIS has seeded curriculum subject rows in `public.subjects`; online enrollment uses the configured workbook offerings instead. The active Supabase configuration contains 36 complete standard loads for AY 2025-2026, 2nd Semester. BSAIS 4th Year, BSMA 4th Year, and CRIM 3rd and 4th Year remain unavailable because the supplied workbook does not contain complete course rows for those combinations.
 
-SQLite development seeding is documented separately in [docs/setup/SQLITE_DEVELOPMENT.md](./docs/setup/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
+SQLite development seeding is documented separately in [the SQLite development notes](./docs/dev/SQLITE_DEVELOPMENT.md) and must not be used to describe the deployed Supabase configuration.
 
 ## 13. Manual Test Checklist
 
