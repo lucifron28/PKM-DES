@@ -84,7 +84,7 @@ The examples were given with names, but the likely ID pattern is the two-digit y
 - Grades must be officially released by the Registrar at the end of the semester.
 - Official class schedule fields: section, instructor, room, days, and time.
 - Balances/payment details are handled by the Finance Office.
-- Digital clearance/signature order: Dean, Librarian, Nurse, Accountant, Registrar.
+- Digital clearance/signature order remains unresolved. The implementation supports separate Student, Librarian, Nurse, Program Chair, Accountant, and Dean signatures through explicit assignments; a generic Registrar signature is not used.
 
 
 ### Provisional Email Decisions
@@ -108,8 +108,18 @@ These are provisional implementation boundaries. They do not constitute formal i
 - Never infer sex from a name.
 - The physical form remains with PKM Health Services.
 - PKM-DES stores requirement status only. Do not store medical conditions, medications, allergies, menstrual information, scans, or detailed medical notes.
-- The Registrar records whether Health Services verified the paper form (a separate Health Services user role is deferred).
+- An explicitly assigned Nurse records status-only verification and applies a drawn Nurse e-signature through the Health Record Verification workspace. The existing admin profile role remains `admin`; official assignments provide the Nurse clearance authority.
 - Enrollment submission may remain PENDING, but final approval is blocked until all applicable required items are VERIFIED.
+
+### Provisional Authenticated E-Signature Decisions
+
+These are implementation boundaries, not final institutional policy:
+
+- One reusable drawn canvas is used for every required signer; typed, generated cursive, and checkbox-only signatures are not accepted.
+- Official roles map to separate clearances: Librarian -> Library, Nurse -> Health, Program Chair -> Program, Accountant -> Accounting, and Dean -> Dean. Student enrollment signature remains supported.
+- Official assignments are explicit and can be global or program-scoped; an admin account does not implicitly sign every official role.
+- Signature rows are immutable and fingerprinted. A source change invalidates the clearance, and re-signing creates a new immutable row.
+- The exact signer order, whether Student signature is mandatory, whether Dean signs last, the Accountant zero-balance rule, Library verification rule, Program Chair program restriction, and multiple-role policy still require PKM confirmation.
 
 ## Still Missing or Needs Client Files
 
@@ -138,4 +148,4 @@ These items remain needed before implementation can be considered official:
 6. Student record fields expansion.
 7. Irregular/transferee subject loading by Registrar.
 
-Do not implement grades encoding, class schedule encoding, balances/payment processing, or digital clearance until the official detailed rules and formats are provided.
+Do not implement grades encoding, class schedule encoding, balances/payment processing, or production institutional clearance policy until the official detailed rules and formats are provided. The branch contains an isolated authenticated e-signature implementation for demonstration and review.

@@ -8,7 +8,9 @@ import {
   sortRegistrationSubjects
 } from "@/lib/registration-form/presentation";
 import { formatDate, formatName } from "@/lib/utils/format";
-import type { CourseOffering, Enrollment, EnrollmentSubject, OfficialStudentRecord, Profile, Student, Subject } from "@/types/database";
+import { getRequirementApplicability } from "@/lib/requirements/rules";
+import type { PresentedEnrollmentSignature } from "@/lib/signatures/presentation";
+import type { CourseOffering, Enrollment, EnrollmentClearance, EnrollmentSubject, OfficialStudentRecord, Profile, Student, Subject } from "@/types/database";
 import type { RegistrationLoadItem } from "@/lib/registration-form/presentation";
 
 type EnrollmentSubjectRow = Pick<EnrollmentSubject, "id" | "subject_id" | "course_offering_id" | "course_code" | "course_description" | "units"> & {
@@ -16,9 +18,12 @@ type EnrollmentSubjectRow = Pick<EnrollmentSubject, "id" | "subject_id" | "cours
   course_offerings?: CourseOffering | null;
 };
 
-export type PrintableEnrollment = Enrollment & {
+export type PrintableEnrollment = Omit<Enrollment, "enrollment_clearances" | "enrollment_signatures"> & {
   students?: (Student & { profiles?: Profile | null; official_student_records?: OfficialStudentRecord | null }) | null;
   enrollment_subjects?: EnrollmentSubjectRow[] | null;
+  enrollment_clearances?: EnrollmentClearance[] | null;
+  enrollment_signatures?: PresentedEnrollmentSignature[] | null;
+  health_requirement_applicability?: "APPLICABLE" | "NOT_APPLICABLE" | null;
 };
 
 function getRegistrationLoadItem(row: EnrollmentSubjectRow): RegistrationLoadItem | null {
@@ -75,10 +80,36 @@ function MarkBox({ label, checked }: { label: string; checked: boolean }) {
   );
 }
 
-function SignatureBlock({ label }: { label: string }) {
+function SignatureBlock({
+  label,
+  signature,
+  unsignedLabel = "Pending Signature"
+}: {
+  label: string;
+  signature?: PresentedEnrollmentSignature | null;
+  unsignedLabel?: string;
+}) {
+  const signatureIsCurrent = Boolean(signature?.is_current);
+
   return (
-    <div className="registration-print-signature flex min-h-16 flex-col justify-end text-center">
+    <div className="registration-print-signature flex min-h-28 flex-col justify-end text-center">
+      <div className="flex min-h-16 items-center justify-center">
+        {signatureIsCurrent && signature?.signed_url ? (
+          <img src={signature.signed_url} alt={`${label} electronic signature`} className="max-h-14 max-w-full object-contain" />
+        ) : (
+          <p className="px-2 text-[10px] font-semibold uppercase leading-4 text-black">
+            {signature ? "Signature invalidated" : unsignedLabel}
+          </p>
+        )}
+      </div>
       <div className="border-t border-black pt-1 text-xs font-bold uppercase text-black">{label}</div>
+      {signatureIsCurrent && signature ? (
+        <div className="mt-1 text-[10px] leading-4 text-black">
+          <p className="font-bold uppercase">{signature.signer_name_snapshot}</p>
+          <p>Electronically Signed</p>
+          <p>{formatDate(signature.signed_at)}</p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -106,6 +137,11 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
   const semesterAcademicYear = `${enrollment.semester} / ${enrollment.academic_year}`;
   const studentName = formatName(profile?.first_name, profile?.last_name);
   const reviewed = enrollment.reviewed_at ? formatDate(enrollment.reviewed_at) : "Not yet reviewed";
+  const healthApplicability = enrollment.health_requirement_applicability ?? getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+    student_type: student?.student_type ?? "",
+    official_gender_sex: student?.official_student_records?.gender_sex ?? null
+  });
+  const signatures = new Map((enrollment.enrollment_signatures ?? []).map((signature) => [signature.clearance_type, signature]));
 
   return (
     <div className="space-y-4">
@@ -254,12 +290,17 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
           </div>
         </section>
 
-        <section className="registration-print-signoff mt-8 grid gap-6 border-t border-black pt-8 sm:grid-cols-2 lg:grid-cols-5" aria-label="Clearance signature lines">
-          <SignatureBlock label="Dean" />
-          <SignatureBlock label="Librarian" />
-          <SignatureBlock label="Nurse" />
-          <SignatureBlock label="Accountant" />
-          <SignatureBlock label="Registrar" />
+        <section className="registration-print-signoff mt-8 grid gap-6 border-t border-black pt-8 sm:grid-cols-2 lg:grid-cols-3" aria-label="Authenticated clearance signatures">
+          <SignatureBlock label="Student" signature={signatures.get("STUDENT_ENROLLMENT_SIGNATURE")} />
+          <SignatureBlock label="Librarian" signature={signatures.get("LIBRARY_CLEARANCE")} />
+          <SignatureBlock
+            label="School Nurse"
+            signature={signatures.get("HEALTH_CLEARANCE")}
+            unsignedLabel={healthApplicability === "NOT_APPLICABLE" ? "Not Applicable" : "Pending Nurse Verification"}
+          />
+          <SignatureBlock label="Program Chair" signature={signatures.get("PROGRAM_CLEARANCE")} />
+          <SignatureBlock label="Accountant" signature={signatures.get("ACCOUNTING_CLEARANCE")} />
+          <SignatureBlock label="Dean" signature={signatures.get("DEAN_CLEARANCE")} />
         </section>
       </section>
     </div>

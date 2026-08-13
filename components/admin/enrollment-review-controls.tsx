@@ -90,6 +90,9 @@ export function EnrollmentReviewControls({
     status: RequirementStatus;
     note: string | null;
     unavailable: boolean;
+    nurseSignatureStatus: "SIGNED" | "MISSING" | "INVALIDATED" | "NOT_REQUIRED" | "UNAVAILABLE";
+    nurseSignerName: string | null;
+    nurseSignedAt: string | null;
   };
 }) {
   const [open, setOpen] = useState(false);
@@ -105,7 +108,9 @@ export function EnrollmentReviewControls({
 
   const isApprovalBlocked =
     healthRequirement.unavailable ||
-    (healthRequirement.applicability === "APPLICABLE" && healthRequirement.status !== "VERIFIED") ||
+    (healthRequirement.applicability === "APPLICABLE" && (
+      healthRequirement.status !== "VERIFIED" || healthRequirement.nurseSignatureStatus !== "SIGNED"
+    )) ||
     !hasValidSubjectLoad(subjects);
 
   const approvalBlockReason = !hasValidSubjectLoad(subjects)
@@ -116,6 +121,12 @@ export function EnrollmentReviewControls({
       ? "Health Record Update verification is PENDING."
       : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "REJECTED"
         ? "Health Record Update status is REJECTED."
+        : healthRequirement.applicability === "APPLICABLE" && healthRequirement.nurseSignatureStatus === "MISSING"
+          ? "Nurse Health Clearance signature is missing."
+          : healthRequirement.applicability === "APPLICABLE" && healthRequirement.nurseSignatureStatus === "INVALIDATED"
+            ? "Nurse Health Clearance signature is invalidated and must be re-signed."
+            : healthRequirement.applicability === "APPLICABLE" && healthRequirement.nurseSignatureStatus === "UNAVAILABLE"
+              ? "Nurse Health Clearance signature data is unavailable."
         : null;
 
   useEffect(() => {
@@ -225,6 +236,9 @@ export function EnrollmentReviewControls({
               currentStatus={healthRequirement.status}
               currentNote={healthRequirement.note}
               unavailable={healthRequirement.unavailable}
+              nurseSignatureStatus={healthRequirement.nurseSignatureStatus}
+              nurseSignerName={healthRequirement.nurseSignerName}
+              nurseSignedAt={healthRequirement.nurseSignedAt}
             />
           </section>
 

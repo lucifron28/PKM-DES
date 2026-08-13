@@ -62,7 +62,10 @@ async function renderControls(container: HTMLElement): Promise<Root> {
           applicability: "APPLICABLE",
           status: "PENDING",
           note: null,
-          unavailable: false
+          unavailable: false,
+          nurseSignatureStatus: "MISSING",
+          nurseSignerName: null,
+          nurseSignedAt: null
         }
       })
     );

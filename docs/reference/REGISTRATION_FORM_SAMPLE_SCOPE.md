@@ -16,7 +16,7 @@ Implemented layout cues include:
 - Total units row
 - Assessment of tuition and other school fees section
 - Payment row placeholders
-- Dean, Librarian, Nurse, Accountant, and Registrar signature labels
+- Student, Dean, Librarian, Nurse, Program Chair, and Accountant authenticated signature blocks
 - Data privacy authorization text
 
 ## What Is Not Imported
@@ -27,7 +27,7 @@ The sample references BTVTED 4G and `2ND/2025-2026`. These are not added as offi
 
 ## Current MVP Treatment
 
-PKM-DES continues to populate the draft registration form from existing enrollment records and attached subjects. Attached subjects are sorted deterministically for display and the total is calculated from the displayed rows. Student browser printing is available only for the latest approved enrollment request; Registrar/Admin preview remains available for pending, approved, and rejected requests.
+PKM-DES continues to populate the draft registration form from existing enrollment records and attached subjects. Attached subjects are sorted deterministically for display and the total is calculated from the displayed rows. Current authenticated drawn signatures are displayed with signer metadata when available; invalidated evidence is labeled rather than silently treated as signed. Student browser printing is available only for the latest approved enrollment request; Registrar/Admin preview remains available for pending, approved, and rejected requests.
 
 The browser-print layout targets readable A4 portrait output. Larger subject loads may continue onto an additional page instead of shrinking the entire document. Query failures are shown as unavailable states, not as missing enrollment records.
 

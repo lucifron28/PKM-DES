@@ -148,6 +148,10 @@ export async function updateEnrollmentRequirementAction(
     return { message: "Requirement status could not be updated. Please try again." };
   }
 
+  if (requirementCode === "HEALTH_RECORD_UPDATE" && status === "VERIFIED") {
+    return { message: "Only an assigned Nurse can verify Health Record Update with a drawn e-signature." };
+  }
+
   const { data: enrollmentData, error: enrollmentError } = await supabase
     .from("enrollments")
     .select("id, student_id, academic_year, semester, status")

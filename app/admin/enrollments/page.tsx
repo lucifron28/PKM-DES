@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth/session";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { formatDate, formatName } from "@/lib/utils/format";
+import { computeHealthRecordDocumentHash } from "@/lib/signatures/fingerprint";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import type { Enrollment, OfficialStudentRecord, Profile, Semester, Student } from "@/types/database";
 
@@ -20,6 +21,18 @@ type RequirementRow = Pick<
 >;
 
 type OfficialRecordGenderRow = Pick<OfficialStudentRecord, "student_id_number" | "gender_sex">;
+type NurseSignatureRow = {
+  id: string;
+  enrollment_id: string;
+  signer_name_snapshot: string;
+  document_hash: string;
+  signed_at: string;
+};
+type ClearanceStatusRow = {
+  enrollment_id: string;
+  clearance_type: "HEALTH_CLEARANCE";
+  status: "PENDING" | "SIGNED" | "NOT_APPLICABLE" | "INVALIDATED";
+};
 
 function requirementKey(studentId: string, academicYear: string | null, semester: string | null) {
   return `${studentId}:${academicYear ?? ""}:${semester ?? ""}`;
@@ -156,7 +169,7 @@ export default async function PendingEnrollmentsPage({
   const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.student_id))];
   const studentIdNumbers = [...new Set(enrollments.map((enrollment) => enrollment.students?.student_id_number).filter(Boolean))] as string[];
 
-  const [requirementsResult, officialRecordsResult] = await Promise.all([
+  const [requirementsResult, officialRecordsResult, nurseSignaturesResult, clearanceStatusesResult] = await Promise.all([
     studentIds.length
       ? supabase
           .from("student_requirements")
@@ -171,11 +184,29 @@ export default async function PendingEnrollmentsPage({
           .from("official_student_records")
           .select("student_id_number, gender_sex")
           .in("student_id_number", studentIdNumbers)
+      : Promise.resolve({ data: [], error: null }),
+    enrollments.length
+      ? supabase
+          .from("enrollment_signatures")
+          .select("id, enrollment_id, signer_name_snapshot, document_hash, signed_at")
+          .in("enrollment_id", enrollments.map((enrollment) => enrollment.id))
+          .eq("signer_role", "NURSE")
+          .eq("clearance_type", "HEALTH_CLEARANCE")
+          .order("signed_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    enrollments.length
+      ? supabase
+          .from("enrollment_clearances")
+          .select("enrollment_id, clearance_type, status")
+          .in("enrollment_id", enrollments.map((enrollment) => enrollment.id))
+          .eq("clearance_type", "HEALTH_CLEARANCE")
       : Promise.resolve({ data: [], error: null })
   ]);
 
   if (requirementsResult.error) console.error("pending_enrollments:requirement_load");
   if (officialRecordsResult.error) console.error("pending_enrollments:official_record_load");
+  if (nurseSignaturesResult.error) console.error("pending_enrollments:nurse_signature_load");
+  if (clearanceStatusesResult.error) console.error("pending_enrollments:clearance_status_load");
 
   const requirementsByTerm = new Map(
     ((requirementsResult.data as RequirementRow[] | null) ?? []).map((requirement) => [
@@ -186,7 +217,16 @@ export default async function PendingEnrollmentsPage({
   const officialGenderByStudentId = new Map(
     ((officialRecordsResult.data as OfficialRecordGenderRow[] | null) ?? []).map((record) => [record.student_id_number ?? "", record.gender_sex])
   );
-  const requirementDataUnavailable = Boolean(requirementsResult.error || officialRecordsResult.error);
+  const nurseSignatureByEnrollmentId = new Map<string, NurseSignatureRow>();
+  for (const signature of (nurseSignaturesResult.data as NurseSignatureRow[] | null) ?? []) {
+    if (!nurseSignatureByEnrollmentId.has(signature.enrollment_id)) {
+      nurseSignatureByEnrollmentId.set(signature.enrollment_id, signature);
+    }
+  }
+  const healthClearanceStatusByEnrollmentId = new Map(
+    ((clearanceStatusesResult.data as ClearanceStatusRow[] | null) ?? []).map((clearance) => [clearance.enrollment_id, clearance.status])
+  );
+  const requirementDataUnavailable = Boolean(requirementsResult.error || officialRecordsResult.error || nurseSignaturesResult.error || clearanceStatusesResult.error);
 
   const isActiveTermFilter = Boolean(
     activeTerm && academicYear === activeTerm.academicYear && semester === activeTerm.semester
@@ -290,6 +330,29 @@ export default async function PendingEnrollmentsPage({
                     const healthRequirementStatus = healthRequirementApplicability === "APPLICABLE"
                       ? requirement?.status ?? "PENDING"
                       : "PENDING";
+                    const nurseSignature = nurseSignatureByEnrollmentId.get(enrollment.id);
+                    const nurseSignatureIsCurrent = Boolean(
+                      nurseSignature &&
+                      healthClearanceStatusByEnrollmentId.get(enrollment.id) === "SIGNED" &&
+                      requirement?.status === "VERIFIED" &&
+                      nurseSignature.document_hash === computeHealthRecordDocumentHash({
+                        enrollmentId: enrollment.id,
+                        studentId: enrollment.student_id,
+                        academicYear: enrollment.academic_year,
+                        semester: enrollment.semester,
+                        applicability: "APPLICABLE",
+                        status: "VERIFIED"
+                      })
+                    );
+                    const nurseSignatureStatus = healthRequirementApplicability !== "APPLICABLE"
+                      ? "NOT_REQUIRED"
+                      : requirementDataUnavailable
+                        ? "UNAVAILABLE"
+                        : nurseSignatureIsCurrent
+                          ? "SIGNED"
+                          : nurseSignature
+                            ? "INVALIDATED"
+                            : "MISSING";
 
                     return (
                       <tr key={enrollment.id} className="bg-white align-top">
@@ -340,7 +403,10 @@ export default async function PendingEnrollmentsPage({
                                 applicability: healthRequirementApplicability,
                                 status: healthRequirementStatus,
                                 note: healthRequirementApplicability === "APPLICABLE" ? requirement?.note ?? null : null,
-                                unavailable: requirementDataUnavailable
+                                unavailable: requirementDataUnavailable,
+                                nurseSignatureStatus,
+                                nurseSignerName: nurseSignature?.signer_name_snapshot ?? null,
+                                nurseSignedAt: nurseSignature?.signed_at ?? null
                               }}
                             />
                           </div>

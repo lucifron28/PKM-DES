@@ -323,7 +323,7 @@ textarea {
 
   .registration-print-signoff {
     gap: 0.08in !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     margin-top: 0.18in !important;
     padding-top: 0.08in !important;
     break-inside: avoid !important;
@@ -422,6 +422,6 @@ textarea {
   }
 
   .registration-print-signoff {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }

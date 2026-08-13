@@ -153,6 +153,18 @@ The Masterlist and Reports pages show enrollment requests, not every student rec
 
 The decision is saved before any optional email delivery is attempted. In the research preview, email delivery is normally disabled. If the registration-form view shows a failed student notification and the approved delivery setup is available, the Registrar can select **Retry student notification**. Email messages do not include rejection remarks; students view those remarks in the portal.
 
+### Optional authenticated clearance-signature pass
+
+The e-signature workflow requires an administrator account with explicit official assignments; an ordinary Registrar/Admin account does not automatically receive every signing role.
+
+1. An assigned School Nurse opens **Health Record Verification** and reviews the status-only Health Record Update row. The applicable rule is limited to an Incoming 1st Year Student whose official Registrar-managed `gender_sex` value is explicitly `Female`.
+2. The Nurse draws a signature in the reusable canvas, confirms it is their own mark, and selects **Apply E-Signature**. The verification and Nurse signature are saved atomically; no medical details are entered.
+3. Assigned Librarian, Program Chair, Accountant, and Dean officials open the enrollment registration view and apply their own separate drawn signatures when the corresponding clearance is required.
+4. The student opens Enrollment Status or the approved registration form and applies the Student e-signature when required.
+5. Return to **Pending Enrollments**. The clearance overview shows each signer separately. An applicable current Nurse signature is required before **Approve** becomes available.
+
+If a signed enrollment or subject load changes, the previous evidence is marked invalidated and the assigned signer must draw a new signature. Historical signature rows are immutable.
+
 ## Part 5: Print The Registration Form
 
 The student or Registrar can open the registration form from the enrollment result or review page.
@@ -162,7 +174,7 @@ The student or Registrar can open the registration form from the enrollment resu
 3. Select the browser's **Print** command.
 4. Choose a printer or **Save as PDF**.
 
-The current form is a draft demonstration output based on the supplied sample. It is not yet the official PKM Certificate of Registration. It does not include electronic signatures, payment processing, or digital clearance.
+The current form is a draft demonstration output based on the supplied sample. It is not yet the official PKM Certificate of Registration. It can display current authenticated Student and named official signatures when they have been applied, but payment processing and official COR generation remain unavailable.
 
 ## Public Pages
 
@@ -194,7 +206,6 @@ The following pages are visible as part of the proposed website but do not conta
 - Class Schedule
 - Balances
 - Official Certificate of Registration generation
-- Electronic signatures and clearance routing
 - Payment or assessment processing
 - Email delivery confirmation in the public demonstration
 

@@ -1,4 +1,15 @@
 export type UserRole = "student" | "admin";
+export type OfficialSignerRole = "LIBRARIAN" | "NURSE" | "PROGRAM_CHAIR" | "ACCOUNTANT" | "DEAN";
+export type SignerRole = "STUDENT" | OfficialSignerRole;
+export type SignatureClearanceType =
+  | "STUDENT_ENROLLMENT_SIGNATURE"
+  | "LIBRARY_CLEARANCE"
+  | "HEALTH_CLEARANCE"
+  | "PROGRAM_CLEARANCE"
+  | "ACCOUNTING_CLEARANCE"
+  | "DEAN_CLEARANCE";
+export type SignatureDocumentType = "ENROLLMENT_REGISTRATION" | "ENROLLMENT_CLEARANCE" | "HEALTH_RECORD";
+export type EnrollmentClearanceStatus = "PENDING" | "SIGNED" | "NOT_APPLICABLE" | "INVALIDATED";
 export type AccountStatus = "ACTIVE" | "PENDING" | "SETUP";
 export type EnrollmentStatus = "NOT ENROLLED" | "PENDING" | "ENROLLED";
 export type EnrollmentDecision = "APPROVED" | "REJECTED";
@@ -23,6 +34,16 @@ export type Profile = {
   last_name: string;
   email: string;
   account_status: AccountStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OfficialRoleAssignment = {
+  id: string;
+  profile_id: string;
+  official_role: OfficialSignerRole;
+  program_id: string | null;
+  active: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -119,6 +140,55 @@ export type Enrollment = {
   students?: Student | null;
   programs?: Program | null;
   enrollment_subjects?: EnrollmentSubject[] | null;
+  enrollment_clearances?: EnrollmentClearance[] | null;
+  enrollment_signatures?: EnrollmentSignature[] | null;
+};
+
+export type EnrollmentClearance = {
+  id: string;
+  enrollment_id: string;
+  clearance_type: SignatureClearanceType;
+  status: EnrollmentClearanceStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EnrollmentSignature = {
+  id: string;
+  enrollment_id: string;
+  student_id: string;
+  signer_profile_id: string;
+  signer_role: SignerRole;
+  clearance_type: SignatureClearanceType;
+  document_type: SignatureDocumentType;
+  signer_name_snapshot: string;
+  signature_storage_path: string;
+  signature_hash: string;
+  document_hash: string;
+  signed_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type NurseHealthRequirementWorkItem = {
+  enrollment_id: string;
+  enrollment_status: "PENDING" | "APPROVED" | "REJECTED";
+  student_id: string;
+  student_id_number: string | null;
+  student_name: string;
+  academic_year: string;
+  semester: Semester;
+  requirement_id: string;
+  requirement_status: "PENDING" | "VERIFIED" | "REJECTED";
+  requirement_applicability: "APPLICABLE" | "NOT_APPLICABLE";
+  verified_at: string | null;
+  verified_by: string | null;
+  nurse_signature_id: string | null;
+  nurse_signature_name: string | null;
+  nurse_signature_signed_at: string | null;
+  nurse_signature_storage_path: string | null;
+  nurse_signature_document_hash: string | null;
+  nurse_signature_is_current: boolean;
 };
 
 export type EnrollmentDecisionNotification = {

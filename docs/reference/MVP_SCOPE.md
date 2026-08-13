@@ -15,12 +15,15 @@ The hosted deployment is a client preview environment. It demonstrates a propose
 5. The student submits an enrollment request for the configured MVP term.
 6. For an eligible student with a complete active standard-load configuration, the server saves the request with `PENDING` status and atomically attaches the configured course-offering set.
 7. The Registrar/Admin opens Pending Enrollments and reviews the request.
-8. The Registrar/Admin approves or rejects the request and may add free-text rejection remarks.
-9. The student views the updated enrollment-status result.
-10. Submitted enrollment information appears in the dashboard counts, masterlist, and reports according to its review status.
-11. The student or Registrar/Admin views or browser-prints the draft registration form.
+8. The student and explicitly assigned officials apply separate drawn e-signatures for the required clearances available to their roles.
+9. For an applicable Health Record Update, an assigned Nurse verifies the status-only requirement and applies the Nurse Health Clearance signature atomically.
+10. The Registrar/Admin reviews the clearance overview; approval remains blocked when the applicable Nurse signature is missing, invalidated, or not current.
+11. The Registrar/Admin approves or rejects the request and may add free-text rejection remarks.
+12. The student views the updated enrollment-status result.
+13. Submitted enrollment information appears in the dashboard counts, masterlist, and reports according to its review status.
+14. The student or Registrar/Admin views or browser-prints the draft registration form with current signatures when available.
 
-The demonstration does not validate real admission requirements, financial obligations, clearances, signatures, grades, or class schedules.
+The demonstration does not validate real admission requirements, financial obligations, institutional clearance order, grades, or class schedules.
 
 ## 3. Implemented MVP Capabilities
 
@@ -44,18 +47,24 @@ The demonstration does not validate real admission requirements, financial oblig
 - Manual creation, search, filtering, and editing of official student records.
 - Registrar/Admin reset of an exact active student account password from the linked official-record edit page. The temporary password is set by the admin and shared privately; no password-reset email, forced change, or expiry rule is implemented. Supabase Auth password update and PostgreSQL audit log insertion are not one atomic cross-system transaction: if the Auth update succeeds but audit log insertion fails, the password update remains in effect in Auth while a server-side audit failure is logged.
 - Pending enrollment review, approval, rejection, and audit-log writes. The request decision, summarized student status, audit row, and durable decision-notification outbox row commit atomically. Approval fails closed when the attached subject snapshot load is missing or invalid. The queue includes only a status-only, current-term Health Record Update check when it applies; it is not a full document or requirements checklist.
+- Explicit official-role assignments for Librarian, Nurse, Program Chair, Accountant, and Dean; assignments can be global or program-scoped, and generic `admin` status does not grant signing authority.
+- Authenticated drawn e-signatures for Student, Librarian, School Nurse, Program Chair, Accountant, and Dean using one reusable canvas input. Signature rows are immutable, private PNG objects are server-uploaded, and document fingerprints detect stale evidence.
+- Separate clearance states (`PENDING`, `SIGNED`, `NOT_APPLICABLE`, `INVALIDATED`) with re-signing through new immutable rows after signed data changes. No generated cursive, typed signature, or generic Registrar signature is used.
+- A dedicated `/admin/health-records` status-only Nurse worklist. The Health Record Update rule remains exact: Incoming 1st Year Student plus official Registrar-managed `gender_sex` explicitly equal to `Female`; no medical data is stored.
 - Enrollment masterlist and browser-printable report views.
 
 ### Reporting and Printing
 
 - Browser-printable enrollment reports and masterlist output based on complete, canonically filtered submitted enrollment records. Query failures show an unavailable state instead of a misleading empty report or zero dashboard count.
 - Browser-printable draft registration form populated from an enrollment request and deterministically ordered attached subjects. Student printing is available only for the latest approved request; Registrar/Admin may preview any review status.
+- Browser-printable draft registration form includes current Student, Librarian, School Nurse, Program Chair, Accountant, and Dean signatures and signer metadata when available; stale signatures are labeled invalidated.
 
 ### Authentication and Access Control
 
 - Supabase Auth sessions.
 - Active-account and student/admin role checks in server-side route access.
 - Row Level Security policies are present for the current database-backed MVP flows. The research MVP has not undergone production security certification or penetration testing.
+- Private Supabase Storage and database RLS protect signature images and rows; signed URLs are short-lived and only generated for current evidence in authorized server views.
 - Responsive public and authenticated navigation, current-section identification, and keyboard-accessible skip navigation support the presentation workflow. No backend capability is added by these interface improvements.
 
 ## 4. Partial or Demonstration-Only Capabilities
@@ -86,7 +95,7 @@ The following routes show proposed system scope but are not operational modules:
 - Balances
 - Encode Grades/Schedule
 
-The draft registration form also contains non-operational placeholders for schedule values, section, address, fees, scholarship, payment details, and signature/clearance completion. It targets readable A4 browser printing; a larger subject load may continue onto an additional page rather than produce an official PDF.
+The draft registration form also contains non-operational placeholders for schedule values, section, address, fees, scholarship, and payment details. Its signature/clearance blocks are operational within this branch but remain a research-MVP workflow, not an official institutional approval record. It targets readable A4 browser printing; a larger subject load may continue onto an additional page rather than produce an official PDF.
 
 ## 6. Explicit MVP Non-Goals
 
@@ -96,8 +105,7 @@ The draft registration form also contains non-operational placeholders for sched
 - Official class scheduling or section assignment.
 - Email-generated password delivery. A setup-link delivery path is demonstration-only until PKM approves sender, templates, and operating rules.
 - Live enrollment-decision email delivery or proof of delivery in the public preview. The durable outbox and retry path demonstrate the boundary only; sender approval and operational monitoring remain future inputs.
-- Digital clearance routing.
-- Electronic signatures.
+- Production institutional approval of the clearance order, signer assignments, and e-signature evidence policy.
 - Complete institutional audit and compliance implementation.
 - Full production security certification.
 - Complete support for every academic program before approved current-term standard-load configurations are supplied.

@@ -2,12 +2,19 @@ import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ClearanceOverview } from "@/components/signatures/clearance-overview";
+import { ESignatureInput } from "@/components/signatures/e-signature-input";
+import { applyStudentEnrollmentSignatureAction } from "@/app/student/enrollment/signature-actions";
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
+import { getRequirementApplicability } from "@/lib/requirements/rules";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
-import { formatDate } from "@/lib/utils/format";
-import type { EnrollmentReviewStatus } from "@/types/database";
+import { getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
+import type { SignaturePresentationLoad } from "@/lib/signatures/presentation";
+import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
+import { formatDate, formatName } from "@/lib/utils/format";
+import type { Enrollment, EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
 
 type StatusEnrollmentRow = {
@@ -97,7 +104,42 @@ export default async function EnrollmentStatusPage() {
     }
   }
 
-  const healthRequirementApplicability = currentTermRequirement?.applicability ?? null;
+  const healthRequirementApplicability = activeTerm
+    ? getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+        student_type: student.student_type,
+        official_gender_sex: student.official_student_records?.gender_sex ?? null
+      })
+    : null;
+
+  let currentDetailedEnrollment: Enrollment | null = null;
+  let signatureResult: SignaturePresentationLoad = { signatures: [], error: null };
+  if (currentTermEnrollment) {
+    const { data: detailedEnrollmentData, error: detailedEnrollmentError } = await supabase
+      .from("enrollments")
+      .select("id, student_id, program_id, year_level, academic_year, semester, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units)")
+      .eq("id", currentTermEnrollment.id)
+      .maybeSingle();
+    if (detailedEnrollmentError) {
+      console.error("student_enrollment_status:signature_enrollment_load");
+    } else {
+      currentDetailedEnrollment = detailedEnrollmentData as Enrollment | null;
+      if (currentDetailedEnrollment) {
+        signatureResult = await loadEnrollmentSignaturePresentation(supabase, currentDetailedEnrollment, {
+          applicability: healthRequirementApplicability ?? "NOT_APPLICABLE",
+          status: currentTermRequirement?.status ?? "PENDING"
+        });
+        if (signatureResult.error) console.error("student_enrollment_status:signature_load");
+      }
+    }
+  }
+  const clearanceOverview = currentDetailedEnrollment
+    ? getEnrollmentClearanceOverview(
+        healthRequirementApplicability,
+        signatureEvidenceByClearance(signatureResult.signatures)
+      )
+    : null;
+  const studentSignature = signatureResult.signatures.filter((item) => item.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE").at(-1) ?? null;
+  const nurseSignature = signatureResult.signatures.filter((item) => item.clearance_type === "HEALTH_CLEARANCE").at(-1) ?? null;
 
   const status = getDisplayedEnrollmentStatus(currentTermEnrollment?.status ?? null);
 
@@ -199,6 +241,11 @@ export default async function EnrollmentStatusPage() {
               <p>Submit the required paper form directly to PKM Health Services. PKM-DES records only the verification status; do not upload medical details.</p>
               {(currentTermRequirement?.status ?? "PENDING") === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this paper form is verified for the current term.</p> : null}
               {currentTermRequirement?.status === "REJECTED" ? <p className="font-semibold text-red-800">Please contact the Registrar or PKM Health Services about the paper-form verification.</p> : null}
+              {currentTermRequirement?.status === "VERIFIED" && nurseSignature?.is_current ? (
+                <p className="text-sm text-slateui-secondary">
+                  Verified by: <span className="font-semibold text-slateui-text">{nurseSignature.signer_name_snapshot}</span> on {formatDate(nurseSignature.signed_at)}.
+                </p>
+              ) : null}
             </div>
           ) : healthRequirementApplicability === "NOT_APPLICABLE" ? (
             <p className="mt-3 text-sm leading-6 text-slateui-secondary">No Health Record Update verification is required for your current-term enrollment request.</p>
@@ -206,6 +253,31 @@ export default async function EnrollmentStatusPage() {
             <p className="mt-3 text-sm leading-6 text-slateui-secondary">Current-term Health Record Update status appears after an enrollment request is recorded, when applicable.</p>
           )}
         </section>
+
+        {currentDetailedEnrollment && clearanceOverview ? (
+          <div className="mt-6 space-y-4">
+            <ClearanceOverview items={clearanceOverview} />
+            {signatureResult.error || (status !== "PENDING" && status !== "ENROLLED") ? null : (
+              <ESignatureInput
+                action={applyStudentEnrollmentSignatureAction}
+                enrollmentId={currentDetailedEnrollment.id}
+                signerRole="STUDENT"
+                clearanceType="STUDENT_ENROLLMENT_SIGNATURE"
+                signerLabel="Student"
+                signerName={formatName(profile.first_name, profile.last_name)}
+                title="Student E-Signature"
+                description="Draw your own signature for the student enrollment section. The signature is bound to this enrollment's current subject load."
+                signedSignature={studentSignature ? {
+                  signerName: studentSignature.signer_name_snapshot,
+                  signedAt: studentSignature.signed_at,
+                  signedUrl: studentSignature.signed_url,
+                  isCurrent: studentSignature.is_current,
+                  inputType: "DRAWN"
+                } : null}
+              />
+            )}
+          </div>
+        ) : null}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {actions.map(([href, label, variant]) => <ButtonLink key={href} href={href} variant={variant as "primary" | "secondary" | "outline"} className="w-full">{label}</ButtonLink>)}

@@ -11,6 +11,7 @@ Container_Boundary(webapp, "PKM-DES Next.js App") {
     Component(auth_layer, "Auth/Session Layer", "TypeScript (lib/auth/)", "Validates session and role-based access")
     Component(domain_logic, "Enrollment Domain Logic", "TypeScript (lib/enrollment/)", "Rules for subject load, term evaluation, account matching")
     Component(reporting_print, "Reporting & Print Modules", "TypeScript (components/print/, lib/admin-student-records/)", "Generates masterlists, reports, and browser-print Draft Registration Forms")
+    Component(signature_layer, "Signature & Clearance Modules", "TypeScript (components/signatures/, lib/signatures/)", "Drawn e-signature input, fingerprints, clearance state, and signed-url presentation")
     
     Component(supabase_client, "Supabase Clients", "TypeScript (lib/supabase/)", "Server and Browser clients for interacting with Supabase")
 
@@ -21,6 +22,8 @@ Container_Boundary(webapp, "PKM-DES Next.js App") {
     Rel(server_actions, supabase_client, "Uses")
     Rel(pages, supabase_client, "Uses for Server Components")
     Rel(pages, reporting_print, "Uses for rendering printables")
+    Rel(pages, signature_layer, "Uses for clearance status and signing")
+    Rel(server_actions, signature_layer, "Validates signature payloads via")
 }
 
 Container_Boundary(supabase_backend, "Supabase Backend") {
@@ -28,18 +31,20 @@ Container_Boundary(supabase_backend, "Supabase Backend") {
     Component(postgres_db, "PostgreSQL Database", "SQL", "Relational storage")
     Component(rls_policies, "Row Level Security", "SQL Policies", "Restricts table access based on JWT")
     Component(db_functions, "PostgreSQL Functions & RPCs", "PL/pgSQL", "Atomic transactions for enrollments/account creation")
-    Component(db_triggers, "Database Triggers", "PL/pgSQL", "Syncs Auth users to Profiles")
+    Component(db_triggers, "Database Triggers", "PL/pgSQL", "Syncs Auth users to Profiles and invalidates stale clearances")
+    Component(storage_service, "Supabase Storage", "Private bucket", "Stores immutable signature PNGs and serves signed URLs")
     
     Rel(supabase_client, auth_service, "Authenticates")
     Rel(supabase_client, postgres_db, "Queries/Mutates")
     Rel(auth_service, db_triggers, "Fires on user.created")
     Rel(supabase_client, db_functions, "Calls RPCs")
+    Rel(supabase_client, storage_service, "Server-only upload / signed URL")
     Rel(postgres_db, rls_policies, "Enforced by")
 }
 
 note right of pages
   Source: app/student/, app/admin/
-  Note: Grades, Class Schedule, Balances, digital clearance, email delivery, or official COR generation are deferred/not implemented.
+  Note: Grades, Class Schedule, Balances, payment processing, email delivery, or official COR generation are deferred/not implemented. Authenticated drawn clearances are implemented as a research-MVP branch workflow.
 end note
 
 note right of postgres_db

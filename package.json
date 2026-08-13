@@ -29,7 +29,8 @@
     "test:enrollment-reporting": "tsx --test lib/enrollment/reporting.test.ts",
     "test:admin-enrollment-review": "tsx --test lib/enrollment/admin-review.test.ts",
     "test:admin-student-records": "tsx --conditions react-server --test lib/admin-student-records/*.test.ts",
-    "test:registration-form": "tsx --test lib/registration-form/presentation.test.ts"
+    "test:registration-form": "tsx --test lib/registration-form/presentation.test.ts",
+    "test:signatures": "tsx --test lib/signatures/*.test.ts lib/official-roles/repository.test.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
