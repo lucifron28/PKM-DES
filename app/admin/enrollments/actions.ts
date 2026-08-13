@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import {
   getEnrollmentReviewRedirect,
   normalizeEnrollmentReviewId,
@@ -50,7 +50,7 @@ function revalidateEnrollmentViews(enrollmentId: string) {
 }
 
 async function processEnrollmentReview(formData: FormData, decision: EnrollmentReviewDecision) {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const enrollmentId = normalizeEnrollmentReviewId(formData.get("enrollment_id"));
 
   if (!enrollmentId) {
@@ -111,7 +111,7 @@ export async function rejectEnrollmentAction(formData: FormData) {
 }
 
 export async function retryEnrollmentDecisionEmailAction(formData: FormData) {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const enrollmentId = normalizeEnrollmentReviewId(formData.get("enrollment_id"));
   const decision = String(formData.get("decision") ?? "").trim();
 
@@ -138,7 +138,7 @@ export async function updateEnrollmentRequirementAction(
   _previousState: RequirementUpdateState,
   formData: FormData
 ): Promise<RequirementUpdateState> {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
   const requirementCode = String(formData.get("requirement_code") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();

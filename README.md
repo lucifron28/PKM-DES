@@ -82,6 +82,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Rejection keeps optional free-text remarks; the MVP has only a narrow, status-only current-term Health Record Update verification for applicable students, not a full document workflow
 - Authenticated drawn e-signatures use one reusable canvas input for Student, Librarian, School Nurse, Program Chair, Accountant, and Dean clearances; there is no generic Registrar signature row
 - Active official assignments map one signer to one clearance, support program-scoped Program Chair/Nurse assignments, and do not let a generic admin account sign implicitly
+- Assigned officials now receive focused role-specific staff navigation and clearance queues at `/admin/clearances/<role>` with a dedicated enrollment review route; Registrar management remains the fallback only for an active admin account with no active official assignment
 - The `/admin/official-signers` management page uses a controlled authenticated RPC to assign or revoke roles for other active admin accounts; self-assignment and direct browser table mutation are blocked, and assignment changes are audited
 - Applicable Health Record Update verification is completed atomically with the Nurse signature and remains status-only; no medical details or uploads are stored
 - Private `enrollment-signatures` Storage objects are uploaded server-side, referenced by immutable database rows, fingerprinted against the signed enrollment/health context, and exposed only through authorized RLS or short-lived signed URLs

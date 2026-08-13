@@ -6,7 +6,7 @@ import { ESignatureInput } from "@/components/signatures/e-signature-input";
 import { RegistrationForm, type PrintableEnrollment } from "@/components/print/registration-form";
 import { retryEnrollmentDecisionEmailAction } from "@/app/admin/enrollments/actions";
 import { applyOfficialClearanceSignatureAction, verifyHealthClearanceAction } from "@/app/admin/enrollments/signature-actions";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { CLEARANCE_DEFINITIONS, getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
 import { canSignClearance, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
@@ -22,7 +22,7 @@ export default async function AdminRegistrationFormPage({
   params: Promise<{ enrollmentId: string }>;
   searchParams?: Promise<{ email?: string }>;
 }) {
-  const { supabase, profile } = await requireRole("admin");
+  const { supabase, profile } = await requireRegistrarAdmin();
   const { enrollmentId } = await params;
 
   const { data, error } = await supabase

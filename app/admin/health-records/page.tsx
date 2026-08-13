@@ -3,8 +3,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ESignatureInput } from "@/components/signatures/e-signature-input";
 import { verifyHealthClearanceAction } from "@/app/admin/enrollments/signature-actions";
-import { loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
-import { requireRole } from "@/lib/auth/session";
+import { requireOfficialSignerRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { SIGNATURE_BUCKET } from "@/lib/signatures/validation";
 import { formatDate, formatName } from "@/lib/utils/format";
@@ -29,17 +28,7 @@ function requirementTone(status: NurseHealthRequirementWorkItem["requirement_sta
 }
 
 export default async function HealthRecordsPage() {
-  const { supabase, profile } = await requireRole("admin");
-  const { assignments, error: assignmentError } = await loadActiveOfficialRoleAssignments(supabase, profile.id);
-
-  if (assignmentError) {
-    console.error("health_records:assignment_load");
-    return <EmptyState title="Health Record Verification is unavailable" description="The official assignment could not be checked safely." />;
-  }
-
-  if (!assignments.some((assignment) => assignment.official_role === "NURSE" && assignment.active)) {
-    return <EmptyState title="Nurse assignment required" description="This workspace is available only to an administrator with an active School Nurse assignment." />;
-  }
+  const { supabase, profile } = await requireOfficialSignerRole("NURSE");
 
   const { data, error } = await supabase.rpc("list_nurse_health_requirements");
   if (error) {

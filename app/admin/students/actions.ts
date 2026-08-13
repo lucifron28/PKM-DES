@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import {
   addOfficialRecordService,
   type OfficialRecordFormState
@@ -16,7 +16,7 @@ export async function addOfficialStudentRecordAction(
   _previousState: OfficialRecordFormState,
   formData: FormData
 ): Promise<OfficialRecordFormState> {
-  const { supabase, profile } = await requireRole("admin");
+  const { supabase, profile } = await requireRegistrarAdmin();
   const result = await addOfficialRecordService(supabase, profile.id, formData);
 
   if (result.success) {
@@ -30,7 +30,7 @@ export async function updateOfficialStudentRecordAction(
   _previousState: OfficialRecordFormState,
   formData: FormData
 ): Promise<OfficialRecordFormState> {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const result = await updateOfficialRecordAndSyncService(supabase, formData);
 
   if (result.success && result.recordId) {
@@ -45,6 +45,6 @@ export async function resetStudentPasswordAction(
   _previousState: StudentPasswordResetState,
   formData: FormData
 ): Promise<StudentPasswordResetState> {
-  const { supabase, profile } = await requireRole("admin");
+  const { supabase, profile } = await requireRegistrarAdmin();
   return resetStudentPasswordService(supabase, formData, profile.id);
 }

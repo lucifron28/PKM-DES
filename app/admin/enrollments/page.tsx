@@ -3,7 +3,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnrollmentReviewControls } from "@/components/admin/enrollment-review-controls";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { formatDate, formatName } from "@/lib/utils/format";
@@ -46,7 +46,7 @@ export default async function PendingEnrollmentsPage({
 }: {
   searchParams?: Promise<{ error?: string; success?: string; email?: string; academic_year?: string; semester?: string }>;
 }) {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const params = (await searchParams) ?? {};
 
   const activeTermResult = await getActiveEnrollmentTermResult(supabase);

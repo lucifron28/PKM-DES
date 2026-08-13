@@ -1,6 +1,7 @@
 export type NavigationIcon =
   | "account"
   | "balances"
+  | "clearance"
   | "dashboard"
   | "enrollment"
   | "grades"

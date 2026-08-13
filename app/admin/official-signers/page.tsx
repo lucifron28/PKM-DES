@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { OFFICIAL_ROLE_LABELS, OFFICIAL_SIGNER_ROLES } from "@/lib/official-roles/roles";
 import { setOfficialRoleAssignmentAction } from "./actions";
 import type { OfficialRoleAssignment, Profile } from "@/types/database";
@@ -36,7 +36,7 @@ export default async function OfficialSignersPage({
 }: {
   searchParams?: Promise<{ success?: string; error?: string }>;
 }) {
-  const { supabase, profile } = await requireRole("admin");
+  const { supabase, profile } = await requireRegistrarAdmin();
   const params = (await searchParams) ?? {};
   const [{ data: profileData, error: profileError }, { data: assignmentData, error: assignmentError }] = await Promise.all([
     supabase

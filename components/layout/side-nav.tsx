@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils/cn";
 const icons: Record<NavigationIcon, typeof BookOpen> = {
   account: UserCircle,
   balances: WalletCards,
+  clearance: ClipboardCheck,
   dashboard: LayoutDashboard,
   enrollment: ClipboardCheck,
   grades: GraduationCap,

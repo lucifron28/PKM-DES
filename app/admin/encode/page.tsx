@@ -1,7 +1,9 @@
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 
-export default function EncodePlaceholderPage() {
+export default async function EncodePlaceholderPage() {
+  await requireRegistrarAdmin();
   return (
     <Card>
       <CardHeader title="Encode Grades/Schedule" description="Placeholder for grade and schedule encoding." />

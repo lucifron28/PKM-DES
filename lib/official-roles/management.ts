@@ -21,3 +21,15 @@ export function canManageOfficialAssignment(
 export function canReceiveActiveOfficialAssignment(targetProfile: AssignmentTargetProfile) {
   return targetProfile.role === "admin" && targetProfile.account_status === "ACTIVE";
 }
+
+/**
+ * The MVP has no separate Registrar profile capability. Until that policy is
+ * supplied, an active admin with no official signing assignment is the
+ * Registrar/admin-management workspace. Assigned officials receive only the
+ * focused signing workspace.
+ */
+export function hasRegistrarManagementAccess(
+  assignments: ReadonlyArray<{ active: boolean }>
+) {
+  return assignments.every((assignment) => !assignment.active);
+}

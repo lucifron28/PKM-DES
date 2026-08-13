@@ -1,15 +1,23 @@
 import { Card, CardHeader } from "@/components/ui/card";
 import { ChangePasswordForm } from "@/components/forms/change-password-form";
 import { requireRole } from "@/lib/auth/session";
+import { loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
+import { OFFICIAL_ROLE_LABELS } from "@/lib/official-roles/roles";
 import { changeAdminPasswordAction } from "./actions";
 import { DetailList } from "@/components/ui/detail-list";
 
 export default async function AdminAccountPage() {
-  const { profile } = await requireRole("admin");
+  const { profile, supabase } = await requireRole("admin");
+  const { assignments, error } = await loadActiveOfficialRoleAssignments(supabase, profile.id);
+  const assignedRole = error
+    ? "Unavailable"
+    : assignments.length
+      ? assignments.map((assignment) => OFFICIAL_ROLE_LABELS[assignment.official_role]).join(" - ")
+      : "Registrar/Admin management";
   const rows: Array<[string, string]> = [
     ["Admin Full Name", `${profile.first_name} ${profile.last_name}`.trim()],
     ["Admin Email Address", profile.email],
-    ["Assigned Role", "Admin"],
+    ["Assigned Role", assignedRole],
     ["Account Status", profile.account_status]
   ];
 

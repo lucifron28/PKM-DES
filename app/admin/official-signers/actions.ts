@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import {
   canManageOfficialAssignment,
   canReceiveActiveOfficialAssignment,
@@ -20,7 +20,7 @@ function redirectWithResult(kind: "success" | "error", value: string): never {
 }
 
 export async function setOfficialRoleAssignmentAction(formData: FormData) {
-  const { supabase, profile } = await requireRole("admin");
+  const { supabase, profile } = await requireRegistrarAdmin();
   const targetProfileId = String(formData.get("profile_id") ?? "").trim();
   const officialRole = String(formData.get("official_role") ?? "").trim();
   const activeValue = String(formData.get("active") ?? "").trim();
