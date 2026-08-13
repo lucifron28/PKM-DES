@@ -155,7 +155,7 @@ The decision is saved before any optional email delivery is attempted. In the re
 
 ### Optional authenticated clearance-signature pass
 
-The e-signature workflow requires an administrator account with explicit official assignments; an ordinary Registrar/Admin account does not automatically receive every signing role.
+The e-signature workflow requires an administrator account with explicit official assignments; an ordinary Registrar/Admin account does not automatically receive every signing role. Existing admin accounts can open **Official Signing Roles** to assign global signing capabilities to another active admin account. The current MVP does not create Auth users from this page and does not allow an admin to assign roles to their own account.
 
 1. An assigned School Nurse opens **Health Record Verification** and reviews the status-only Health Record Update row. The applicable rule is limited to an Incoming 1st Year Student whose official Registrar-managed `gender_sex` value is explicitly `Female`.
 2. The Nurse draws a signature in the reusable canvas, confirms it is their own mark, and selects **Apply E-Signature**. The verification and Nurse signature are saved atomically; no medical details are entered.

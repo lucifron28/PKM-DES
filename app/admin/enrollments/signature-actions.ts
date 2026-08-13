@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
 import type { SignatureActionState } from "@/lib/signatures/action-state";
 import { recordOfficialClearanceSignature, verifyHealthClearance } from "@/lib/signatures/service";
-import type { OfficialSignerRole } from "@/types/database";
 
 function revalidateSignatureViews(enrollmentId: string) {
   revalidatePath("/admin/enrollments");
@@ -20,8 +19,7 @@ export async function applyOfficialClearanceSignatureAction(
   formData: FormData
 ): Promise<SignatureActionState> {
   const { supabase } = await requireRole("admin");
-  const officialRole = String(formData.get("official_role") ?? "").trim() as OfficialSignerRole;
-  const result = await recordOfficialClearanceSignature(supabase, officialRole, formData);
+  const result = await recordOfficialClearanceSignature(supabase, formData);
 
   if (result.success) revalidateSignatureViews(String(formData.get("enrollment_id") ?? "").trim());
   return result;

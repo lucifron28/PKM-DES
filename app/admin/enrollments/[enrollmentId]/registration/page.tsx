@@ -7,9 +7,9 @@ import { RegistrationForm, type PrintableEnrollment } from "@/components/print/r
 import { retryEnrollmentDecisionEmailAction } from "@/app/admin/enrollments/actions";
 import { applyOfficialClearanceSignatureAction, verifyHealthClearanceAction } from "@/app/admin/enrollments/signature-actions";
 import { requireRole } from "@/lib/auth/session";
-import { getClearanceDefinition, getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
+import { CLEARANCE_DEFINITIONS, getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
-import { hasActiveOfficialRoleForProgram, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
+import { canSignClearance, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatName } from "@/lib/utils/format";
@@ -80,10 +80,7 @@ export default async function AdminRegistrationFormPage({
   };
   const signatureEvidence = signatureEvidenceByClearance(signatureResult.signatures);
   const clearanceOverview = getEnrollmentClearanceOverview(healthApplicability, signatureEvidence);
-  const activeAssignments = assignmentsResult.assignments.filter((assignment) =>
-    hasActiveOfficialRoleForProgram(assignmentsResult.assignments, assignment.official_role, enrollment.program_id)
-    && (assignment.program_id === null || assignment.program_id === enrollment.program_id)
-  );
+  const officialClearanceDefinitions = CLEARANCE_DEFINITIONS.filter((definition) => definition.signerRole !== "STUDENT");
 
   const { data: notificationData, error: notificationError } = await supabase
     .from("enrollment_decision_notifications")
@@ -146,14 +143,7 @@ export default async function AdminRegistrationFormPage({
           <ClearanceOverview items={clearanceOverview} />
         )}
         {!signatureResult.error ? <div className="grid gap-4 lg:grid-cols-2">
-          {activeAssignments.map((assignment) => {
-            const definition = getClearanceDefinition(
-              assignment.official_role === "NURSE" ? "HEALTH_CLEARANCE" :
-                assignment.official_role === "LIBRARIAN" ? "LIBRARY_CLEARANCE" :
-                  assignment.official_role === "PROGRAM_CHAIR" ? "PROGRAM_CLEARANCE" :
-                    assignment.official_role === "ACCOUNTANT" ? "ACCOUNTING_CLEARANCE" : "DEAN_CLEARANCE"
-            );
-            if (!definition) return null;
+          {officialClearanceDefinitions.map((definition) => {
             const signature = signatureResult.signatures.filter((item) => item.clearance_type === definition.clearanceType).at(-1) ?? null;
             const isHealthNotApplicable = definition.clearanceType === "HEALTH_CLEARANCE" && healthApplicability !== "APPLICABLE";
             if (isHealthNotApplicable) return null;
@@ -166,13 +156,32 @@ export default async function AdminRegistrationFormPage({
                   inputType: "DRAWN" as const
                 }
               : null;
+            const isAuthorized = canSignClearance(assignmentsResult.assignments, definition.clearanceType, enrollment.program_id);
+            const hasCurrentSignature = signedSignature?.isCurrent === true;
+
+            if (!hasCurrentSignature && !isAuthorized) {
+              return (
+                <section key={definition.clearanceType} className="rounded-lg border border-slateui-border bg-slateui-surfaceAlt p-4" aria-label={`${definition.signerLabel} authorization status`}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-slateui-text">{definition.label}</h3>
+                      <p className="mt-1 text-sm leading-6 text-slateui-secondary">You are not authorized to sign this clearance. An active {definition.signerLabel} assignment is required.</p>
+                    </div>
+                    <Badge tone="neutral">Not authorized</Badge>
+                  </div>
+                  {signedSignature ? (
+                    <p className="mt-3 text-xs leading-5 text-slateui-muted">A previous signature is retained in the audit history but is not current. An assigned {definition.signerLabel} must re-sign.</p>
+                  ) : null}
+                </section>
+              );
+            }
 
             return (
               <ESignatureInput
-                key={assignment.id}
-                action={assignment.official_role === "NURSE" ? verifyHealthClearanceAction : applyOfficialClearanceSignatureAction}
+                key={definition.clearanceType}
+                action={definition.signerRole === "NURSE" ? verifyHealthClearanceAction : applyOfficialClearanceSignatureAction}
                 enrollmentId={enrollment.id}
-                signerRole={assignment.official_role}
+                signerRole={definition.signerRole}
                 clearanceType={definition.clearanceType}
                 signerLabel={definition.signerLabel}
                 signerName={formatName(profile.first_name, profile.last_name)}

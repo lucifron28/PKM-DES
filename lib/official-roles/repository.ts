@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { requiredOfficialRoleForClearance } from "@/lib/official-roles/roles";
 import type { OfficialRoleAssignment, OfficialSignerRole } from "@/types/database";
 
 export async function loadActiveOfficialRoleAssignments(supabase: SupabaseClient, profileId: string) {
@@ -29,4 +30,13 @@ export function hasActiveOfficialRoleForProgram(
       assignment.official_role === role &&
       (assignment.program_id === null || assignment.program_id === programId)
   );
+}
+
+export function canSignClearance(
+  assignments: OfficialRoleAssignment[],
+  clearanceType: string,
+  programId: string
+) {
+  const requiredRole = requiredOfficialRoleForClearance(clearanceType);
+  return requiredRole ? hasActiveOfficialRoleForProgram(assignments, requiredRole, programId) : false;
 }

@@ -27,6 +27,7 @@ const icons: Record<NavigationIcon, typeof BookOpen> = {
   pending: ListChecks,
   reports: FileText,
   schedule: CalendarDays,
+  signers: Users,
   students: Users,
   subjects: BookOpen
 };

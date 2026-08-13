@@ -225,7 +225,7 @@ export function ESignatureInput({
         <p className="mt-1 text-sm leading-6 text-slateui-secondary">
           {description ?? `Draw your own signature for the ${clearanceType.replaceAll("_", " ").toLowerCase()} section. It is stored privately and cannot be overwritten.`}
         </p>
-        <p className="mt-2 text-xs font-semibold text-slateui-muted">Authenticated signer: {signerName}</p>
+        <p className="mt-2 text-xs font-semibold text-slateui-muted">Authenticated signer: {signerName} · Capacity: {signerRole}</p>
         <p id={`${enrollmentId}-${clearanceType}-instructions`} className="mt-2 text-xs leading-5 text-slateui-muted">
           Use a mouse, touch screen, or stylus. Keyboard users can focus the pad, press Space to raise/lower the pen, and use the arrow keys to draw.
         </p>
@@ -239,7 +239,6 @@ export function ESignatureInput({
 
       <form action={formAction} onSubmit={handleSubmit} className="mt-4 space-y-3">
         <input type="hidden" name="enrollment_id" value={enrollmentId} />
-        <input type="hidden" name="official_role" value={signerRole} />
         <input type="hidden" name="clearance_type" value={clearanceType} />
         <input ref={hiddenSignatureRef} type="hidden" name="signature_data" />
         <div className="overflow-hidden rounded-md border border-slateui-border bg-slateui-surfaceAlt">

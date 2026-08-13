@@ -8,6 +8,7 @@ export type NavigationIcon =
   | "pending"
   | "reports"
   | "schedule"
+  | "signers"
   | "students"
   | "subjects";
 
@@ -44,6 +45,7 @@ export const adminNavigation: NavigationItem[] = [
   { label: "Admin Dashboard", href: "/admin/dashboard", icon: "dashboard", section: "Workflow" },
   { label: "Pending Enrollments", href: "/admin/enrollments", icon: "pending", section: "Workflow" },
   { label: "Health Record Verification", href: "/admin/health-records", icon: "pending", section: "Workflow" },
+  { label: "Official Signing Roles", href: "/admin/official-signers", icon: "signers", section: "Workflow" },
   { label: "Student Records", href: "/admin/students", icon: "students", section: "Workflow" },
   { label: "Enrollment Masterlist", href: "/admin/masterlist", icon: "masterlist", section: "Reference" },
   { label: "Enrollment Reports", href: "/admin/reports", icon: "reports", section: "Reference" },

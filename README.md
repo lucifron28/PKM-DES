@@ -38,7 +38,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 
 - Public pages: Home, Login, Create Student Account, About Us
 - Student pages: Dashboard, Online Enrollment, Subject List, Enrollment Status Result, Grades placeholder, Class Schedule placeholder, Balances placeholder, Account, Logout
-- Admin pages: Dashboard, Pending Enrollments, Health Record Verification, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
+- Admin pages: Dashboard, Pending Enrollments, Health Record Verification, Official Signing Roles, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
 - Admin reporting: Enrollment Reports with filters, status summaries, and browser-print output
 - Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, client-provided term offerings, explicit term-scoped standard-load configuration, official role assignments, clearance state, and immutable signature evidence
 
@@ -48,6 +48,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - PKM and Municipality of Mauban logo images applied to the public header, home page, app shell, and printable registration form
 - Supabase-backed login with active-account checks
 - Role-based protection for student and admin areas
+- Official signing assignments are capabilities attached to existing authenticated `admin` accounts; they are not separate Librarian, Nurse, Dean, Accountant, or Program Chair login roles
 - Production environment check for Supabase/Vercel configuration
 - Student account creation through Supabase Auth when `SUPABASE_SERVICE_ROLE_KEY` is configured
 - Create-account dropdown values exactly as requested: Incoming 1st Year Student, Transferee, Old Student
@@ -81,6 +82,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Rejection keeps optional free-text remarks; the MVP has only a narrow, status-only current-term Health Record Update verification for applicable students, not a full document workflow
 - Authenticated drawn e-signatures use one reusable canvas input for Student, Librarian, School Nurse, Program Chair, Accountant, and Dean clearances; there is no generic Registrar signature row
 - Active official assignments map one signer to one clearance, support program-scoped Program Chair/Nurse assignments, and do not let a generic admin account sign implicitly
+- The `/admin/official-signers` management page uses a controlled authenticated RPC to assign or revoke roles for other active admin accounts; self-assignment and direct browser table mutation are blocked, and assignment changes are audited
 - Applicable Health Record Update verification is completed atomically with the Nurse signature and remains status-only; no medical details or uploads are stored
 - Private `enrollment-signatures` Storage objects are uploaded server-side, referenced by immutable database rows, fingerprinted against the signed enrollment/health context, and exposed only through authorized RLS or short-lived signed URLs
 - Enrollment clearance states are `PENDING`, `SIGNED`, `NOT_APPLICABLE`, or `INVALIDATED`; source changes invalidate old evidence and re-signing creates a new immutable row

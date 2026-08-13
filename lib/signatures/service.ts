@@ -99,7 +99,7 @@ function resultMessage(outcome: string | undefined, signerLabel: string) {
     case "signed":
       return { success: true, message: `${signerLabel} e-signature applied successfully.` } satisfies ServiceResult;
     case "duplicate":
-      return { success: false, message: "This clearance already has an accepted signature and cannot be overwritten." } satisfies ServiceResult;
+      return { success: false, message: "This clearance already has an accepted current signature." } satisfies ServiceResult;
     case "fingerprint_mismatch":
       return { success: false, message: "The signed enrollment changed while this form was open. Refresh and draw a new signature." } satisfies ServiceResult;
     case "not_signable":
@@ -176,7 +176,6 @@ export async function recordStudentEnrollmentSignature(
 
 export async function recordOfficialClearanceSignature(
   supabase: SupabaseClient,
-  officialRole: OfficialSignerRole,
   formData: FormData
 ): Promise<ServiceResult> {
   const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
@@ -184,9 +183,10 @@ export async function recordOfficialClearanceSignature(
   const definition = getClearanceDefinition(clearanceType);
   const parsed = signatureFormPayload(formData);
 
-  if (!enrollmentId || !definition || definition.signerRole !== officialRole || clearanceType === "HEALTH_CLEARANCE") {
+  if (!enrollmentId || !definition || definition.signerRole === "STUDENT" || clearanceType === "HEALTH_CLEARANCE") {
     return { success: false, message: "The requested clearance is not authorized for this account." };
   }
+  const officialRole = definition.signerRole as OfficialSignerRole;
   if (!parsed.ok) return { success: false, message: parsed.error };
   const { payload } = parsed;
 

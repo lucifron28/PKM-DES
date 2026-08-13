@@ -118,6 +118,7 @@ These are implementation boundaries, not final institutional policy:
 - One reusable drawn canvas is used for every required signer; typed, generated cursive, and checkbox-only signatures are not accepted.
 - Official roles map to separate clearances: Librarian -> Library, Nurse -> Health, Program Chair -> Program, Accountant -> Accounting, and Dean -> Dean. Student enrollment signature remains supported.
 - Official assignments are explicit and can be global or program-scoped; an admin account does not implicitly sign every official role.
+- Official signing assignments are capabilities attached to existing authenticated `admin` accounts, not separate login roles. The `/admin/official-signers` page manages global assignments for other active admin accounts through a controlled audited RPC; users cannot assign or revoke their own roles, and removing a role affects future signing only.
 - Signature rows are immutable and fingerprinted. A source change invalidates the clearance, and re-signing creates a new immutable row.
 - The exact signer order, whether Student signature is mandatory, whether Dean signs last, the Accountant zero-balance rule, Library verification rule, Program Chair program restriction, and multiple-role policy still require PKM confirmation.
 
