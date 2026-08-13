@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireOfficialSignerRole } from "@/lib/auth/session";
 import { requiredOfficialRoleForClearance } from "@/lib/official-roles/roles";
 import type { SignatureActionState } from "@/lib/signatures/action-state";
-import { recordOfficialClearanceSignature, verifyHealthClearance } from "@/lib/signatures/service";
+import { recordOfficialClearanceSignature, rejectHealthClearance, verifyHealthClearance } from "@/lib/signatures/service";
 
 function revalidateSignatureViews(enrollmentId: string) {
   revalidatePath("/admin/enrollments");
@@ -12,6 +12,8 @@ function revalidateSignatureViews(enrollmentId: string) {
   revalidatePath("/student/enrollment-status");
   revalidatePath("/student/cor");
   revalidatePath("/admin/health-records");
+  revalidatePath("/admin/clearances/health");
+  revalidatePath(`/admin/clearances/health/${enrollmentId}`);
   revalidatePath("/admin/dashboard");
 }
 
@@ -35,6 +37,17 @@ export async function verifyHealthClearanceAction(
 ): Promise<SignatureActionState> {
   const { supabase } = await requireOfficialSignerRole("NURSE");
   const result = await verifyHealthClearance(supabase, formData);
+
+  if (result.success) revalidateSignatureViews(String(formData.get("enrollment_id") ?? "").trim());
+  return result;
+}
+
+export async function rejectHealthRequirementAction(
+  _previousState: SignatureActionState,
+  formData: FormData
+): Promise<SignatureActionState> {
+  const { supabase } = await requireOfficialSignerRole("NURSE");
+  const result = await rejectHealthClearance(supabase, formData);
 
   if (result.success) revalidateSignatureViews(String(formData.get("enrollment_id") ?? "").trim());
   return result;

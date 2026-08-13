@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getClearanceDefinition } from "@/lib/signatures/clearances";
 import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash, type EnrollmentFingerprintInput } from "@/lib/signatures/fingerprint";
+import { isRequirementUuid, normalizeRequirementNote } from "@/lib/requirements/rules";
 import {
   buildSignatureStoragePath,
   SIGNATURE_BUCKET,
@@ -108,6 +109,12 @@ function resultMessage(outcome: string | undefined, signerLabel: string) {
       return { success: false, message: "This clearance is not applicable to the enrollment." } satisfies ServiceResult;
     case "already_verified":
       return { success: false, message: "Health Clearance is already verified and cannot be overwritten." } satisfies ServiceResult;
+    case "acknowledgment_required":
+      return { success: false, message: "Confirm the Nurse verification statement before applying the e-signature." } satisfies ServiceResult;
+    case "rejected":
+      return { success: true, message: "Health Record Update marked REJECTED. No Nurse signature was recorded." } satisfies ServiceResult;
+    case "nurse_controlled":
+      return { success: false, message: "Health Record Update status is controlled by the assigned Nurse form." } satisfies ServiceResult;
     case "requirement_unavailable":
       return { success: false, message: "The Health Record Update requirement could not be loaded safely." } satisfies ServiceResult;
     case "unauthorized":
@@ -239,6 +246,8 @@ export async function verifyHealthClearance(
   formData: FormData
 ): Promise<ServiceResult> {
   const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
+  const verificationAcknowledged = formData.get("verification_acknowledged") === "on";
+  const note = normalizeRequirementNote(formData.get("verification_note"));
   const parsed = signatureFormPayload(formData);
   if (!enrollmentId) return { success: false, message: "Enrollment record is required." };
   if (!parsed.ok) return { success: false, message: parsed.error };
@@ -254,9 +263,6 @@ export async function verifyHealthClearance(
     return resultMessage("not_applicable", "Nurse");
   }
   if (requirement.enrollment_status !== "PENDING") {
-    return resultMessage("not_signable", "Nurse");
-  }
-  if (requirement.requirement_status === "REJECTED") {
     return resultMessage("not_signable", "Nurse");
   }
   if (requirement.requirement_status === "VERIFIED" && requirement.nurse_signature_is_current) {
@@ -288,7 +294,9 @@ export async function verifyHealthClearance(
     p_signature_id: signatureId,
     p_signature_storage_path: path,
     p_signature_hash: payload.signatureHash,
-    p_document_hash: documentHash
+    p_document_hash: documentHash,
+    p_verification_acknowledged: verificationAcknowledged,
+    p_note: note.note
   });
 
   if (rpcError) {
@@ -299,5 +307,28 @@ export async function verifyHealthClearance(
 
   const outcome = ((rpcData as SignatureRpcResult[] | null)?.[0])?.outcome;
   if (outcome !== "signed") await cleanupSignature(admin, path);
+  return resultMessage(outcome, "Nurse");
+}
+
+export async function rejectHealthClearance(
+  supabase: SupabaseClient,
+  formData: FormData
+): Promise<ServiceResult> {
+  const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
+  const note = normalizeRequirementNote(formData.get("rejection_note"));
+
+  if (!isRequirementUuid(enrollmentId)) return { success: false, message: "Enrollment record is required." };
+  if (!note.valid) return { success: false, message: "The administrative note must be 240 characters or fewer and contain no control characters." };
+
+  const { data, error } = await supabase.rpc("reject_health_requirement", {
+    p_enrollment_id: enrollmentId,
+    p_note: note.note
+  });
+  if (error) {
+    console.error("signature_record:nurse_rejection_rpc_failed", { message: error.message });
+    return { success: false, message: "The Nurse rejection could not be saved." };
+  }
+
+  const outcome = ((data as SignatureRpcResult[] | null)?.[0])?.outcome;
   return resultMessage(outcome, "Nurse");
 }

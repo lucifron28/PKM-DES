@@ -11,11 +11,13 @@ import {
   type ClearanceQueueFilter,
   type OfficialClearanceQueueRow
 } from "@/lib/official-roles/queue";
+import { healthVerificationStateLabel } from "@/lib/health-records/presentation";
 
 function statusLabel(status: OfficialClearanceQueueRow["clearanceStatus"]) {
   if (status === "SIGNED") return "Signed";
   if (status === "INVALIDATED") return "Invalidated";
   if (status === "NOT_APPLICABLE") return "Not Applicable";
+  if (status === "REJECTED") return "Rejected";
   return "Pending Signature";
 }
 
@@ -23,11 +25,19 @@ function statusTone(status: OfficialClearanceQueueRow["clearanceStatus"]) {
   if (status === "SIGNED") return "success" as const;
   if (status === "INVALIDATED") return "error" as const;
   if (status === "NOT_APPLICABLE") return "neutral" as const;
+  if (status === "REJECTED") return "error" as const;
   return "warning" as const;
 }
 
+function rowTone(row: OfficialClearanceQueueRow) {
+  if (row.healthVerificationState === "VERIFIED") return "success" as const;
+  if (row.healthVerificationState === "REJECTED") return "error" as const;
+  if (row.healthVerificationState === "LEGACY_VERIFICATION") return "warning" as const;
+  return statusTone(row.clearanceStatus);
+}
+
 function parseFilter(value: string | undefined): ClearanceQueueFilter {
-  return value === "signed" || value === "all" ? value : "pending";
+  return value === "signed" || value === "verified" || value === "rejected" || value === "all" ? value : "pending";
 }
 
 export default async function OfficialClearanceQueuePage({
@@ -52,10 +62,12 @@ export default async function OfficialClearanceQueuePage({
     return <EmptyState title={`${workspace.label} is unavailable`} description="The clearance queue could not be loaded safely. Please refresh and try again." />;
   }
 
-  const allRows = result.rows;
+  const allRows: OfficialClearanceQueueRow[] = result.rows as OfficialClearanceQueueRow[];
   const rows = filterOfficialClearanceQueue(allRows, status, search);
   const pendingCount = allRows.filter((row) => row.clearanceStatus === "PENDING" || row.clearanceStatus === "INVALIDATED").length;
-  const signedCount = allRows.filter((row) => row.clearanceStatus === "SIGNED").length;
+  const signedCount = allRows.filter((row) => row.clearanceStatus === "SIGNED" || row.healthVerificationState === "VERIFIED").length;
+  const rejectedCount = allRows.filter((row) => row.clearanceStatus === "REJECTED" || row.healthVerificationState === "REJECTED").length;
+  const emptyStateLabel = status === "verified" || status === "signed" ? "verified" : status === "rejected" ? "rejected" : "pending";
 
   return (
     <div className="space-y-6">
@@ -66,17 +78,22 @@ export default async function OfficialClearanceQueuePage({
         </p>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className={`grid gap-4 ${workspace.role === "NURSE" ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Pending</p>
           <p className="mt-2 text-3xl font-bold text-amber-950">{pendingCount}</p>
           <p className="mt-1 text-sm text-amber-900">{workspace.pendingDescription}</p>
         </div>
         <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-green-800">Signed</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-green-800">{workspace.role === "NURSE" ? "Verified" : "Signed"}</p>
           <p className="mt-2 text-3xl font-bold text-green-950">{signedCount}</p>
           <p className="mt-1 text-sm text-green-900">Current signatures for this clearance.</p>
         </div>
+        {workspace.role === "NURSE" ? <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-red-800">Rejected</p>
+          <p className="mt-2 text-3xl font-bold text-red-950">{rejectedCount}</p>
+          <p className="mt-1 text-sm text-red-900">Records needing Nurse follow-up.</p>
+        </div> : null}
         <div className="rounded-lg border border-slateui-border bg-slateui-surfaceAlt p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-slateui-muted">All records</p>
           <p className="mt-2 text-3xl font-bold text-slateui-text">{allRows.length}</p>
@@ -85,7 +102,7 @@ export default async function OfficialClearanceQueuePage({
       </div>
 
       <Card>
-        <CardHeader title="Clearance queue" description="Use Pending, Signed, or All to focus the list. Search by student, ID, program, or term." />
+        <CardHeader title="Clearance queue" description={workspace.role === "NURSE" ? "Use Pending, Verified, Rejected, or All to focus the applicable Incoming 1st Year female records." : "Use Pending, Signed, or All to focus the list. Search by student, ID, program, or term."} />
         <form method="get" className="grid gap-3 border-b border-slateui-border px-6 pb-5 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end">
           <label className="block text-sm font-semibold text-slateui-text">
             Search
@@ -95,7 +112,9 @@ export default async function OfficialClearanceQueuePage({
             Status
             <select name="status" defaultValue={status} className="mt-1 block min-h-11 w-full rounded-md border border-slateui-border bg-white px-3 py-2 text-sm font-normal text-slateui-text outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-200">
               <option value="pending">Pending</option>
-              <option value="signed">Signed</option>
+              <option value="verified">{workspace.role === "NURSE" ? "Verified" : "Signed"}</option>
+              {workspace.role === "NURSE" ? <option value="rejected">Rejected</option> : null}
+              {workspace.role !== "NURSE" ? <option value="signed">Signed</option> : null}
               <option value="all">All</option>
             </select>
           </label>
@@ -105,8 +124,8 @@ export default async function OfficialClearanceQueuePage({
         {rows.length === 0 ? (
           <div className="p-6">
             <EmptyState
-              title={status === "signed" ? `No signed ${workspace.label.toLowerCase()} records` : `No ${workspace.label.toLowerCase()} signatures pending`}
-              description={status === "signed" ? "No current signed records match the selected search." : `There are currently no students awaiting ${workspace.signerLabel} signature in the selected view.`}
+              title={emptyStateLabel === "verified" ? `No verified ${workspace.label.toLowerCase()} records` : emptyStateLabel === "rejected" ? `No rejected ${workspace.label.toLowerCase()} records` : `No ${workspace.label.toLowerCase()} signatures pending`}
+              description={emptyStateLabel === "verified" ? "No current verified records match the selected search." : emptyStateLabel === "rejected" ? "No rejected records match the selected search." : `There are currently no students awaiting ${workspace.signerLabel} signature in the selected view.`}
             />
           </div>
         ) : (
@@ -118,7 +137,7 @@ export default async function OfficialClearanceQueuePage({
                     <h2 className="font-bold text-slateui-text">{row.studentName}</h2>
                     <p className="mt-1 text-sm text-slateui-muted">{row.studentIdNumber ?? "Student ID unavailable"}</p>
                   </div>
-                  <Badge tone={statusTone(row.clearanceStatus)}>{statusLabel(row.clearanceStatus)}</Badge>
+                  <Badge tone={rowTone(row)}>{row.healthVerificationState ? healthVerificationStateLabel(row.healthVerificationState) : statusLabel(row.clearanceStatus)}</Badge>
                 </div>
                 <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
                   <div><dt className="text-slateui-muted">Program</dt><dd className="font-semibold text-slateui-text">{row.programName}</dd></div>

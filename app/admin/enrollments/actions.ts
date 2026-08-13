@@ -10,31 +10,14 @@ import {
   type EnrollmentReviewDecision
 } from "@/lib/enrollment/admin-review";
 import {
-  getRequirementApplicability,
-  isRequirementCode,
-  isRequirementStatus,
-  isRequirementUuid,
-  isValidRequirementTerm,
-  normalizeRequirementNote
-} from "@/lib/requirements/rules";
-import {
   processEnrollmentReviewNotification,
   sendEnrollmentDecisionEmailService,
   type EnrollmentDecisionEmailDelivery
 } from "@/lib/email/enrollment-decision";
-import type { RequirementApplicability, RequirementStatus } from "@/lib/requirements/types";
-import type { Enrollment, Student } from "@/types/database";
 
 export type RequirementUpdateState = {
   message?: string;
   success?: boolean;
-};
-
-type RequirementUpdateRpcResult = {
-  outcome: "updated" | "not_applicable" | "not_found" | "invalid_request" | "unauthorized";
-  requirement_id: string | null;
-  requirement_status: RequirementStatus | null;
-  applicability: RequirementApplicability | null;
 };
 
 function revalidateEnrollmentViews(enrollmentId: string) {
@@ -138,87 +121,7 @@ export async function updateEnrollmentRequirementAction(
   _previousState: RequirementUpdateState,
   formData: FormData
 ): Promise<RequirementUpdateState> {
-  const { supabase } = await requireRegistrarAdmin();
-  const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
-  const requirementCode = String(formData.get("requirement_code") ?? "").trim();
-  const status = String(formData.get("status") ?? "").trim();
-  const note = normalizeRequirementNote(formData.get("note"));
-
-  if (!isRequirementUuid(enrollmentId) || !isRequirementCode(requirementCode) || !isRequirementStatus(status) || !note.valid) {
-    return { message: "Requirement status could not be updated. Please try again." };
-  }
-
-  if (requirementCode === "HEALTH_RECORD_UPDATE" && status === "VERIFIED") {
-    return { message: "Only an assigned Nurse can verify Health Record Update with a drawn e-signature." };
-  }
-
-  const { data: enrollmentData, error: enrollmentError } = await supabase
-    .from("enrollments")
-    .select("id, student_id, academic_year, semester, status")
-    .eq("id", enrollmentId)
-    .maybeSingle();
-  const enrollment = enrollmentData as Pick<Enrollment, "id" | "student_id" | "academic_year" | "semester" | "status"> | null;
-
-  if (enrollmentError || !enrollment || enrollment.status !== "PENDING" || !isValidRequirementTerm({
-    academicYear: enrollment.academic_year,
-    semester: enrollment.semester
-  })) {
-    console.error("requirement_status:enrollment_validation");
-    return { message: "Requirement status could not be updated. Please try again." };
-  }
-
-  const { data: studentData, error: studentError } = await supabase
-    .from("students")
-    .select("id, student_id_number, student_type")
-    .eq("id", enrollment.student_id)
-    .maybeSingle();
-  const student = studentData as Pick<Student, "id" | "student_id_number" | "student_type"> | null;
-
-  if (studentError || !student?.student_id_number) {
-    console.error("requirement_status:student_validation");
-    return { message: "Requirement status could not be updated. Please try again." };
-  }
-
-  const { data: officialRecord, error: officialRecordError } = await supabase
-    .from("official_student_records")
-    .select("gender_sex")
-    .eq("student_id_number", student.student_id_number)
-    .maybeSingle();
-
-  if (officialRecordError) {
-    console.error("requirement_status:official_record_load");
-    return { message: "Requirement status could not be updated. Please try again." };
-  }
-
-  if (getRequirementApplicability(requirementCode, {
-    student_type: student.student_type,
-    official_gender_sex: officialRecord?.gender_sex ?? null
-  }) !== "APPLICABLE") {
-    return { message: "No Health Record Update verification is required for this student and term." };
-  }
-
-  const { data, error } = await supabase.rpc("update_enrollment_requirement_status", {
-    p_enrollment_id: enrollmentId,
-    p_requirement_code: requirementCode,
-    p_status: status,
-    p_note: note.note
-  });
-  const result = (data as RequirementUpdateRpcResult[] | null)?.[0];
-
-  if (error || !result) {
-    console.error("requirement_status:rpc");
-    return { message: "Requirement status could not be updated. Please try again." };
-  }
-
-  if (result.outcome === "not_applicable") {
-    return { message: "No Health Record Update verification is required for this student and term." };
-  }
-
-  if (result.outcome !== "updated") {
-    console.error("requirement_status:rpc_outcome");
-    return { message: "Requirement status could not be updated. Please try again." };
-  }
-
-  revalidateEnrollmentViews(enrollmentId);
-  return { success: true, message: "Health Record Update status saved." };
+  void formData;
+  await requireRegistrarAdmin();
+  return { message: "Health Record Update status is read-only here. Use the assigned Nurse verification form." };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { SignatureActionState } from "@/lib/signatures/action-state";
@@ -36,7 +36,8 @@ export function ESignatureInput({
   title,
   description,
   signedSignature,
-  applyLabel = "Apply E-Signature"
+  applyLabel = "Apply E-Signature",
+  verificationFields
 }: {
   action: SignatureAction;
   enrollmentId: string;
@@ -48,6 +49,7 @@ export function ESignatureInput({
   description?: string;
   signedSignature?: SignatureEvidenceView | null;
   applyLabel?: string;
+  verificationFields?: ReactNode;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, {} as SignatureActionState);
@@ -241,6 +243,7 @@ export function ESignatureInput({
         <input type="hidden" name="enrollment_id" value={enrollmentId} />
         <input type="hidden" name="clearance_type" value={clearanceType} />
         <input ref={hiddenSignatureRef} type="hidden" name="signature_data" />
+        {verificationFields}
         <div className="overflow-hidden rounded-md border border-slateui-border bg-slateui-surfaceAlt">
           <canvas
             ref={canvasRef}
