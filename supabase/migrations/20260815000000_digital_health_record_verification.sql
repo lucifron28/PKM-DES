@@ -15,6 +15,7 @@ grant select on table public.student_requirements to authenticated;
 create or replace function private.prevent_unscoped_health_requirement_verification()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 declare
   v_nurse_transaction boolean := coalesce(current_setting('pkm.health_requirement_mutation', true), 'false') = 'true';
