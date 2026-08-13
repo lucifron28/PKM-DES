@@ -1,33 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
-import { updateEnrollmentRequirementAction, type RequirementUpdateState } from "@/app/admin/enrollments/actions";
-import { Button } from "@/components/ui/button";
-import { TextArea } from "@/components/ui/field";
+import { Badge } from "@/components/ui/badge";
 import type { RequirementApplicability, RequirementStatus } from "@/lib/requirements/types";
 import { formatDate } from "@/lib/utils/format";
 
-const initialState: RequirementUpdateState = {};
-
-function StatusButton({ status, currentStatus }: { status: RequirementStatus; currentStatus: RequirementStatus }) {
-  const { pending } = useFormStatus();
-  const labels: Record<RequirementStatus, string> = {
-    VERIFIED: "Verify",
-    REJECTED: "Reject",
-    PENDING: "Mark Pending"
-  };
-  const variant = status === "VERIFIED" ? "primary" : status === "REJECTED" ? "danger" : "outline";
-
-  return (
-    <Button type="submit" name="status" value={status} variant={variant} disabled={pending || currentStatus === status}>
-      {pending ? "Saving..." : labels[status]}
-    </Button>
-  );
-}
-
 export function RequirementStatusCard({
-  enrollmentId,
   currentStatus = "PENDING",
   applicability = "APPLICABLE",
   currentNote = null,
@@ -45,63 +22,44 @@ export function RequirementStatusCard({
   nurseSignerName?: string | null;
   nurseSignedAt?: string | null;
 }) {
-  const [state, formAction] = useActionState(updateEnrollmentRequirementAction, initialState);
-
-  const statusColor =
-    currentStatus === "VERIFIED"
-      ? "bg-green-100 text-green-800 border-green-200"
-      : currentStatus === "REJECTED"
-      ? "bg-red-100 text-red-800 border-red-200"
-      : "bg-amber-100 text-amber-800 border-amber-200";
+  const isLegacyVerification = currentStatus === "VERIFIED" && nurseSignatureStatus !== "SIGNED";
+  const statusTone = applicability === "NOT_APPLICABLE"
+    ? "neutral" as const
+    : currentStatus === "REJECTED"
+      ? "error" as const
+      : currentStatus === "VERIFIED" && !isLegacyVerification
+        ? "success" as const
+        : "warning" as const;
+  const statusLabel = applicability === "NOT_APPLICABLE"
+    ? "NOT REQUIRED"
+    : isLegacyVerification
+      ? "LEGACY VERIFICATION"
+      : currentStatus;
 
   return (
     <div className="rounded-lg border border-slateui-border bg-slateui-surface p-4 shadow-sm space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="font-semibold text-slateui-text">Health Record Update</h4>
-          <p className="text-xs text-slateui-muted">Status-only paper-form verification. Do not enter medical details.</p>
+          <p className="text-xs text-slateui-muted">Registrar view is read-only. The assigned Nurse controls verification and rejection.</p>
         </div>
-        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}>
-          {applicability === "APPLICABLE" ? currentStatus : "NOT REQUIRED"}
-        </span>
+        <Badge tone={statusTone}>{statusLabel}</Badge>
       </div>
 
       {unavailable ? <p className="border-l-4 border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950">Requirement information could not be loaded. Refresh before reviewing this request.</p> : null}
-      {applicability === "NOT_APPLICABLE" ? <p className="text-sm leading-6 text-slateui-secondary">Nurse verification not required for this enrollment.</p> : null}
+      {applicability === "NOT_APPLICABLE" ? <p className="text-sm leading-6 text-slateui-secondary">Nurse verification is not required for this enrollment.</p> : null}
       {applicability === "APPLICABLE" && !unavailable ? (
         <div className="rounded-md border border-slateui-border bg-white p-3 text-sm text-slateui-secondary">
           <p className="font-semibold text-slateui-text">Nurse Health Clearance</p>
           <p className="mt-1">
-            Status: <span className="font-semibold text-slateui-text">{nurseSignatureStatus === "SIGNED" ? "SIGNED" : nurseSignatureStatus === "NOT_REQUIRED" ? "NOT REQUIRED" : nurseSignatureStatus === "UNAVAILABLE" ? "UNAVAILABLE" : nurseSignatureStatus === "INVALIDATED" ? "INVALIDATED" : "PENDING SIGNATURE"}</span>
+            Evidence: <span className="font-semibold text-slateui-text">
+              {nurseSignatureStatus === "SIGNED" ? "CURRENT SIGNATURE" : nurseSignatureStatus === "NOT_REQUIRED" ? "NOT REQUIRED" : nurseSignatureStatus === "UNAVAILABLE" ? "UNAVAILABLE" : nurseSignatureStatus === "INVALIDATED" ? "INVALIDATED" : "SIGNATURE MISSING"}
+            </span>
           </p>
           {nurseSignerName && nurseSignatureStatus === "SIGNED" ? <p>Signed by: <span className="font-semibold text-slateui-text">{nurseSignerName}</span>{nurseSignedAt ? ` on ${formatDate(nurseSignedAt)}` : ""}.</p> : null}
+          {isLegacyVerification ? <p className="mt-2 font-semibold text-amber-900">The requirement is VERIFIED but has no current Nurse signature. Approval remains blocked until the Nurse records a current signature.</p> : null}
+          {currentNote ? <p className="mt-2"><span className="font-semibold text-slateui-text">Administrative note:</span> {currentNote}</p> : null}
         </div>
-      ) : null}
-      {applicability === "APPLICABLE" && !unavailable ? (
-        <form action={formAction} className="space-y-3 border-t border-slateui-border pt-3">
-          <input type="hidden" name="enrollment_id" value={enrollmentId} />
-          <input type="hidden" name="requirement_code" value="HEALTH_RECORD_UPDATE" />
-          {state.message ? (
-            <p
-              role={state.success ? "status" : "alert"}
-              aria-live={state.success ? "polite" : undefined}
-              className={state.success ? "text-sm font-medium text-green-700" : "text-sm font-medium text-red-700"}
-            >
-              {state.message}
-            </p>
-          ) : null}
-          <TextArea
-            label="Administrative note"
-            name="note"
-            defaultValue={currentNote ?? ""}
-            placeholder="Optional short status-only note. Do not enter medical details."
-            maxLength={240}
-          />
-          <div className="flex flex-wrap gap-2">
-            {currentStatus !== "VERIFIED" ? <StatusButton status="REJECTED" currentStatus={currentStatus} /> : null}
-            {currentStatus !== "VERIFIED" ? <StatusButton status="PENDING" currentStatus={currentStatus} /> : null}
-          </div>
-        </form>
       ) : null}
     </div>
   );

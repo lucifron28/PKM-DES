@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
+import { HealthRecordVerificationForm } from "@/components/health/health-record-verification-form";
 import { ESignatureInput } from "@/components/signatures/e-signature-input";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { applyOfficialClearanceSignatureAction, verifyHealthClearanceAction } from "@/app/admin/enrollments/signature-actions";
+import { applyOfficialClearanceSignatureAction } from "@/app/admin/enrollments/signature-actions";
 import { requireOfficialSignerRole } from "@/lib/auth/session";
+import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
 import { hasActiveOfficialRoleForProgram } from "@/lib/official-roles/repository";
 import { getOfficialWorkspaceBySlug } from "@/lib/official-roles/roles";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
@@ -96,8 +98,20 @@ export default async function OfficialClearanceReviewPage({
     : null;
   const signableEnrollment = enrollment.status === "PENDING" || enrollment.status === "APPROVED";
   const canSign = workspace.role === "NURSE"
-    ? enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && (healthRequirement.status === "PENDING" || healthRequirement.status === "VERIFIED")
+    ? enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && (
+        healthRequirement.status === "PENDING" ||
+        healthRequirement.status === "REJECTED" ||
+        (healthRequirement.status === "VERIFIED" && !latestSignature?.is_current)
+      )
     : signableEnrollment;
+  const canReject = workspace.role === "NURSE" && enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && !latestSignature?.is_current;
+  const healthVerificationState = workspace.role === "NURSE"
+    ? getHealthVerificationViewState({
+        applicability: healthRequirement?.applicability ?? healthApplicability,
+        status: healthRequirement?.status ?? "PENDING",
+        nurseSignatureIsCurrent: Boolean(latestSignature?.is_current)
+      })
+    : null;
   const signerName = formatName(profile.first_name, profile.last_name);
   const studentName = formatName(enrollment.students?.profiles?.first_name, enrollment.students?.profiles?.last_name) || "Student name unavailable";
 
@@ -105,7 +119,7 @@ export default async function OfficialClearanceReviewPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ButtonLink href={`/admin/clearances/${workspace.slug}`} variant="outline">Back to {workspace.label}</ButtonLink>
-        <Badge tone={statusTone(clearanceStatus)}>{statusLabel(clearanceStatus)}</Badge>
+        <Badge tone={healthVerificationState ? healthVerificationStateTone(healthVerificationState) : statusTone(clearanceStatus)}>{healthVerificationState ? healthVerificationStateLabel(healthVerificationState) : statusLabel(clearanceStatus)}</Badge>
       </div>
 
       <Card>
@@ -141,11 +155,29 @@ export default async function OfficialClearanceReviewPage({
         <CardHeader title={`${workspace.label} evidence`} description={workspace.description} />
         {signatureResult.error ? (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" role="alert">Signature evidence could not be loaded safely. Signing controls are unavailable until the page is refreshed.</p>
-        ) : isHealthNotApplicable ? (
+        ) : workspace.role === "NURSE" && isHealthNotApplicable ? (
           <p className="rounded-md border border-slateui-border bg-slateui-surfaceAlt px-3 py-2 text-sm text-slateui-secondary">Health Record Update is not applicable to this student. No Nurse signature is requested.</p>
+        ) : workspace.role === "NURSE" ? (
+          <HealthRecordVerificationForm
+            enrollmentId={enrollment.id}
+            studentName={studentName}
+            studentId={enrollment.students?.student_id_number ?? "Unavailable"}
+            program={enrollment.programs?.name ?? "Unavailable"}
+            yearLevel={enrollment.year_level}
+            studentType={enrollment.students?.student_type ?? "Unavailable"}
+            academicYear={enrollment.academic_year}
+            semester={enrollment.semester}
+            applicability={healthRequirement?.applicability ?? healthApplicability}
+            status={healthRequirement?.status ?? "PENDING"}
+            note={healthRequirement?.note ?? null}
+            signerName={signerName}
+            signedSignature={signedSignature}
+            canVerify={canSign}
+            canReject={canReject}
+          />
         ) : clearanceStatus === "SIGNED" ? (
           <ESignatureInput
-            action={workspace.role === "NURSE" ? verifyHealthClearanceAction : applyOfficialClearanceSignatureAction}
+            action={applyOfficialClearanceSignatureAction}
             enrollmentId={enrollment.id}
             signerRole={workspace.role}
             clearanceType={workspace.clearanceType}
@@ -156,7 +188,7 @@ export default async function OfficialClearanceReviewPage({
           />
         ) : canSign ? (
           <ESignatureInput
-            action={workspace.role === "NURSE" ? verifyHealthClearanceAction : applyOfficialClearanceSignatureAction}
+            action={applyOfficialClearanceSignatureAction}
             enrollmentId={enrollment.id}
             signerRole={workspace.role}
             clearanceType={workspace.clearanceType}
@@ -169,7 +201,7 @@ export default async function OfficialClearanceReviewPage({
         ) : (
           <div className="space-y-3">
             {signedSignature ? <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">The previous signature is invalidated because the signed data changed. This enrollment is not currently signable.</p> : null}
-            {workspace.role === "NURSE" ? <p className="text-sm text-slateui-secondary">A current applicable Health Record Update requirement and a pending enrollment are required before Nurse verification.</p> : <p className="text-sm text-slateui-secondary">This enrollment is not currently in a signable state.</p>}
+            <p className="text-sm text-slateui-secondary">This enrollment is not currently in a signable state.</p>
           </div>
         )}
       </Card>

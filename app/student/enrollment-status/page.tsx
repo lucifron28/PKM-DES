@@ -8,6 +8,7 @@ import { applyStudentEnrollmentSignatureAction } from "@/app/student/enrollment/
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
+import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
@@ -140,6 +141,13 @@ export default async function EnrollmentStatusPage() {
     : null;
   const studentSignature = signatureResult.signatures.filter((item) => item.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE").at(-1) ?? null;
   const nurseSignature = signatureResult.signatures.filter((item) => item.clearance_type === "HEALTH_CLEARANCE").at(-1) ?? null;
+  const healthVerificationState = healthRequirementApplicability && !signatureResult.error
+    ? getHealthVerificationViewState({
+        applicability: healthRequirementApplicability,
+        status: currentTermRequirement?.status ?? "PENDING",
+        nurseSignatureIsCurrent: Boolean(nurseSignature?.is_current)
+      })
+    : null;
 
   const status = getDisplayedEnrollmentStatus(currentTermEnrollment?.status ?? null);
 
@@ -228,9 +236,9 @@ export default async function EnrollmentStatusPage() {
                 Current term: {activeTerm ? activeTerm.label : "No active term"}
               </p>
             </div>
-            {healthRequirementApplicability === "APPLICABLE" ? (
-              <Badge tone={currentTermRequirement?.status === "VERIFIED" ? "success" : currentTermRequirement?.status === "REJECTED" ? "error" : "warning"}>
-                {currentTermRequirement?.status ?? "PENDING"}
+            {healthRequirementApplicability === "APPLICABLE" && healthVerificationState ? (
+              <Badge tone={healthVerificationStateTone(healthVerificationState)}>
+                {healthVerificationStateLabel(healthVerificationState)}
               </Badge>
             ) : healthRequirementApplicability === "NOT_APPLICABLE" ? <Badge tone="info">NOT REQUIRED</Badge> : null}
           </div>
@@ -239,9 +247,11 @@ export default async function EnrollmentStatusPage() {
           ) : healthRequirementApplicability === "APPLICABLE" ? (
             <div className="mt-3 space-y-2 text-sm leading-6 text-slateui-secondary">
               <p>Submit the required paper form directly to PKM Health Services. PKM-DES records only the verification status; do not upload medical details.</p>
-              {(currentTermRequirement?.status ?? "PENDING") === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this paper form is verified for the current term.</p> : null}
-              {currentTermRequirement?.status === "REJECTED" ? <p className="font-semibold text-red-800">Please contact the Registrar or PKM Health Services about the paper-form verification.</p> : null}
-              {currentTermRequirement?.status === "VERIFIED" && nurseSignature?.is_current ? (
+              {signatureResult.error ? <p className="font-semibold text-amber-900">Current Nurse signature evidence is unavailable. Refresh or contact the Registrar before relying on this status.</p> : null}
+              {healthVerificationState === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this paper form is verified with a current Nurse signature for the current term.</p> : null}
+              {healthVerificationState === "REJECTED" ? <p className="font-semibold text-red-800">The paper-form verification was rejected. Please contact PKM Health Services for follow-up.</p> : null}
+              {healthVerificationState === "LEGACY_VERIFICATION" ? <p className="font-semibold text-amber-900">This record has legacy verification without a current Nurse signature. It does not satisfy the approval gate.</p> : null}
+              {healthVerificationState === "VERIFIED" && nurseSignature?.is_current ? (
                 <p className="text-sm text-slateui-secondary">
                   Verified by: <span className="font-semibold text-slateui-text">{nurseSignature.signer_name_snapshot}</span> on {formatDate(nurseSignature.signed_at)}.
                 </p>

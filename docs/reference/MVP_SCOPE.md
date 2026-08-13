@@ -53,14 +53,15 @@ The demonstration does not validate real admission requirements, financial oblig
 - An active admin account with no active official assignment is treated as the Registrar/Admin management workspace for this MVP. Registrar-only routes remain unavailable to assigned officials, including enrollment review, student records, reports, masterlist, and signer-assignment management.
 - Authenticated drawn e-signatures for Student, Librarian, School Nurse, Program Chair, Accountant, and Dean using one reusable canvas input. Signature rows are immutable, private PNG objects are server-uploaded, and document fingerprints detect stale evidence.
 - Separate clearance states (`PENDING`, `SIGNED`, `NOT_APPLICABLE`, `INVALIDATED`) with re-signing through new immutable rows after signed data changes. No generated cursive, typed signature, or generic Registrar signature is used.
-- A dedicated `/admin/health-records` status-only Nurse worklist. The Health Record Update rule remains exact: Incoming 1st Year Student plus official Registrar-managed `gender_sex` explicitly equal to `Female`; no medical data is stored.
+- A dedicated `/admin/clearances/health` Nurse workspace with an image-guided, browser-printable Health Record Update form. The form keeps student and term identity read-only, requires a server-validated Nurse acknowledgment plus a real drawn signature for `VERIFIED`, supports a controlled no-signature rejection path, and records only short administrative notes. The Health Record Update rule remains exact: Incoming 1st Year Student plus official Registrar-managed `gender_sex` explicitly equal to `Female`; no clinical fields or medical data are stored.
+- Registrar and student views expose read-only status. A legacy `VERIFIED` requirement without a current Nurse signature is labeled explicitly and remains blocked by the approval gate; non-applicable records do not block approval. The former `/admin/health-records` path is retained only as a Nurse-authorized redirect to the dedicated workspace.
 - Enrollment masterlist and browser-printable report views.
 
 ### Reporting and Printing
 
 - Browser-printable enrollment reports and masterlist output based on complete, canonically filtered submitted enrollment records. Query failures show an unavailable state instead of a misleading empty report or zero dashboard count.
 - Browser-printable draft registration form populated from an enrollment request and deterministically ordered attached subjects. Student printing is available only for the latest approved request; Registrar/Admin may preview any review status.
-- Browser-printable draft registration form includes current Student, Librarian, School Nurse, Program Chair, Accountant, and Dean signatures and signer metadata when available; stale signatures are labeled invalidated.
+- Browser-printable draft registration form includes current Student, Librarian, School Nurse, Program Chair, Accountant, and Dean signatures and signer metadata when available; stale signatures are labeled invalidated. Registrar views of Health Record Update remain status-only and never expose a Nurse signing control.
 
 ### Authentication and Access Control
 

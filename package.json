@@ -30,7 +30,8 @@
     "test:admin-enrollment-review": "tsx --test lib/enrollment/admin-review.test.ts",
     "test:admin-student-records": "tsx --conditions react-server --test lib/admin-student-records/*.test.ts",
     "test:registration-form": "tsx --test lib/registration-form/presentation.test.ts",
-    "test:signatures": "tsx --test lib/signatures/*.test.ts lib/official-roles/*.test.ts",
+    "test:signatures": "tsx --test lib/signatures/*.test.ts lib/official-roles/*.test.ts lib/health-records/*.test.ts",
+    "test:health-record": "tsx --test components/health/*.test.ts lib/health-records/*.test.ts",
     "test:signature-ui": "tsx --import ./tests/support/stub-loader.mjs --test components/signatures/e-signature-input.test.tsx"
   },
   "dependencies": {

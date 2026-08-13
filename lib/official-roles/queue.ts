@@ -8,9 +8,11 @@ import type {
   NurseHealthRequirementWorkItem,
   Semester
 } from "@/types/database";
+import { getHealthVerificationViewState, type HealthVerificationViewState } from "@/lib/health-records/presentation";
+import type { RequirementStatus } from "@/lib/requirements/types";
 
-export type ClearanceQueueStatus = "PENDING" | "SIGNED" | "INVALIDATED" | "NOT_APPLICABLE";
-export type ClearanceQueueFilter = "pending" | "signed" | "all";
+export type ClearanceQueueStatus = "PENDING" | "SIGNED" | "INVALIDATED" | "NOT_APPLICABLE" | "REJECTED";
+export type ClearanceQueueFilter = "pending" | "verified" | "rejected" | "signed" | "all";
 
 export type OfficialClearanceQueueRow = {
   enrollmentId: string;
@@ -26,6 +28,8 @@ export type OfficialClearanceQueueRow = {
   signerName: string | null;
   signedAt: string | null;
   actionable: boolean;
+  requirementStatus?: RequirementStatus;
+  healthVerificationState?: HealthVerificationViewState;
 };
 
 type GenericEnrollmentRow = {
@@ -57,8 +61,9 @@ function displayName(firstName?: string | null, lastName?: string | null) {
 function filterMatches(row: OfficialClearanceQueueRow, status: ClearanceQueueFilter, search: string) {
   const normalizedSearch = search.trim().toLowerCase();
   const statusMatches = status === "all"
-    || (status === "signed" && row.clearanceStatus === "SIGNED")
-    || (status === "pending" && (row.clearanceStatus === "PENDING" || row.clearanceStatus === "INVALIDATED"));
+    || ((status === "signed" || status === "verified") && (row.clearanceStatus === "SIGNED" || row.healthVerificationState === "VERIFIED"))
+    || (status === "rejected" && (row.clearanceStatus === "REJECTED" || row.healthVerificationState === "REJECTED"))
+    || (status === "pending" && (row.clearanceStatus === "PENDING" || row.clearanceStatus === "INVALIDATED" || row.healthVerificationState === "LEGACY_VERIFICATION"));
   if (!statusMatches) return false;
   if (!normalizedSearch) return true;
   return [row.studentName, row.studentIdNumber, row.programName, row.academicYear, row.semester]
@@ -123,11 +128,18 @@ async function loadNurseQueue(
       })
       .map((item) => {
         const context = contextById.get(item.enrollment_id);
-        const clearanceStatus: ClearanceQueueStatus = item.nurse_signature_is_current
-          ? "SIGNED"
-          : item.nurse_signature_id
-            ? "INVALIDATED"
-            : "PENDING";
+        const healthVerificationState = getHealthVerificationViewState({
+          applicability: item.requirement_applicability,
+          status: item.requirement_status,
+          nurseSignatureIsCurrent: item.nurse_signature_is_current
+        });
+        const clearanceStatus: ClearanceQueueStatus = healthVerificationState === "REJECTED"
+          ? "REJECTED"
+          : item.nurse_signature_is_current
+            ? "SIGNED"
+            : item.nurse_signature_id
+              ? "INVALIDATED"
+              : "PENDING";
         return {
           enrollmentId: item.enrollment_id,
           studentId: item.student_id,
@@ -141,7 +153,9 @@ async function loadNurseQueue(
           clearanceStatus,
           signerName: item.nurse_signature_name,
           signedAt: item.nurse_signature_signed_at,
-          actionable: item.enrollment_status === "PENDING" && (item.requirement_status === "PENDING" || item.requirement_status === "VERIFIED")
+          actionable: item.enrollment_status === "PENDING" && healthVerificationState !== "NOT_APPLICABLE" && healthVerificationState !== "VERIFIED",
+          requirementStatus: item.requirement_status,
+          healthVerificationState
         } satisfies OfficialClearanceQueueRow;
       }),
     error: null

@@ -47,12 +47,48 @@ const rows: OfficialClearanceQueueRow[] = [
     signerName: "Previous Librarian",
     signedAt: "2026-08-13T00:00:00.000Z",
     actionable: true
+  },
+  {
+    enrollmentId: "enrollment-4",
+    studentId: "student-4",
+    studentName: "Dina Reyes",
+    studentIdNumber: "2026-0004",
+    programName: "BSAIS",
+    yearLevel: "1st Year",
+    academicYear: "2025-2026",
+    semester: "2nd Semester",
+    enrollmentStatus: "PENDING",
+    clearanceStatus: "INVALIDATED",
+    signerName: null,
+    signedAt: null,
+    actionable: true,
+    requirementStatus: "VERIFIED",
+    healthVerificationState: "LEGACY_VERIFICATION"
+  },
+  {
+    enrollmentId: "enrollment-5",
+    studentId: "student-5",
+    studentName: "Eli Ramos",
+    studentIdNumber: "2026-0005",
+    programName: "BEED",
+    yearLevel: "1st Year",
+    academicYear: "2025-2026",
+    semester: "2nd Semester",
+    enrollmentStatus: "PENDING",
+    clearanceStatus: "REJECTED",
+    signerName: null,
+    signedAt: null,
+    actionable: true,
+    requirementStatus: "REJECTED",
+    healthVerificationState: "REJECTED"
   }
 ];
 
 test("queue filters keep invalidated records in the pending work view", () => {
-  assert.deepEqual(filterOfficialClearanceQueue(rows, "pending").map((row) => row.enrollmentId), ["enrollment-1", "enrollment-3"]);
+  assert.deepEqual(filterOfficialClearanceQueue(rows, "pending").map((row) => row.enrollmentId), ["enrollment-1", "enrollment-3", "enrollment-4"]);
   assert.deepEqual(filterOfficialClearanceQueue(rows, "signed").map((row) => row.enrollmentId), ["enrollment-2"]);
+  assert.deepEqual(filterOfficialClearanceQueue(rows, "verified").map((row) => row.enrollmentId), ["enrollment-2"]);
+  assert.deepEqual(filterOfficialClearanceQueue(rows, "rejected").map((row) => row.enrollmentId), ["enrollment-5"]);
   assert.deepEqual(filterOfficialClearanceQueue(rows, "all", "2026-0003").map((row) => row.enrollmentId), ["enrollment-3"]);
   assert.deepEqual(filterOfficialClearanceQueue(rows, "all", "bsma").map((row) => row.enrollmentId), ["enrollment-2"]);
 });

@@ -5,12 +5,13 @@ import { ClearanceOverview } from "@/components/signatures/clearance-overview";
 import { ESignatureInput } from "@/components/signatures/e-signature-input";
 import { RegistrationForm, type PrintableEnrollment } from "@/components/print/registration-form";
 import { retryEnrollmentDecisionEmailAction } from "@/app/admin/enrollments/actions";
-import { applyOfficialClearanceSignatureAction, verifyHealthClearanceAction } from "@/app/admin/enrollments/signature-actions";
+import { applyOfficialClearanceSignatureAction } from "@/app/admin/enrollments/signature-actions";
 import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { CLEARANCE_DEFINITIONS, getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
 import { canSignClearance, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
+import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatName } from "@/lib/utils/format";
 import type { EnrollmentDecisionNotification } from "@/types/database";
@@ -156,6 +157,25 @@ export default async function AdminRegistrationFormPage({
                   inputType: "DRAWN" as const
                 }
               : null;
+            if (definition.signerRole === "NURSE") {
+              const healthState = getHealthVerificationViewState({
+                applicability: healthApplicability,
+                status: healthRequirement?.status ?? "PENDING",
+                nurseSignatureIsCurrent: Boolean(signedSignature?.isCurrent)
+              });
+              return (
+                <section key={definition.clearanceType} className="rounded-lg border border-slateui-border bg-slateui-surfaceAlt p-4" aria-label="Registrar Health Record Update status">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-slateui-text">Health Record Update</h3>
+                      <p className="mt-1 text-sm leading-6 text-slateui-secondary">Registrar view only. The assigned Nurse controls verification, rejection, and e-signature.</p>
+                    </div>
+                    <Badge tone={healthVerificationStateTone(healthState)}>{healthVerificationStateLabel(healthState)}</Badge>
+                  </div>
+                  {healthRequirement?.note ? <p className="mt-3 text-sm text-slateui-secondary"><span className="font-semibold text-slateui-text">Administrative note:</span> {healthRequirement.note}</p> : null}
+                </section>
+              );
+            }
             const isAuthorized = canSignClearance(assignmentsResult.assignments, definition.clearanceType, enrollment.program_id);
             const hasCurrentSignature = signedSignature?.isCurrent === true;
 
@@ -179,7 +199,7 @@ export default async function AdminRegistrationFormPage({
             return (
               <ESignatureInput
                 key={definition.clearanceType}
-                action={definition.signerRole === "NURSE" ? verifyHealthClearanceAction : applyOfficialClearanceSignatureAction}
+                action={applyOfficialClearanceSignatureAction}
                 enrollmentId={enrollment.id}
                 signerRole={definition.signerRole}
                 clearanceType={definition.clearanceType}
