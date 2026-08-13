@@ -12,6 +12,16 @@ Supabase -> DB : Select
 DB --> Supabase : Results
 Supabase --> Browser : Displays Table
 
+opt Applicable Health Record Update and assigned Nurse
+  Admin -> Browser : Opens Health Record Verification
+  Browser -> Action : verifyHealthRequirementWithSignature(enrollment_id, drawn_png)
+  Action -> Supabase : RPC verify_health_requirement_with_signature(...)
+  Supabase -> DB : Locks enrollment and requirement
+  DB -> DB : Verifies exact applicability and inserts immutable Nurse signature
+  DB -> DB : Marks requirement VERIFIED and Health Clearance SIGNED atomically
+  DB -> DB : Inserts Nurse audit row
+end
+
 Admin -> Browser : Clicks "Approve" (or "Reject")
 Browser -> Action : reviewEnrollmentAction(id, decision, remarks)
 Action -> Supabase : RPC review_enrollment(id, decision, reviewer_id, remarks)
@@ -22,9 +32,9 @@ alt if status is not PENDING
     DB --> Supabase : Error (Already reviewed)
 else
     opt Applicable current-term Health Record Update
-      DB -> DB : Reads status-only requirement for this enrollment term
-      alt requirement is not VERIFIED
-        DB --> Supabase : Error (Unverified requirements)
+      DB -> DB : Reads status-only requirement and current Nurse fingerprint
+      alt requirement/signature is not current
+        DB --> Supabase : Error (Unverified or unsigned Health Clearance)
       end
     end
     DB -> DB : Updates enrollment status to APPROVED/REJECTED

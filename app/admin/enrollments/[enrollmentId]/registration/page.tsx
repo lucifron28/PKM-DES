@@ -1,9 +1,18 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ClearanceOverview } from "@/components/signatures/clearance-overview";
+import { ESignatureInput } from "@/components/signatures/e-signature-input";
 import { RegistrationForm, type PrintableEnrollment } from "@/components/print/registration-form";
 import { retryEnrollmentDecisionEmailAction } from "@/app/admin/enrollments/actions";
-import { requireRole } from "@/lib/auth/session";
+import { applyOfficialClearanceSignatureAction, verifyHealthClearanceAction } from "@/app/admin/enrollments/signature-actions";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
+import { CLEARANCE_DEFINITIONS, getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
+import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
+import { canSignClearance, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
+import { getRequirementApplicability } from "@/lib/requirements/rules";
+import type { StudentRequirementRecord } from "@/lib/requirements/types";
+import { formatName } from "@/lib/utils/format";
 import type { EnrollmentDecisionNotification } from "@/types/database";
 
 export default async function AdminRegistrationFormPage({
@@ -13,7 +22,7 @@ export default async function AdminRegistrationFormPage({
   params: Promise<{ enrollmentId: string }>;
   searchParams?: Promise<{ email?: string }>;
 }) {
-  const { supabase } = await requireRole("admin");
+  const { supabase, profile } = await requireRegistrarAdmin();
   const { enrollmentId } = await params;
 
   const { data, error } = await supabase
@@ -39,6 +48,39 @@ export default async function AdminRegistrationFormPage({
   if (!enrollment) {
     return <EmptyState title="Enrollment record not found." description="The selected registration form is not available." />;
   }
+
+  const healthApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+    student_type: enrollment.students?.student_type ?? "",
+    official_gender_sex: enrollment.students?.official_student_records?.gender_sex ?? null
+  });
+  const [requirementResult, assignmentsResult] = await Promise.all([
+    supabase
+      .from("student_requirements")
+      .select("id, student_id, requirement_code, status, academic_year, semester, applicability, note, verified_at, verified_by, created_at, updated_at")
+      .eq("student_id", enrollment.student_id)
+      .eq("requirement_code", "HEALTH_RECORD_UPDATE")
+      .eq("academic_year", enrollment.academic_year)
+      .eq("semester", enrollment.semester)
+      .maybeSingle(),
+    loadActiveOfficialRoleAssignments(supabase, profile.id)
+  ]);
+  const healthRequirement = (requirementResult.data as StudentRequirementRecord | null) ?? null;
+  if (requirementResult.error) console.error("registration_form:health_requirement_load");
+  const signatureResult = await loadEnrollmentSignaturePresentation(supabase, enrollment, {
+    applicability: healthApplicability,
+    status: healthRequirement?.status ?? "PENDING"
+  });
+  if (signatureResult.error) console.error("registration_form:signature_load");
+  if (assignmentsResult.error) console.error("registration_form:official_assignment_load");
+
+  const presentationEnrollment: PrintableEnrollment = {
+    ...enrollment,
+    enrollment_signatures: signatureResult.signatures,
+    health_requirement_applicability: healthApplicability
+  };
+  const signatureEvidence = signatureEvidenceByClearance(signatureResult.signatures);
+  const clearanceOverview = getEnrollmentClearanceOverview(healthApplicability, signatureEvidence);
+  const officialClearanceDefinitions = CLEARANCE_DEFINITIONS.filter((definition) => definition.signerRole !== "STUDENT");
 
   const { data: notificationData, error: notificationError } = await supabase
     .from("enrollment_decision_notifications")
@@ -92,7 +134,66 @@ export default async function AdminRegistrationFormPage({
         </section>
       ) : null}
 
-      <RegistrationForm enrollment={enrollment} />
+      <div className="print-hidden space-y-4">
+        {signatureResult.error ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="alert">
+            Signature evidence could not be loaded safely. Signing controls are unavailable until the page is refreshed.
+          </p>
+        ) : (
+          <ClearanceOverview items={clearanceOverview} />
+        )}
+        {!signatureResult.error ? <div className="grid gap-4 lg:grid-cols-2">
+          {officialClearanceDefinitions.map((definition) => {
+            const signature = signatureResult.signatures.filter((item) => item.clearance_type === definition.clearanceType).at(-1) ?? null;
+            const isHealthNotApplicable = definition.clearanceType === "HEALTH_CLEARANCE" && healthApplicability !== "APPLICABLE";
+            if (isHealthNotApplicable) return null;
+            const signedSignature = signature
+              ? {
+                  signerName: signature.signer_name_snapshot,
+                  signedAt: signature.signed_at,
+                  signedUrl: signature.signed_url,
+                  isCurrent: signature.is_current,
+                  inputType: "DRAWN" as const
+                }
+              : null;
+            const isAuthorized = canSignClearance(assignmentsResult.assignments, definition.clearanceType, enrollment.program_id);
+            const hasCurrentSignature = signedSignature?.isCurrent === true;
+
+            if (!hasCurrentSignature && !isAuthorized) {
+              return (
+                <section key={definition.clearanceType} className="rounded-lg border border-slateui-border bg-slateui-surfaceAlt p-4" aria-label={`${definition.signerLabel} authorization status`}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-slateui-text">{definition.label}</h3>
+                      <p className="mt-1 text-sm leading-6 text-slateui-secondary">You are not authorized to sign this clearance. An active {definition.signerLabel} assignment is required.</p>
+                    </div>
+                    <Badge tone="neutral">Not authorized</Badge>
+                  </div>
+                  {signedSignature ? (
+                    <p className="mt-3 text-xs leading-5 text-slateui-muted">A previous signature is retained in the audit history but is not current. An assigned {definition.signerLabel} must re-sign.</p>
+                  ) : null}
+                </section>
+              );
+            }
+
+            return (
+              <ESignatureInput
+                key={definition.clearanceType}
+                action={definition.signerRole === "NURSE" ? verifyHealthClearanceAction : applyOfficialClearanceSignatureAction}
+                enrollmentId={enrollment.id}
+                signerRole={definition.signerRole}
+                clearanceType={definition.clearanceType}
+                signerLabel={definition.signerLabel}
+                signerName={formatName(profile.first_name, profile.last_name)}
+                title={`${definition.label} — ${definition.signerLabel} E-Signature`}
+                description={`Only an account with an active ${definition.signerLabel} assignment may sign this separate clearance.`}
+                signedSignature={signedSignature}
+              />
+            );
+          })}
+        </div> : null}
+      </div>
+      <RegistrationForm enrollment={presentationEnrollment} />
     </div>
   );
 }

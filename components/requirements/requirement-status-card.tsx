@@ -6,6 +6,7 @@ import { updateEnrollmentRequirementAction, type RequirementUpdateState } from "
 import { Button } from "@/components/ui/button";
 import { TextArea } from "@/components/ui/field";
 import type { RequirementApplicability, RequirementStatus } from "@/lib/requirements/types";
+import { formatDate } from "@/lib/utils/format";
 
 const initialState: RequirementUpdateState = {};
 
@@ -30,13 +31,19 @@ export function RequirementStatusCard({
   currentStatus = "PENDING",
   applicability = "APPLICABLE",
   currentNote = null,
-  unavailable = false
+  unavailable = false,
+  nurseSignatureStatus = "MISSING",
+  nurseSignerName = null,
+  nurseSignedAt = null
 }: {
   enrollmentId: string;
   currentStatus?: RequirementStatus;
   applicability?: RequirementApplicability;
   currentNote?: string | null;
   unavailable?: boolean;
+  nurseSignatureStatus?: "SIGNED" | "MISSING" | "INVALIDATED" | "NOT_REQUIRED" | "UNAVAILABLE";
+  nurseSignerName?: string | null;
+  nurseSignedAt?: string | null;
 }) {
   const [state, formAction] = useActionState(updateEnrollmentRequirementAction, initialState);
 
@@ -60,7 +67,16 @@ export function RequirementStatusCard({
       </div>
 
       {unavailable ? <p className="border-l-4 border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950">Requirement information could not be loaded. Refresh before reviewing this request.</p> : null}
-      {applicability === "NOT_APPLICABLE" ? <p className="text-sm leading-6 text-slateui-secondary">No Health Record Update verification is required for this student and term.</p> : null}
+      {applicability === "NOT_APPLICABLE" ? <p className="text-sm leading-6 text-slateui-secondary">Nurse verification not required for this enrollment.</p> : null}
+      {applicability === "APPLICABLE" && !unavailable ? (
+        <div className="rounded-md border border-slateui-border bg-white p-3 text-sm text-slateui-secondary">
+          <p className="font-semibold text-slateui-text">Nurse Health Clearance</p>
+          <p className="mt-1">
+            Status: <span className="font-semibold text-slateui-text">{nurseSignatureStatus === "SIGNED" ? "SIGNED" : nurseSignatureStatus === "NOT_REQUIRED" ? "NOT REQUIRED" : nurseSignatureStatus === "UNAVAILABLE" ? "UNAVAILABLE" : nurseSignatureStatus === "INVALIDATED" ? "INVALIDATED" : "PENDING SIGNATURE"}</span>
+          </p>
+          {nurseSignerName && nurseSignatureStatus === "SIGNED" ? <p>Signed by: <span className="font-semibold text-slateui-text">{nurseSignerName}</span>{nurseSignedAt ? ` on ${formatDate(nurseSignedAt)}` : ""}.</p> : null}
+        </div>
+      ) : null}
       {applicability === "APPLICABLE" && !unavailable ? (
         <form action={formAction} className="space-y-3 border-t border-slateui-border pt-3">
           <input type="hidden" name="enrollment_id" value={enrollmentId} />
@@ -82,9 +98,8 @@ export function RequirementStatusCard({
             maxLength={240}
           />
           <div className="flex flex-wrap gap-2">
-            <StatusButton status="VERIFIED" currentStatus={currentStatus} />
-            <StatusButton status="REJECTED" currentStatus={currentStatus} />
-            <StatusButton status="PENDING" currentStatus={currentStatus} />
+            {currentStatus !== "VERIFIED" ? <StatusButton status="REJECTED" currentStatus={currentStatus} /> : null}
+            {currentStatus !== "VERIFIED" ? <StatusButton status="PENDING" currentStatus={currentStatus} /> : null}
           </div>
         </form>
       ) : null}

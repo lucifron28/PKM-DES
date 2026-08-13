@@ -1,8 +1,10 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Profile, Student, UserRole } from "@/types/database";
+import type { OfficialSignerRole, Profile, Student, UserRole } from "@/types/database";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasRegistrarManagementAccess } from "@/lib/official-roles/management";
+import { hasActiveOfficialRole, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
 
 export const getCurrentProfile = cache(async function getCurrentProfile() {
   const supabase = await createSupabaseServerClient().catch(() => null);
@@ -53,6 +55,28 @@ export async function requireRole(role: UserRole) {
     user: context.user,
     profile: context.profile
   };
+}
+
+export async function requireRegistrarAdmin() {
+  const context = await requireRole("admin");
+  const { assignments, error } = await loadActiveOfficialRoleAssignments(context.supabase, context.profile.id);
+
+  if (error || !hasRegistrarManagementAccess(assignments)) {
+    redirect("/admin/dashboard?error=registrar_only");
+  }
+
+  return { ...context, assignments };
+}
+
+export async function requireOfficialSignerRole(role: OfficialSignerRole) {
+  const context = await requireRole("admin");
+  const { assignments, error } = await loadActiveOfficialRoleAssignments(context.supabase, context.profile.id);
+
+  if (error || !hasActiveOfficialRole(assignments, role)) {
+    redirect("/admin/dashboard?error=official_role_required");
+  }
+
+  return { ...context, assignments };
 }
 
 export type StudentQueryResult =

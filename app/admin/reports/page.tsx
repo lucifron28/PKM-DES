@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EnrollmentFilterGrid } from "@/components/forms/enrollment-filter-grid";
 import { PrintButton } from "@/components/print/print-button";
 import { StatCard } from "@/components/ui/stat-card";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import {
   countEnrollmentStatuses,
   fetchEnrollmentFilterData,
@@ -22,7 +22,7 @@ export default async function EnrollmentReportsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const params = await searchParams;
   const result = await fetchEnrollmentFilterData(supabase, params);
 

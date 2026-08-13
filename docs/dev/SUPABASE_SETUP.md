@@ -459,6 +459,37 @@ For setup-link accounts, the setup action first confirms that the authenticated 
 
 Health Record Update applicability is recalculated from the current Registrar-managed official record whenever the student or Registrar view is rendered. The stored status is used only when that current record makes the requirement applicable.
 
+### Authenticated E-Signatures and Clearance Routing
+
+Migrations `supabase/migrations/20260813000000_official_clearance_signatures.sql` and `supabase/migrations/20260814000000_official_signer_management.sql` add the branch e-signature workflow and its controlled assignment-management RPC. They are intentionally hand-authored because the Supabase CLI is not required by the application repository; apply them only through the normal migration pipeline or an isolated fictional-data Supabase environment. This branch does not apply them to a hosted project automatically.
+
+The existing `profiles.role` values remain `student` and `admin`. Signing authority is an explicit, active `public.official_role_assignments` row for one of these roles:
+
+- `LIBRARIAN` -> `LIBRARY_CLEARANCE`
+- `NURSE` -> `HEALTH_CLEARANCE`
+- `PROGRAM_CHAIR` -> `PROGRAM_CLEARANCE`
+- `ACCOUNTANT` -> `ACCOUNTING_CLEARANCE`
+- `DEAN` -> `DEAN_CLEARANCE`
+- `STUDENT` -> `STUDENT_ENROLLMENT_SIGNATURE`
+
+An official assignment may be global (`program_id is null`) or scoped to one program. Program-scoped assignments are enforced by the signing RPCs; an active `admin` account does not implicitly sign every role. There is no generic Registrar signature clearance. Official assignments are authorization capabilities attached to authenticated `admin` accounts, not separate login account types. Existing admin accounts use the `/admin/official-signers` page to manage global assignments for other active admin accounts through `set_official_role_assignment(...)`; the actor cannot assign or revoke their own role, direct table mutation is denied, and every assignment change writes `ASSIGN_OFFICIAL_SIGNING_ROLE` or `REVOKE_OFFICIAL_SIGNING_ROLE`. Provisioning the first signer or a program-scoped assignment remains a reviewed deployment/configuration task using `supabase/official_role_assignments.example.sql`.
+
+The database creates one `public.enrollment_clearances` row per enrollment and clearance with `PENDING`, `SIGNED`, `NOT_APPLICABLE`, or `INVALIDATED` state. `public.enrollment_signatures` stores immutable signer identity snapshots, a SHA-256 signature-image hash, a SHA-256 document fingerprint, the private Storage path, and the signed timestamp. Source enrollment, subject, official-record, or Health Record status changes invalidate signed clearance state. Re-signing inserts a new immutable row; historical rows are never overwritten or deleted.
+
+The `enrollment-signatures` Storage bucket is private, restricted to PNG files, and capped at 256 KiB. Browser clients do not receive Storage write privileges. Server actions validate a real drawn PNG, upload it with the service-role Storage client, then call the authenticated-user RPC so the database still derives the signer, role assignment, profile name snapshot, timestamp, applicability, and document fingerprint. If the RPC fails, the server removes the orphaned object. Current images are rendered through short-lived signed URLs only.
+
+The reusable `components/signatures/e-signature-input.tsx` canvas is the only signature input. It supports mouse, touch, stylus, and keyboard drawing plus an explicit confirmation checkbox. Typed signatures, generated cursive marks, checkbox-only approvals, and client-supplied signer names are not accepted.
+
+Signing RPCs:
+
+- `record_student_enrollment_signature(...)` records the authenticated student's current enrollment signature.
+- `record_official_clearance_signature(...)` records Librarian, Program Chair, Accountant, or Dean clearances after role/program authorization.
+- `verify_health_requirement_with_signature(...)` performs Nurse authorization, exact applicability evaluation, status-only requirement verification, Nurse signature insertion, clearance update, and audit insertion in one transaction.
+- `set_official_role_assignment(...)` is the only authenticated assignment mutation path; it accepts only an existing admin target, blocks self-assignment, and records assignment audit events.
+- `list_nurse_health_requirements()` and `get_nurse_health_requirement(...)` expose only the Nurse status worklist and signature metadata; no medical fields are returned.
+
+The approval RPC requires a current Nurse Health Clearance for applicable Incoming 1st Year Student records whose official `gender_sex` is explicitly `Female`. The current Nurse workspace is `/admin/health-records`; Registrar/Admin review remains at `/admin/enrollments` and shows missing, invalidated, or unavailable Nurse evidence as an approval block. Removing an official assignment blocks future signatures but does not invalidate or erase historical signatures because each signature snapshots the signer name, profile, role, and timestamp. Exact clearance order, whether every non-health official is mandatory, payment/zero-balance rules, and multi-role operational policy remain client decisions.
+
 ### Disposable Local Database Verification
 
 After Docker and the Supabase CLI are available, reset a local-only stack and run the focused verification script. It uses fictional records in one transaction and rolls them back.
@@ -519,6 +550,12 @@ Designated Registrar account details are distributed privately. The role is `Reg
 The MVP database role value is `admin` for the Registrar / authorized enrollment staff account.
 
 Then log in at `/login` with the admin email and password.
+
+Staff/admin account and signing-assignment management:
+
+- This MVP has no public staff registration or shared Librarian/Nurse/Dean/Accountant credentials. Provision each staff member's own Supabase Auth user and `profiles.role = 'admin'` through the approved private admin/deployment process.
+- After a second active admin exists, an authorized admin can open `/admin/official-signers` and assign or revoke global signing capabilities for another active admin account. The page never creates Auth users and cannot change the actor's own assignments.
+- The first official signer or a program-scoped assignment must be provisioned through the reviewed SQL example or an approved operational process. Production PKM policy should replace the research-MVP all-admin management rule with a formally designated privilege hierarchy.
 
 ## Enrollment Flow in Supabase
 

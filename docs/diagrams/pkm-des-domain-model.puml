@@ -120,13 +120,44 @@ entity "student_requirements" as student_requirements {
   verified_by : uuid [FK -> profiles.id]
 }
 
+entity "official_role_assignments" as official_role_assignments {
+  * id : uuid [PK]
+  * profile_id : uuid [FK -> profiles.id]
+  * official_role : LIBRARIAN|NURSE|PROGRAM_CHAIR|ACCOUNTANT|DEAN
+  program_id : uuid [FK -> programs.id, nullable]
+  * active : boolean
+  --
+  Explicit signing authority; null program_id means global scope.
+}
+
+entity "enrollment_clearances" as enrollment_clearances {
+  * id : uuid [PK]
+  * enrollment_id : uuid [FK -> enrollments.id]
+  * clearance_type : STUDENT|LIBRARY|HEALTH|PROGRAM|ACCOUNTING|DEAN
+  * status : PENDING|SIGNED|NOT_APPLICABLE|INVALIDATED
+}
+
+entity "enrollment_signatures" as enrollment_signatures {
+  * id : uuid [PK]
+  * enrollment_id : uuid [FK -> enrollments.id]
+  * student_id : uuid [FK -> students.id]
+  * signer_profile_id : uuid [FK -> profiles.id]
+  * signer_role : STUDENT|LIBRARIAN|NURSE|PROGRAM_CHAIR|ACCOUNTANT|DEAN
+  * clearance_type : SignatureClearanceType
+  * signature_storage_path : text [private PNG]
+  * signature_hash : SHA-256
+  * document_hash : SHA-256 fingerprint
+  * signed_at : timestamptz
+  --
+  Immutable historical evidence; re-signing inserts a new row.
+}
+
 entity "audit_logs" as audit_logs {
   * id : uuid [PK]
+  * actor_profile_id : uuid [FK -> profiles.id]
   * action : text
-  * entity_type : text
-  * entity_id : uuid
-  * actor_id : uuid
-  * details : jsonb
+  * target_table : text
+  * target_id : uuid
   * created_at : timestamptz
 }
 
@@ -138,7 +169,13 @@ programs "1" -- "0..*" standard_load_sets : configures
 students "1" -- "0..*" enrollments : creates
 students "1" -- "0..*" student_requirements : has
 profiles "1" -- "0..*" student_requirements : verifies
+profiles "1" -- "0..*" official_role_assignments : receives
+programs "1" -- "0..*" official_role_assignments : scopes
 enrollments "1" -- "0..*" enrollment_subjects : includes
+enrollments "1" -- "0..*" enrollment_clearances : requires
+enrollments "1" -- "0..*" enrollment_signatures : has immutable evidence
+profiles "1" -- "0..*" enrollment_signatures : signs as
+students "1" -- "0..*" enrollment_signatures : owns
 subjects "1" -- "0..*" enrollment_subjects : included in
 course_offerings "1" -- "0..*" enrollment_subjects : attached as snapshot
 programs "1" -- "0..*" official_student_records : defines

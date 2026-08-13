@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { getSafeNextDestination } from "@/lib/auth/safe-next-destination";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminLandingDestination } from "@/lib/official-roles/roles";
+import { loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
 import type { Profile } from "@/types/database";
 
 export type LoginState = {
@@ -50,6 +52,10 @@ export async function loginAction(_previousState: LoginState, formData: FormData
   }
 
   const rawNext = String(formData.get("next") ?? "");
-  const destination = getSafeNextDestination(rawNext, typedProfile.role);
+  let destination = getSafeNextDestination(rawNext, typedProfile.role);
+  if (typedProfile.role === "admin" && !rawNext.trim()) {
+    const { assignments, error: assignmentError } = await loadActiveOfficialRoleAssignments(supabase, typedProfile.id);
+    destination = assignmentError ? "/admin/dashboard" : getAdminLandingDestination(assignments);
+  }
   redirect(destination);
 }

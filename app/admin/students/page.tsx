@@ -8,7 +8,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { SimpleTable } from "@/components/tables/simple-table";
 import { addOfficialStudentRecordAction } from "./actions";
 import { OfficialStudentRecordForm } from "./official-record-form";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import {
   ACCOUNT_MATCH_LABELS,
   buildOfficialRecordSearchFilter,
@@ -108,7 +108,7 @@ export default async function StudentRecordsPage({
 }: {
   searchParams?: Promise<StudentRecordParams>;
 }) {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const params = (await searchParams) ?? {};
   const { data: programsData, error: programsError } = await supabase.from("programs").select("*").order("name");
 

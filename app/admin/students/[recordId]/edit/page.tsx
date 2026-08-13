@@ -5,7 +5,7 @@ import { ResetStudentPasswordForm } from "@/components/admin/reset-student-passw
 import { OfficialStudentRecordForm } from "../../official-record-form";
 import { resetStudentPasswordAction, updateOfficialStudentRecordAction } from "../../actions";
 import { isExactActiveStudentAccount } from "@/lib/admin-student-records/password-reset";
-import { requireRole } from "@/lib/auth/session";
+import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { OFFICIAL_RECORD_ERROR_MESSAGES } from "@/lib/constants/pkm";
 import type { OfficialStudentRecord, Program } from "@/types/database";
 
@@ -20,7 +20,7 @@ export default async function EditOfficialStudentRecordPage({
   params: Promise<EditPageParams>;
   searchParams?: Promise<{ updated?: string; error?: string; email_mismatch?: string }>;
 }) {
-  const { supabase } = await requireRole("admin");
+  const { supabase } = await requireRegistrarAdmin();
   const { recordId } = await params;
   const query = (await searchParams) ?? {};
   const [{ data: programsData, error: programsError }, { data: recordData, error: recordError }] = await Promise.all([

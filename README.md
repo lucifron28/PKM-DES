@@ -6,7 +6,7 @@ PKM-DES is the first MVP of a web-based enrollment and student information syste
 
 Some data in the FRD is marked as for revision, pending requirements, or work in progress. For this MVP, missing institutional data is represented through placeholders and documented future inputs instead of invented system rules.
 
-Manual enrollment background from the FRD: students receive four registration-form copies, collect professor, Dean, Library, Clinic/Nurse, and Accounting Office signatures, submit final copies to Accounting, receive one copy back, and receive a blank class card for the next semester. Digital clearance and signature routing are documented as future enhancements, not implemented in this MVP.
+Manual enrollment background from the FRD: students receive four registration-form copies, collect professor, Dean, Library, Clinic/Nurse, and Accounting Office signatures, submit final copies to Accounting, receive one copy back, and receive a blank class card for the next semester. This branch adds an authenticated drawn-signature workflow for the named official clearances while keeping the output a draft and the institutional process authoritative.
 
 ## Research MVP Status
 
@@ -25,7 +25,7 @@ Client source artifacts and their tracked implementation references are listed i
 - Supabase PostgreSQL
 - Supabase Row Level Security
 - SQLite local development database setup
-- Supabase Storage: not used in this MVP
+- Supabase Storage private bucket for immutable drawn e-signature PNGs
 - Browser printing for MVP draft registration forms using the supplied sample workbook as a layout reference; official PDF/COR generation remains pending until PKM confirms the final approved template
 
 ## 3. Source Documents Used
@@ -38,9 +38,9 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 
 - Public pages: Home, Login, Create Student Account, About Us
 - Student pages: Dashboard, Online Enrollment, Subject List, Enrollment Status Result, Grades placeholder, Class Schedule placeholder, Balances placeholder, Account, Logout
-- Admin pages: Dashboard, Pending Enrollments, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
+- Admin pages: Dashboard, Pending Enrollments, Health Record Verification, Official Signing Roles, Enrollment Masterlist, Student Records official-record management, Encode Grades/Schedule placeholder, Logout
 - Admin reporting: Enrollment Reports with filters, status summaries, and browser-print output
-- Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, client-provided term offerings, and explicit term-scoped standard-load configuration
+- Database: Supabase schema, RLS policies, audit log table, a multi-program catalog, client-provided term offerings, explicit term-scoped standard-load configuration, official role assignments, clearance state, and immutable signature evidence
 
 ## 5. Features Implemented
 
@@ -48,6 +48,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - PKM and Municipality of Mauban logo images applied to the public header, home page, app shell, and printable registration form
 - Supabase-backed login with active-account checks
 - Role-based protection for student and admin areas
+- Official signing assignments are capabilities attached to existing authenticated `admin` accounts; they are not separate Librarian, Nurse, Dean, Accountant, or Program Chair login roles
 - Production environment check for Supabase/Vercel configuration
 - Student account creation through Supabase Auth when `SUPABASE_SERVICE_ROLE_KEY` is configured
 - Create-account dropdown values exactly as requested: Incoming 1st Year Student, Transferee, Old Student
@@ -79,11 +80,20 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Successful approval/rejection decisions create one durable notification outbox row; the server-only email adapter reserves it, prevents concurrent sends, records safe delivery outcomes, and supports Registrar retry for failed delivery
 - Optional server-only enrollment approval/rejection email notifications use the configured adapter; delivery is disabled by default and a delivery failure does not undo the saved decision
 - Rejection keeps optional free-text remarks; the MVP has only a narrow, status-only current-term Health Record Update verification for applicable students, not a full document workflow
+- Authenticated drawn e-signatures use one reusable canvas input for Student, Librarian, School Nurse, Program Chair, Accountant, and Dean clearances; there is no generic Registrar signature row
+- Active official assignments map one signer to one clearance, support program-scoped Program Chair/Nurse assignments, and do not let a generic admin account sign implicitly
+- Assigned officials now receive focused role-specific staff navigation and clearance queues at `/admin/clearances/<role>` with a dedicated enrollment review route; Registrar management remains the fallback only for an active admin account with no active official assignment
+- The `/admin/official-signers` management page uses a controlled authenticated RPC to assign or revoke roles for other active admin accounts; self-assignment and direct browser table mutation are blocked, and assignment changes are audited
+- Applicable Health Record Update verification is completed atomically with the Nurse signature and remains status-only; no medical details or uploads are stored
+- Private `enrollment-signatures` Storage objects are uploaded server-side, referenced by immutable database rows, fingerprinted against the signed enrollment/health context, and exposed only through authorized RLS or short-lived signed URLs
+- Enrollment clearance states are `PENDING`, `SIGNED`, `NOT_APPLICABLE`, or `INVALIDATED`; source changes invalidate old evidence and re-signing creates a new immutable row
+- Registrar approval fails closed when an applicable Health Clearance does not have a current Nurse signature; unresolved institutional ordering and financial/academic policy questions remain documented
 - Enrollment masterlist across pending, approved, and rejected submitted requests, with program, academic year, year level, semester, review-status, and student identity search filters
 - Admin Account page with internal account details and password change
 - Registrar/Admin can reset the password of an exact active student account from its official-record edit page; the temporary password is shared privately and never stored or displayed again
 - MVP draft printable registration form aligned with the supplied registration form sample layout and readable A4 browser printing
 - Printable registration form displays deterministic attached-subject rows, total units, classification markers, review status, fee/payment placeholders, signature labels, and data privacy authorization text
+- Printable registration form displays actual current signature images and signer metadata for Student, Librarian, School Nurse, Program Chair, Accountant, and Dean when available
 - Students can print only their latest approved request; Registrar/Admin can preview individual enrollment forms for every review status
 - Admin-managed official student/admitted-applicant records page for manual Registrar entry, search, filtering, and editing
 - Official student records list displays page-scoped account-match status for Registrar review; its source enrollment status never creates or changes an online enrollment request
@@ -101,7 +111,7 @@ Client-supplied artifacts, including `About Us.pdf`, `Subjects.pdf`, `FRD1.pdf`,
 - Full student records module beyond Registrar-managed official account-matching records
 - Encode Grades/Schedule
 - Email-generated initial password workflow
-- Digital clearance/signature routing
+- Official COR PDF generation and institutional approval of the draft e-signature/clearance workflow
 
 The Create Student Account page includes an MVP password setup block so local Supabase Auth testing can work. The official generated-password email workflow remains a placeholder until approved templates and rules are supplied. Enrollment decision notifications are a separate optional path, disabled by default, and do not include rejection remarks.
 
@@ -119,6 +129,8 @@ Missing Information / Future Inputs Needed:
 - Email service/template approval for generated passwords or account messages
 - Final confirmation of official Accounting Information System program title
 - Official process for irregular/transferee adjusted subject loading
+- Official clearance order and whether Student, Dean, Accountant, Library, Program Chair, and Nurse signers are mandatory for every enrollment
+- Program-scope rules for official assignments, multiple concurrent assignments, and re-signing after an enrollment change
 
 ## 8. Supabase Setup Instructions
 
@@ -339,7 +351,7 @@ Security:
 - Official printable enrollment/masterlist report format
 - Registrar-managed official student/admitted-applicant import
 - Expanded account matching rules if PKM supplies stricter official requirements
-- Digital clearance/signature routing
+- Production institutional approval and deployment of the authenticated e-signature/clearance workflow
 - Grade encoding and release workflow
 - Class schedule assignment workflow
 - Balance/payment records workflow
