@@ -542,7 +542,7 @@ as $$
     where e.id = p_enrollment_id
   )
   select encode(
-    digest(
+    extensions.digest(
       format(
         'ENROLLMENT\n' ||
         'enrollment_id=%s\n' ||
@@ -588,7 +588,7 @@ security definer
 set search_path = public, pg_temp
 as $$
   select encode(
-    digest(
+    extensions.digest(
       format(
         'HEALTH_RECORD\n' ||
         'enrollment_id=%s\n' ||
@@ -717,8 +717,8 @@ begin
     return;
   end if;
 
-  select e, s, p
-  into v_enrollment, v_student, v_profile
+  select e.*
+  into v_enrollment
   from public.enrollments e
   join public.students s on s.id = e.student_id
   join public.profiles p on p.id = s.profile_id
@@ -732,6 +732,13 @@ begin
     return query select 'unauthorized'::text, null::uuid, null::timestamptz;
     return;
   end if;
+
+  select s.* into v_student
+  from public.students s
+  where s.id = v_enrollment.student_id;
+  select p.* into v_profile
+  from public.profiles p
+  where p.id = v_student.profile_id;
 
   if v_enrollment.status not in ('PENDING', 'APPROVED') then
     return query select 'not_signable'::text, null::uuid, null::timestamptz;
@@ -861,8 +868,8 @@ begin
     return;
   end if;
 
-  select e, s, p
-  into v_enrollment, v_student, v_profile
+  select e.*
+  into v_enrollment
   from public.enrollments e
   join public.students s on s.id = e.student_id
   join public.profiles p on p.id = auth.uid()
@@ -873,6 +880,13 @@ begin
     return query select 'not_found'::text, null::uuid, null::timestamptz;
     return;
   end if;
+
+  select s.* into v_student
+  from public.students s
+  where s.id = v_enrollment.student_id;
+  select p.* into v_profile
+  from public.profiles p
+  where p.id = auth.uid();
 
   if not private.has_official_role_for_program(v_signer_role, v_enrollment.program_id) then
     return query select 'unauthorized'::text, null::uuid, null::timestamptz;
@@ -1008,8 +1022,8 @@ begin
     return;
   end if;
 
-  select e, s, p
-  into v_enrollment, v_student, v_profile
+  select e.*
+  into v_enrollment
   from public.enrollments e
   join public.students s on s.id = e.student_id
   join public.profiles p on p.id = auth.uid()
@@ -1020,6 +1034,13 @@ begin
     return query select 'not_found'::text, null::uuid, null::uuid, null::timestamptz;
     return;
   end if;
+
+  select s.* into v_student
+  from public.students s
+  where s.id = v_enrollment.student_id;
+  select p.* into v_profile
+  from public.profiles p
+  where p.id = auth.uid();
 
   if not private.has_official_role_for_program('NURSE', v_enrollment.program_id) then
     return query select 'unauthorized'::text, null::uuid, null::uuid, null::timestamptz;
