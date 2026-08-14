@@ -1,4 +1,6 @@
-# PKM-DES Demo Reset Procedure
+# PKM-DES Legacy Demo Fixture Reset Procedure
+
+> For the final browser demonstration, use [DEMO_PREPARATION.md](../demo/DEMO_PREPARATION.md). This document describes the older claim-only/pending/approved/rejected fixture set.
 
 > The reset command is destructive only for the exact fictional demo identities defined in `scripts/demo/demo-records.mjs`. It must never truncate tables or target live student records. Use it only with a clean, dedicated preview or test database.
 
@@ -19,7 +21,7 @@ The reset script uses the service-role key only in this explicitly invoked devel
 Validate the target project, BSAIS program, configured term, and complete standard-load configuration without changing data:
 
 ```bash
-npm run demo:reset -- --dry-run
+npm run demo:reset:legacy -- --dry-run
 ```
 
 The command prints `DRY RUN - NO DATA WAS CHANGED` before it exits. Dry run confirms configuration only; it is not a replacement for verification.
@@ -29,7 +31,7 @@ The command prints `DRY RUN - NO DATA WAS CHANGED` before it exits. Dry run conf
 Run only against a dedicated preview or test Supabase project that contains no live institutional information:
 
 ```bash
-npm run demo:reset
+npm run demo:reset:legacy
 ```
 
 The script deletes and recreates only exact, account-backed fictional identities whose Auth user, profile email, and Student ID all match the allowlisted demo record. Reserved Student IDs are collision checks only: a missing profile, non-demo profile, mismatched pair, or a student row for the claim-only ID stops the reset before any mutation. The script does not truncate tables or select records by broad date, status, program, or email-domain filters. It must find an active, complete standard-load configuration before creating attached demo enrollment snapshots; the client-provided workbook rows are used only through that matching active configuration.
@@ -39,7 +41,7 @@ Before removing those exact demo students, the reset removes only their exact en
 ## Verify the Result
 
 ```bash
-npm run demo:verify
+npm run demo:verify:legacy
 ```
 
 Verification is read-only. It checks the claim-only record, all demo Auth identities, three account-backed enrollment states, exact subject attachments, current-term uniqueness, and expected dashboard counts. Dashboard totals require the database to contain only the three fictional enrollment records; additional enrollment records cause verification to fail because the presentation state cannot be guaranteed.
