@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { isUsableSignatureSpecimen } from "@/lib/signatures/specimen-policy";
 import {
   buildSignatureSpecimenStoragePath,
   SIGNATURE_SPECIMEN_BUCKET,
@@ -106,7 +107,13 @@ export async function loadSavedSignaturePayload(
     const downloaded = await admin.storage.from(SIGNATURE_SPECIMEN_BUCKET).download(specimen.signature_storage_path);
     if (downloaded.error || !downloaded.data) return null;
     const payload = await validatePngSignatureBytes(Buffer.from(await downloaded.data.arrayBuffer()));
-    return payload?.signatureHash === specimen.signature_hash ? payload : null;
+    return payload && isUsableSignatureSpecimen({
+      authenticatedProfileId: profileId,
+      specimenProfileId: specimen.profile_id,
+      retiredAt: specimen.retired_at,
+      storedHash: specimen.signature_hash,
+      payloadHash: payload.signatureHash
+    }) ? payload : null;
   } catch {
     return null;
   }
