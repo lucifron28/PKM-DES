@@ -1459,7 +1459,7 @@ begin
     v_enrollment.academic_year, v_enrollment.semester, 'PENDING', 0,
     null, null, null, null
   )
-  on conflict (enrollment_id, decision) do nothing;
+  on conflict on constraint enrollment_decision_notifications_enrollment_decision_key do nothing;
 
   return query select lower(p_decision), v_enrollment.id, p_decision, v_student_status;
 end;
