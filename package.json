@@ -35,7 +35,8 @@
     "test:registration-form": "tsx --test lib/registration-form/presentation.test.ts",
     "test:signatures": "tsx --conditions react-server --test lib/signatures/*.test.ts lib/official-roles/*.test.ts lib/health-records/*.test.ts",
     "test:health-record": "tsx --test components/health/*.test.ts lib/health-records/*.test.ts",
-    "test:signature-ui": "tsx --import ./tests/support/stub-loader.mjs --test components/signatures/e-signature-input.test.tsx"
+    "test:signature-ui": "tsx --import ./tests/support/stub-loader.mjs --test components/signatures/e-signature-input.test.tsx",
+    "test:demo-reset": "tsx --test lib/demo/reset-guard.test.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
