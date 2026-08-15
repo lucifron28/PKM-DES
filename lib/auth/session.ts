@@ -90,7 +90,7 @@ export async function fetchStudentQueryResult(
 ): Promise<StudentQueryResult> {
   const { data, error } = await supabase
     .from("students")
-    .select("*, programs(*)")
+    .select("*, programs(*), official_student_records(*)")
     .eq("profile_id", profileId)
     .maybeSingle();
 
