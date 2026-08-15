@@ -4,6 +4,7 @@ import { useActionState, useCallback, useEffect, useRef, useState, type FormEven
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { SignatureActionState } from "@/lib/signatures/action-state";
+import { hasMeaningfulSignatureMotion, signatureSegmentDistance, type SignaturePoint } from "@/lib/signatures/drawing";
 import type { SignatureClearanceType, SignerRole } from "@/types/database";
 
 type SignatureAction = (
@@ -36,6 +37,7 @@ export function ESignatureInput({
   title,
   description,
   signedSignature,
+  savedSignature,
   applyLabel = "Apply E-Signature",
   verificationFields
 }: {
@@ -48,6 +50,7 @@ export function ESignatureInput({
   title?: string;
   description?: string;
   signedSignature?: SignatureEvidenceView | null;
+  savedSignature?: { id: string; signedUrl?: string | null; createdAt?: string } | null;
   applyLabel?: string;
   verificationFields?: ReactNode;
 }) {
@@ -57,9 +60,12 @@ export function ESignatureInput({
   const hiddenSignatureRef = useRef<HTMLInputElement | null>(null);
   const drawingRef = useRef(false);
   const hasInkRef = useRef(false);
+  const pathDistanceRef = useRef(0);
+  const lastPointRef = useRef<SignaturePoint | null>(null);
   const keyboardPenDownRef = useRef(false);
   const keyboardPositionRef = useRef({ x: 24, y: 72 });
   const [hasInk, setHasInk] = useState(false);
+  const [useSavedSignature, setUseSavedSignature] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const resetCanvas = useCallback(() => {
@@ -70,6 +76,9 @@ export function ESignatureInput({
     context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
     setCanvasStyle(context);
     hasInkRef.current = false;
+    pathDistanceRef.current = 0;
+    lastPointRef.current = null;
+    drawingRef.current = false;
     keyboardPenDownRef.current = false;
     setHasInk(false);
     setLocalError(null);
@@ -89,6 +98,10 @@ export function ESignatureInput({
     setCanvasStyle(context);
     keyboardPositionRef.current = { x: Math.min(24, rect.width / 2), y: Math.min(72, rect.height / 2) };
     hasInkRef.current = false;
+    pathDistanceRef.current = 0;
+    lastPointRef.current = null;
+    drawingRef.current = false;
+    keyboardPenDownRef.current = false;
     setHasInk(false);
   }, []);
 
@@ -118,8 +131,7 @@ export function ESignatureInput({
     context.beginPath();
     context.moveTo(point.x, point.y);
     drawingRef.current = true;
-    hasInkRef.current = true;
-    setHasInk(true);
+    lastPointRef.current = point;
     setLocalError(null);
   }
 
@@ -128,12 +140,22 @@ export function ESignatureInput({
     const context = event.currentTarget.getContext("2d");
     if (!context) return;
     const point = pointFromEvent(event);
+    const lastPoint = lastPointRef.current;
+    if (lastPoint) {
+      pathDistanceRef.current += signatureSegmentDistance(lastPoint, point);
+    }
+    lastPointRef.current = point;
     context.lineTo(point.x, point.y);
     context.stroke();
+    if (hasMeaningfulSignatureMotion(pathDistanceRef.current)) {
+      hasInkRef.current = true;
+      setHasInk(true);
+    }
   }
 
   function handlePointerUp(event: ReactPointerEvent<HTMLCanvasElement>) {
     drawingRef.current = false;
+    lastPointRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -169,17 +191,27 @@ export function ESignatureInput({
       y: Math.max(2, Math.min(rect.height - 2, keyboardPositionRef.current.y + delta.y))
     };
     if (keyboardPenDownRef.current) {
+      pathDistanceRef.current += signatureSegmentDistance(keyboardPositionRef.current, next);
       context.lineTo(next.x, next.y);
       context.stroke();
-      hasInkRef.current = true;
-      setHasInk(true);
-      setLocalError(null);
+      if (hasMeaningfulSignatureMotion(pathDistanceRef.current)) {
+        hasInkRef.current = true;
+        setHasInk(true);
+        setLocalError(null);
+      }
     }
     keyboardPositionRef.current = next;
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!hasInkRef.current) {
+    if (useSavedSignature) {
+      if (!savedSignature?.id) {
+        event.preventDefault();
+        setLocalError("The saved signature is not available. Refresh and try again.");
+      }
+      return;
+    }
+    if (!hasInkRef.current || !hasMeaningfulSignatureMotion(pathDistanceRef.current)) {
       event.preventDefault();
       setLocalError("Draw a signature before applying it.");
       return;
@@ -191,6 +223,12 @@ export function ESignatureInput({
       return;
     }
     hiddenSignatureRef.current.value = canvas.toDataURL("image/png");
+  }
+
+  function handleUseSavedSignature() {
+    resetCanvas();
+    setUseSavedSignature(true);
+    setLocalError(null);
   }
 
   if (signedSignature?.isCurrent) {
@@ -233,6 +271,26 @@ export function ESignatureInput({
         </p>
       </div>
 
+      {savedSignature ? (
+        <div className="rounded-md border border-primary-200 bg-primary-50 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-primary-950">Saved signature specimen</p>
+              <p className="mt-1 text-xs leading-5 text-primary-900">Use the private specimen saved on your account. You must confirm it again for this specific signing action.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={useSavedSignature ? () => { setUseSavedSignature(false); setLocalError(null); } : handleUseSavedSignature}>
+              {useSavedSignature ? "Use Drawn Signature" : "Use Saved Signature"}
+            </Button>
+          </div>
+          {useSavedSignature ? (
+            <div className="mt-3 flex items-center gap-3 rounded-md border border-primary-200 bg-white p-3">
+              {savedSignature.signedUrl ? <img src={savedSignature.signedUrl} alt="Saved signature specimen preview" className="h-14 max-w-[15rem] object-contain object-left" /> : null}
+              <p className="text-sm font-semibold text-primary-900">Saved specimen selected for this signing action.</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {signedSignature && !signedSignature.isCurrent ? (
         <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
           The previous {signerLabel} signature is invalidated because the signed data changed. Draw a new signature to create a new immutable record.
@@ -242,6 +300,8 @@ export function ESignatureInput({
       <form action={formAction} onSubmit={handleSubmit} className="mt-4 space-y-3">
         <input type="hidden" name="enrollment_id" value={enrollmentId} />
         <input type="hidden" name="clearance_type" value={clearanceType} />
+        <input type="hidden" name="signature_source" value={useSavedSignature ? "SAVED" : "DRAWN"} />
+        {useSavedSignature && savedSignature ? <input type="hidden" name="signature_specimen_id" value={savedSignature.id} /> : null}
         <input ref={hiddenSignatureRef} type="hidden" name="signature_data" />
         {verificationFields}
         <div className="overflow-hidden rounded-md border border-slateui-border bg-slateui-surfaceAlt">
@@ -263,14 +323,14 @@ export function ESignatureInput({
         </div>
         {localError ? <p role="alert" className="text-sm font-semibold text-red-700">{localError}</p> : null}
         {state.message ? <p role={state.success ? "status" : "alert"} className={state.success ? "text-sm font-semibold text-green-700" : "text-sm font-semibold text-red-700"}>{state.message}</p> : null}
-        <label className="flex items-start gap-2 text-sm leading-6 text-slateui-secondary">
-          <input type="checkbox" name="signature_confirmation" required className="mt-1 h-4 w-4 rounded border-slateui-border text-primary-800 focus:ring-primary-700" />
-          <span>I confirm that this drawn mark is my own electronic signature and that I am the authenticated {signerLabel}.</span>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={resetCanvas} disabled={pending || !hasInk}>Clear</Button>
-          <Button type="submit" disabled={pending || !hasInk}>{pending ? "Saving..." : applyLabel}</Button>
-        </div>
+          <label className="flex items-start gap-2 text-sm leading-6 text-slateui-secondary">
+            <input type="checkbox" name="signature_confirmation" required className="mt-1 h-4 w-4 rounded border-slateui-border text-primary-800 focus:ring-primary-700" />
+          <span>I confirm that this {useSavedSignature ? "saved signature specimen" : "drawn mark"} is my own electronic signature and that I am the authenticated {signerLabel}.</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={resetCanvas} disabled={pending || !hasInk || useSavedSignature}>Clear</Button>
+          <Button type="submit" disabled={pending || (!hasInk && !useSavedSignature)}>{pending ? "Saving..." : useSavedSignature ? "Apply Saved Signature" : applyLabel}</Button>
+          </div>
       </form>
     </section>
   );

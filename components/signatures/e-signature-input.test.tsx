@@ -21,10 +21,16 @@ function installCanvasMocks(window: { HTMLCanvasElement: { prototype: unknown } 
     getContext: () => CanvasRenderingContext2D;
     toDataURL: () => string;
     getBoundingClientRect: () => DOMRect;
+    setPointerCapture: () => void;
+    hasPointerCapture: () => boolean;
+    releasePointerCapture: () => void;
   };
 
   canvasPrototype.getContext = () => context;
   canvasPrototype.toDataURL = () => "data:image/png;base64,AAAA";
+  canvasPrototype.setPointerCapture = () => undefined;
+  canvasPrototype.hasPointerCapture = () => false;
+  canvasPrototype.releasePointerCapture = () => undefined;
   canvasPrototype.getBoundingClientRect = () => ({
     width: 640,
     height: 176,
@@ -86,6 +92,16 @@ async function renderSignatureInput(container: HTMLElement, signedSignature?: { 
   return root;
 }
 
+function pointerEvent(dom: JSDOM, type: string, clientX: number, clientY: number, pointerId: number) {
+  const event = new dom.window.Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    clientX: { value: clientX },
+    clientY: { value: clientY },
+    pointerId: { value: pointerId }
+  });
+  return event;
+}
+
 test("signature input is a real canvas with confirmation and no browser role field", async () => {
   const dom = await setup();
   const container = dom.window.document.createElement("div");
@@ -117,10 +133,52 @@ test("signature input is a real canvas with confirmation and no browser role fie
       form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
     });
     assert.match(hiddenSignature.value, /^data:image\/png;base64,/);
+
+    await act(async () => {
+      const untouched = new dom.window.Event("submit", { bubbles: true, cancelable: true });
+      form.dispatchEvent(untouched);
+    });
+    assert.match(hiddenSignature.value, /^data:image\/png;base64,/);
   } finally {
     await act(async () => {
       root?.unmount();
     });
+    dom.window.close();
+  }
+});
+
+test("pointer down and a one-pixel mark do not enable signing", async () => {
+  const dom = await setup();
+  const container = dom.window.document.createElement("div");
+  dom.window.document.body.appendChild(container);
+  let root: Root | undefined;
+
+  try {
+    root = await renderSignatureInput(container);
+    const canvas = container.querySelector<HTMLCanvasElement>("canvas");
+    const form = container.querySelector<HTMLFormElement>("form");
+    const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    assert.ok(canvas);
+    assert.ok(form);
+    assert.ok(submit);
+    assert.equal(submit.disabled, true);
+
+    await act(async () => {
+      canvas.dispatchEvent(pointerEvent(dom, "pointerdown", 10, 10, 1));
+      canvas.dispatchEvent(pointerEvent(dom, "pointerup", 10, 10, 1));
+    });
+    assert.equal(submit.disabled, true);
+
+    await act(async () => {
+      canvas.dispatchEvent(pointerEvent(dom, "pointerdown", 10, 10, 2));
+      canvas.dispatchEvent(pointerEvent(dom, "pointermove", 11, 10, 2));
+      canvas.dispatchEvent(pointerEvent(dom, "pointerup", 11, 10, 2));
+    });
+    assert.equal(submit.disabled, true);
+    await act(async () => form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true })));
+    assert.match(container.textContent ?? "", /Draw a signature before applying it/);
+  } finally {
+    await act(async () => root?.unmount());
     dom.window.close();
   }
 });

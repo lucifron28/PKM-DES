@@ -5,6 +5,7 @@ import { HealthRecordRejectionForm } from "@/components/health/health-record-rej
 import { verifyHealthClearanceAction } from "@/app/admin/enrollments/signature-actions";
 import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
 import type { RequirementApplicability, RequirementStatus } from "@/lib/requirements/types";
+import type { SignatureSpecimenView } from "@/lib/signatures/specimens";
 import { formatDate } from "@/lib/utils/format";
 
 type HealthRecordVerificationFormProps = {
@@ -23,6 +24,7 @@ type HealthRecordVerificationFormProps = {
   signedSignature: SignatureEvidenceView | null;
   canVerify: boolean;
   canReject: boolean;
+  savedSignature?: SignatureSpecimenView | null;
 };
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
@@ -49,7 +51,8 @@ export function HealthRecordVerificationForm({
   signerName,
   signedSignature,
   canVerify,
-  canReject
+  canReject,
+  savedSignature
 }: HealthRecordVerificationFormProps) {
   const state = getHealthVerificationViewState({
     applicability,
@@ -121,6 +124,7 @@ export function HealthRecordVerificationForm({
           title="Nurse verification signature"
           description="This signature is immutable evidence bound to the current administrative verification record."
           signedSignature={currentSignature}
+          savedSignature={savedSignature}
         />
       ) : canVerify ? (
         <ESignatureInput
@@ -133,6 +137,7 @@ export function HealthRecordVerificationForm({
           title="Verify and apply Nurse e-signature"
           description="Review the read-only identity and term fields, confirm the administrative verification statement, then draw your own signature. No clinical details are entered or stored here."
           signedSignature={signedSignature}
+          savedSignature={savedSignature}
           applyLabel="Verify & Apply E-Signature"
           verificationFields={(
             <div className="rounded-md border border-primary-200 bg-primary-50 p-4">

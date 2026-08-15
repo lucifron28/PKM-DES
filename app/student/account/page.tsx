@@ -3,9 +3,11 @@ import { DetailList } from "@/components/ui/detail-list";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChangePasswordForm } from "@/components/forms/change-password-form";
-import { changePasswordAction } from "./actions";
+import { SignatureSpecimenManager } from "@/components/signatures/signature-specimen-manager";
+import { changePasswordAction, deleteStudentSignatureSpecimenAction, saveStudentSignatureSpecimenAction } from "./actions";
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
 import type { OfficialStudentRecord } from "@/types/database";
 
 function displayValue(value?: string | null) {
@@ -65,7 +67,7 @@ async function getMatchingOfficialRecord({
 
 
 export default async function StudentAccountPage() {
-  const { profile } = await requireRole("student");
+  const { profile, supabase } = await requireRole("student");
   const studentResult = await getStudentQueryResult(profile.id);
 
   if (studentResult.status === "query_failed") {
@@ -82,6 +84,7 @@ export default async function StudentAccountPage() {
   }
 
   const student = studentResult.student;
+  const signatureSpecimen = await loadCurrentSignatureSpecimen(supabase, profile.id);
 
   const officialRecord = await getMatchingOfficialRecord({
     email: profile.email,
@@ -123,6 +126,13 @@ export default async function StudentAccountPage() {
           </Button>
         </div>
       </Card>
+
+      <SignatureSpecimenManager
+        specimen={signatureSpecimen}
+        roleLabels={["Student"]}
+        saveAction={saveStudentSignatureSpecimenAction}
+        deleteAction={deleteStudentSignatureSpecimenAction}
+      />
 
       <Card className="border-t-4 border-t-secondary-600">
         <CardHeader

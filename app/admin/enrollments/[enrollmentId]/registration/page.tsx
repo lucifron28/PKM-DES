@@ -9,6 +9,7 @@ import { applyOfficialClearanceSignatureAction } from "@/app/admin/enrollments/s
 import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { CLEARANCE_DEFINITIONS, getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
+import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
 import { canSignClearance, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
@@ -49,6 +50,8 @@ export default async function AdminRegistrationFormPage({
   if (!enrollment) {
     return <EmptyState title="Enrollment record not found." description="The selected registration form is not available." />;
   }
+
+  const signatureSpecimen = await loadCurrentSignatureSpecimen(supabase, profile.id);
 
   const healthApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
     student_type: enrollment.students?.student_type ?? "",
@@ -208,6 +211,7 @@ export default async function AdminRegistrationFormPage({
                 title={`${definition.label} — ${definition.signerLabel} E-Signature`}
                 description={`Only an account with an active ${definition.signerLabel} assignment may sign this separate clearance.`}
                 signedSignature={signedSignature}
+                savedSignature={signatureSpecimen}
               />
             );
           })}

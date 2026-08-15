@@ -26,7 +26,7 @@ test("official signing derives role from clearance instead of a browser role fie
     readFile(signatureInputPath, "utf8")
   ]);
 
-  assert.match(service, /recordOfficialClearanceSignature\(\s*\n?\s*supabase: SupabaseClient,\s*\n?\s*formData: FormData/);
+  assert.match(service, /recordOfficialClearanceSignature\(\s*\n?\s*supabase: SupabaseClient,\s*\n?\s*profileId: string,\s*\n?\s*formData: FormData/);
   assert.match(service, /const definition = getClearanceDefinition\(clearanceType\)/);
   assert.doesNotMatch(input, /name=["']official_role["']/);
 });

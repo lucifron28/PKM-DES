@@ -6,11 +6,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getClearanceDefinition } from "@/lib/signatures/clearances";
 import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash, type EnrollmentFingerprintInput } from "@/lib/signatures/fingerprint";
 import { isRequirementUuid, normalizeRequirementNote } from "@/lib/requirements/rules";
+import { loadSavedSignaturePayload } from "@/lib/signatures/specimens";
 import {
   buildSignatureStoragePath,
   SIGNATURE_BUCKET,
   validatePngSignatureDataUrl,
-  validateSignatureConfirmation
+  validateSignatureConfirmation,
+  type ValidatedSignaturePayload
 } from "@/lib/signatures/validation";
 import type { OfficialSignerRole, SignatureClearanceType } from "@/types/database";
 
@@ -43,16 +45,27 @@ type SignatureRpcResult = {
 
 type SignatureFormPayloadResult =
   | { ok: false; error: string }
-  | { ok: true; payload: ReturnType<typeof validatePngSignatureDataUrl> extends infer Payload
-      ? Exclude<Payload, null>
-      : never };
+  | { ok: true; payload: ValidatedSignaturePayload };
 
-function signatureFormPayload(formData: FormData): SignatureFormPayloadResult {
+async function signatureFormPayload(
+  supabase: SupabaseClient,
+  profileId: string,
+  formData: FormData
+): Promise<SignatureFormPayloadResult> {
   if (!validateSignatureConfirmation(formData.get("signature_confirmation"))) {
-    return { ok: false, error: "Please confirm that you are applying your own drawn electronic signature." };
+    return { ok: false, error: "Please confirm that you are applying your own electronic signature." };
   }
 
-  const payload = validatePngSignatureDataUrl(formData.get("signature_data"));
+  if (formData.get("signature_source") === "SAVED") {
+    const specimenId = String(formData.get("signature_specimen_id") ?? "").trim();
+    const payload = await loadSavedSignaturePayload(supabase, profileId, specimenId);
+    if (!payload) {
+      return { ok: false, error: "The saved signature is no longer available. Refresh the page and try again." };
+    }
+    return { ok: true, payload };
+  }
+
+  const payload = await validatePngSignatureDataUrl(formData.get("signature_data"));
   if (!payload) {
     return { ok: false, error: "The signature image is empty, malformed, or exceeds the allowed PNG size." };
   }
@@ -130,7 +143,7 @@ export async function recordStudentEnrollmentSignature(
   formData: FormData
 ): Promise<ServiceResult> {
   const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
-  const parsed = signatureFormPayload(formData);
+  const parsed = await signatureFormPayload(supabase, profileId, formData);
   if (!enrollmentId) return { success: false, message: "Enrollment record is required." };
   if (!parsed.ok) return { success: false, message: parsed.error };
   const { payload } = parsed;
@@ -183,12 +196,13 @@ export async function recordStudentEnrollmentSignature(
 
 export async function recordOfficialClearanceSignature(
   supabase: SupabaseClient,
+  profileId: string,
   formData: FormData
 ): Promise<ServiceResult> {
   const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
   const clearanceType = String(formData.get("clearance_type") ?? "").trim() as SignatureClearanceType;
   const definition = getClearanceDefinition(clearanceType);
-  const parsed = signatureFormPayload(formData);
+  const parsed = await signatureFormPayload(supabase, profileId, formData);
 
   if (!enrollmentId || !definition || definition.signerRole === "STUDENT" || clearanceType === "HEALTH_CLEARANCE") {
     return { success: false, message: "The requested clearance is not authorized for this account." };
@@ -243,12 +257,13 @@ export async function recordOfficialClearanceSignature(
 
 export async function verifyHealthClearance(
   supabase: SupabaseClient,
+  profileId: string,
   formData: FormData
 ): Promise<ServiceResult> {
   const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
   const verificationAcknowledged = formData.get("verification_acknowledged") === "on";
   const note = normalizeRequirementNote(formData.get("verification_note"));
-  const parsed = signatureFormPayload(formData);
+  const parsed = await signatureFormPayload(supabase, profileId, formData);
   if (!enrollmentId) return { success: false, message: "Enrollment record is required." };
   if (!parsed.ok) return { success: false, message: parsed.error };
   const { payload } = parsed;

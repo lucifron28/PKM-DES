@@ -24,8 +24,8 @@ export async function applyOfficialClearanceSignatureAction(
   const clearanceType = String(formData.get("clearance_type") ?? "").trim();
   const officialRole = requiredOfficialRoleForClearance(clearanceType);
   if (!officialRole) return { success: false, message: "The requested clearance is not authorized for an official signer." };
-  const { supabase } = await requireOfficialSignerRole(officialRole);
-  const result = await recordOfficialClearanceSignature(supabase, formData);
+  const { supabase, profile } = await requireOfficialSignerRole(officialRole);
+  const result = await recordOfficialClearanceSignature(supabase, profile.id, formData);
 
   if (result.success) revalidateSignatureViews(String(formData.get("enrollment_id") ?? "").trim());
   return result;
@@ -35,8 +35,8 @@ export async function verifyHealthClearanceAction(
   _previousState: SignatureActionState,
   formData: FormData
 ): Promise<SignatureActionState> {
-  const { supabase } = await requireOfficialSignerRole("NURSE");
-  const result = await verifyHealthClearance(supabase, formData);
+  const { supabase, profile } = await requireOfficialSignerRole("NURSE");
+  const result = await verifyHealthClearance(supabase, profile.id, formData);
 
   if (result.success) revalidateSignatureViews(String(formData.get("enrollment_id") ?? "").trim());
   return result;
