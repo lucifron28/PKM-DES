@@ -7,6 +7,7 @@ export type NavigationIcon =
   | "grades"
   | "masterlist"
   | "pending"
+  | "registration"
   | "reports"
   | "schedule"
   | "signers"
@@ -31,6 +32,8 @@ export const ENABLE_STUB_PAGES = process.env.NEXT_PUBLIC_ENABLE_STUB_PAGES === "
 export const studentNavigation: NavigationItem[] = [
   { label: "Student Dashboard", href: "/student/dashboard", icon: "dashboard", section: "Workflow" },
   { label: "Online Enrollment", href: "/student/enrollment", icon: "enrollment", section: "Workflow" },
+  { label: "Enrollment Status", href: "/student/enrollment-status", icon: "pending", section: "Workflow" },
+  { label: "My Registration Form", href: "/student/cor", icon: "registration", section: "Workflow" },
   { label: "Subject List", href: "/student/subjects", icon: "subjects", section: "Reference" },
   ...(ENABLE_STUB_PAGES
     ? [

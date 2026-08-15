@@ -26,6 +26,7 @@ const icons: Record<NavigationIcon, typeof BookOpen> = {
   grades: GraduationCap,
   masterlist: FileText,
   pending: ListChecks,
+  registration: FileText,
   reports: FileText,
   schedule: CalendarDays,
   signers: Users,
@@ -35,14 +36,10 @@ const icons: Record<NavigationIcon, typeof BookOpen> = {
 
 function isItemActive(href: string, pathname: string): boolean {
   if (href === "/student/enrollment") {
-    return (
-      pathname === "/student/enrollment" ||
-      pathname === "/student/enrollment-status" ||
-      pathname.startsWith("/student/enrollments/") ||
-      pathname === "/student/cor" ||
-      pathname.startsWith("/student/cor/")
-    );
+    return pathname === "/student/enrollment";
   }
+  if (href === "/student/enrollment-status") return pathname === "/student/enrollment-status";
+  if (href === "/student/cor") return pathname === "/student/cor" || pathname.startsWith("/student/enrollments/") || pathname.startsWith("/student/cor/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -69,7 +66,7 @@ export function SideNav({
 
         return (
           <div key={section}>
-            <p className="mb-2 px-3 text-xs font-bold tracking-wide text-slateui-muted">{section}</p>
+            <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.14em] text-primary-800">{section}</p>
             <div className="space-y-1.5">
               {sectionItems.map((item) => {
                 const Icon = icons[item.icon];
@@ -87,7 +84,7 @@ export function SideNav({
                     className={cn(
                       "flex min-h-11 items-center gap-3 border-l-4 px-3 py-2 text-sm font-semibold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-offset-2",
                       active
-                        ? "border-secondary-600 bg-primary-50 text-primary-900 shadow-2xs"
+                        ? "border-secondary-600 bg-primary-100 text-primary-900 shadow-2xs"
                         : "border-transparent text-slateui-secondary hover:bg-primary-50 hover:text-primary-800"
                     )}
                   >

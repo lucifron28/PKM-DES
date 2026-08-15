@@ -10,6 +10,7 @@ import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
+import { studentRegistrationFormHref } from "@/lib/enrollment/student-print-access";
 
 type DashboardEnrollment = {
   id: string;
@@ -79,7 +80,7 @@ export default async function StudentDashboardPage() {
   const status = getDisplayedEnrollmentStatus(currentTermEnrollment?.status ?? null);
 
   const primaryAction = status === "ENROLLED"
-    ? { href: "/student/cor", label: "Print Draft Registration Form", icon: FileText, variant: "secondary" as const }
+    ? { href: "/student/cor", label: "View / Print Registration Form", icon: FileText, variant: "secondary" as const }
     : status === "PENDING" || status === "REJECTED"
       ? { href: "/student/enrollment-status", label: "View Enrollment Status", icon: ClipboardCheck, variant: "primary" as const }
       : { href: "/student/enrollment", label: "Start Online Enrollment", icon: ClipboardCheck, variant: "primary" as const };
@@ -172,6 +173,7 @@ export default async function StudentDashboardPage() {
                   <th className="px-4 py-3">Academic Term</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Submitted Date</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slateui-border">
@@ -185,6 +187,9 @@ export default async function StudentDashboardPage() {
                     </td>
                     <td className="px-4 py-3 text-slateui-secondary">
                       {formatDate(record.submitted_at)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {record.status === "APPROVED" ? <ButtonLink href={studentRegistrationFormHref(record.id)} variant="outline" className="text-xs">View / Print</ButtonLink> : null}
                     </td>
                   </tr>
                 ))}

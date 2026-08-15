@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { formatDate } from "@/lib/utils/format";
+import { selectCurrentApprovedRegistration, studentRegistrationFormHref } from "@/lib/enrollment/student-print-access";
 import type { EnrollmentReviewStatus } from "@/types/database";
 
 type ApprovedEnrollmentRow = {
@@ -58,18 +59,8 @@ export default async function StudentCorPage() {
   const approvedEnrollments = (approvedResponse.data as ApprovedEnrollmentRow[] | null) ?? [];
   const activeTerm = activeTermResult.ok ? activeTermResult.term : null;
 
-  if (approvedEnrollments.length === 1) {
-    redirect(`/student/enrollments/${approvedEnrollments[0].id}/registration`);
-  }
-
-  if (activeTerm && approvedEnrollments.length > 1) {
-    const currentTermApproved = approvedEnrollments.find(
-      (e) => e.academic_year === activeTerm.academicYear && e.semester === activeTerm.semester
-    );
-    if (currentTermApproved) {
-      redirect(`/student/enrollments/${currentTermApproved.id}/registration`);
-    }
-  }
+  const selectedRegistrationId = selectCurrentApprovedRegistration(approvedEnrollments, activeTerm);
+  if (selectedRegistrationId) redirect(studentRegistrationFormHref(selectedRegistrationId));
 
   if (approvedEnrollments.length === 0) {
     return (
@@ -111,7 +102,7 @@ export default async function StudentCorPage() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <ButtonLink
-                    href={`/student/enrollments/${record.id}/registration`}
+                    href={studentRegistrationFormHref(record.id)}
                     variant="outline"
                     className="text-xs"
                   >

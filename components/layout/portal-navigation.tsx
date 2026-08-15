@@ -93,13 +93,13 @@ export function PortalNavigation({
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-slateui-border bg-white lg:flex" aria-label={`${portalLabel} sidebar`}>
-        <div className="border-b border-primary-100 px-5 py-5">
+      <aside className="sticky top-0 hidden h-screen flex-col border-r border-primary-100 bg-slateui-surfaceAlt lg:flex" aria-label={`${portalLabel} sidebar`}>
+        <div className="border-b border-primary-800 bg-primary-900 px-5 py-5 text-white">
           <div className="flex items-center gap-3">
             <PkmMark />
             <div className="min-w-0">
-              <p className="font-bold text-slateui-text">PKM-DES</p>
-              <p className="truncate text-xs font-semibold text-primary-800">{portalLabel}</p>
+              <p className="font-bold text-white">PKM-DES</p>
+              <p className="truncate text-xs font-semibold text-secondary-500">{portalLabel}</p>
             </div>
           </div>
         </div>
@@ -110,19 +110,19 @@ export function PortalNavigation({
           <div className="mt-3"><LogoutButton /></div>
         </div>
       </aside>
-      <header className="print-hidden border-b border-primary-100 bg-white lg:hidden">
+      <header className="print-hidden border-b border-primary-800 bg-primary-900 text-white lg:hidden">
         <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <PkmMark />
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-slateui-text">PKM-DES</p>
-              <p className="truncate text-xs text-slateui-muted">{portalLabel}</p>
+              <p className="truncate text-sm font-bold text-white">PKM-DES</p>
+              <p className="truncate text-xs text-primary-100">{portalLabel}</p>
             </div>
           </div>
           <button
             ref={menuButtonRef}
             type="button"
-            className={buttonClassName("ghost", "min-h-11 px-3")}
+            className={buttonClassName("ghost", "min-h-11 px-3 text-white hover:bg-primary-800 hover:text-white focus-visible:ring-secondary-500")}
             aria-expanded={open}
             aria-controls="portal-mobile-navigation"
             onClick={() => setOpen((current) => !current)}
