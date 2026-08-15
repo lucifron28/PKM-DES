@@ -5,7 +5,12 @@ import {
   getAcademicClassificationLabel,
   getRegistrationClassificationMarks,
   getRegistrationTotalUnits,
-  sortRegistrationSubjects
+  sortRegistrationSubjects,
+  REGISTRATION_FORM_MISCELLANEOUS_FEE_LABELS,
+  REGISTRATION_FORM_SIGNATURE_BLOCKS,
+  REGISTRATION_FORM_SIGNATURE_LABELS,
+  REGISTRATION_FORM_SOURCE_SECTIONS,
+  REGISTRATION_FORM_SUBJECT_ROW_COUNT
 } from "./presentation";
 import type { Subject } from "@/types/database";
 
@@ -88,4 +93,38 @@ test("allows student printing only for approved enrollment requests", () => {
   assert.equal(canStudentPrintRegistrationForm("APPROVED"), true);
   assert.equal(canStudentPrintRegistrationForm("PENDING"), false);
   assert.equal(canStudentPrintRegistrationForm("REJECTED"), false);
+});
+
+test("keeps the source form sections and signature blocks explicit", () => {
+  assert.equal(REGISTRATION_FORM_SUBJECT_ROW_COUNT, 10);
+  assert.deepEqual(REGISTRATION_FORM_SOURCE_SECTIONS, [
+    "REGISTRATION FORM",
+    "ASSESSMENT OF TUITION AND OTHER SCHOOL FEES (TOSF)",
+    "MISCELLANEOUS FEE:",
+    "TUITION FEE:",
+    "NSTP FEE (CWTS):",
+    "TOTAL TOSF:",
+    "SCHOLARSHIP:"
+  ]);
+  assert.deepEqual(REGISTRATION_FORM_MISCELLANEOUS_FEE_LABELS.slice(0, 3), [
+    "Admission Fee",
+    "Athletic Fee",
+    "Computer Fee"
+  ]);
+  assert.deepEqual(REGISTRATION_FORM_SIGNATURE_BLOCKS, [
+    { label: "Student", clearanceType: "STUDENT_ENROLLMENT_SIGNATURE" },
+    { label: "Librarian", clearanceType: "LIBRARY_CLEARANCE" },
+    { label: "School Nurse", clearanceType: "HEALTH_CLEARANCE" },
+    { label: "Program Chair", clearanceType: "PROGRAM_CLEARANCE" },
+    { label: "Accountant", clearanceType: "ACCOUNTING_CLEARANCE" },
+    { label: "Dean", clearanceType: "DEAN_CLEARANCE" }
+  ]);
+  assert.deepEqual(REGISTRATION_FORM_SIGNATURE_LABELS, [
+    "Student",
+    "Librarian",
+    "School Nurse",
+    "Program Chair",
+    "Accountant",
+    "Dean"
+  ]);
 });

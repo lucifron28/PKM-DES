@@ -1,4 +1,4 @@
-import type { EnrollmentReviewStatus, Subject } from "@/types/database";
+import type { EnrollmentReviewStatus, SignatureClearanceType, Subject } from "@/types/database";
 
 export type RegistrationLoadItem = Pick<Subject, "id" | "course_code" | "course_description" | "units"> & {
   source?: "legacy_subject" | "course_offering" | "snapshot";
@@ -11,6 +11,45 @@ export type RegistrationClassificationMarks = {
   regular: boolean;
   irregular: boolean;
 };
+
+export const REGISTRATION_FORM_SUBJECT_ROW_COUNT = 10;
+
+export const REGISTRATION_FORM_MISCELLANEOUS_FEE_LABELS = [
+  "Admission Fee",
+  "Athletic Fee",
+  "Computer Fee",
+  "Cultural Fee",
+  "Development Fee",
+  "Entrance Fee",
+  "Guidance Fee",
+  "Handbook Fee",
+  "Laboratory Fee",
+  "Library Fee",
+  "Medical and Dental Fee",
+  "Registration Fee",
+  "School ID Fee"
+] as const;
+
+export const REGISTRATION_FORM_SIGNATURE_BLOCKS = [
+  { label: "Student", clearanceType: "STUDENT_ENROLLMENT_SIGNATURE" },
+  { label: "Librarian", clearanceType: "LIBRARY_CLEARANCE" },
+  { label: "School Nurse", clearanceType: "HEALTH_CLEARANCE" },
+  { label: "Program Chair", clearanceType: "PROGRAM_CLEARANCE" },
+  { label: "Accountant", clearanceType: "ACCOUNTING_CLEARANCE" },
+  { label: "Dean", clearanceType: "DEAN_CLEARANCE" }
+] as const satisfies ReadonlyArray<{ label: string; clearanceType: SignatureClearanceType }>;
+
+export const REGISTRATION_FORM_SIGNATURE_LABELS = REGISTRATION_FORM_SIGNATURE_BLOCKS.map((block) => block.label);
+
+export const REGISTRATION_FORM_SOURCE_SECTIONS = [
+  "REGISTRATION FORM",
+  "ASSESSMENT OF TUITION AND OTHER SCHOOL FEES (TOSF)",
+  "MISCELLANEOUS FEE:",
+  "TUITION FEE:",
+  "NSTP FEE (CWTS):",
+  "TOTAL TOSF:",
+  "SCHOLARSHIP:"
+] as const;
 
 const emptyMarks: RegistrationClassificationMarks = {
   newStudent: false,
