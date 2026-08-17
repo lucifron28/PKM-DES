@@ -12,6 +12,7 @@ import { hasActiveOfficialRoleForProgram } from "@/lib/official-roles/repository
 import { getOfficialWorkspaceBySlug } from "@/lib/official-roles/roles";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { loadEnrollmentSignaturePresentation } from "@/lib/signatures/presentation";
+import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatName } from "@/lib/utils/format";
 import type { EnrollmentClearanceStatus } from "@/types/database";
@@ -113,6 +114,7 @@ export default async function OfficialClearanceReviewPage({
       })
     : null;
   const signerName = formatName(profile.first_name, profile.last_name);
+  const signatureSpecimen = await loadCurrentSignatureSpecimen(supabase, profile.id);
   const studentName = formatName(enrollment.students?.profiles?.first_name, enrollment.students?.profiles?.last_name) || "Student name unavailable";
 
   return (
@@ -174,6 +176,7 @@ export default async function OfficialClearanceReviewPage({
             signedSignature={signedSignature}
             canVerify={canSign}
             canReject={canReject}
+            savedSignature={signatureSpecimen}
           />
         ) : clearanceStatus === "SIGNED" ? (
           <ESignatureInput
@@ -185,6 +188,7 @@ export default async function OfficialClearanceReviewPage({
             signerName={signerName}
             title={`${workspace.label} e-signature`}
             signedSignature={signedSignature}
+            savedSignature={signatureSpecimen}
           />
         ) : canSign ? (
           <ESignatureInput
@@ -197,6 +201,7 @@ export default async function OfficialClearanceReviewPage({
             title={`Apply ${workspace.label} e-signature`}
             description={`Draw your signature to create the immutable ${workspace.label} evidence for this enrollment.`}
             signedSignature={signedSignature}
+            savedSignature={signatureSpecimen}
           />
         ) : (
           <div className="space-y-3">

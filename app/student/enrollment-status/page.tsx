@@ -14,6 +14,8 @@ import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import type { SignaturePresentationLoad } from "@/lib/signatures/presentation";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
+import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
+import { studentRegistrationFormHref } from "@/lib/enrollment/student-print-access";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { Enrollment, EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
@@ -46,6 +48,7 @@ export default async function EnrollmentStatusPage() {
   }
 
   const student = studentResult.student;
+  const signatureSpecimen = await loadCurrentSignatureSpecimen(supabase, profile.id);
 
   const [activeTermResult, enrollmentsResponse] = await Promise.all([
     getActiveEnrollmentTermResult(supabase),
@@ -160,7 +163,7 @@ export default async function EnrollmentStatusPage() {
         : "border-primary-800 bg-primary-50";
 
   const actions = status === "ENROLLED"
-    ? [["/student/cor", "Print Draft Registration Form", "secondary"], ["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]]
+    ? [["/student/cor", "View / Print Registration Form", "secondary"], ["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]]
     : status === "NOT ENROLLED"
       ? [["/student/enrollment", "Online Enrollment", "primary"], ["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]]
       : [["/student/subjects", "View Subject List", "outline"], ["/student/account", "Account", "outline"]];
@@ -284,6 +287,7 @@ export default async function EnrollmentStatusPage() {
                   isCurrent: studentSignature.is_current,
                   inputType: "DRAWN"
                 } : null}
+                savedSignature={signatureSpecimen}
               />
             )}
           </div>
@@ -309,6 +313,7 @@ export default async function EnrollmentStatusPage() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Submitted Date</th>
                   <th className="px-4 py-3">Remarks</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slateui-border">
@@ -325,6 +330,9 @@ export default async function EnrollmentStatusPage() {
                     </td>
                     <td className="px-4 py-3 text-slateui-secondary">
                       {record.remarks ? record.remarks : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {record.status === "APPROVED" ? <ButtonLink href={studentRegistrationFormHref(record.id)} variant="outline" className="text-xs">View / Print</ButtonLink> : null}
                     </td>
                   </tr>
                 ))}

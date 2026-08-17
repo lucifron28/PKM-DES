@@ -232,28 +232,30 @@ test.describe.serial('Demo Workflow Smoke Test', () => {
     const printedForm = page.locator('section.registration-print');
     await expect(printedForm).toBeVisible();
 
-    // Assert COR Draft details inside printed form section
-    await expect(printedForm.getByText('Student Number', { exact: true })).toBeVisible();
+    // Assert source-aligned registration form details inside the printed form section
+    await expect(printedForm.getByText('STUDENT NO:', { exact: true })).toBeVisible();
     await expect(printedForm.getByText(studentIdNumber, { exact: true })).toBeVisible();
-    await expect(printedForm.getByText('Student Name', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('NAME:', { exact: true })).toBeVisible();
     await expect(printedForm.getByText(canonicalFullName, { exact: true })).toBeVisible();
-    await expect(printedForm.getByText('Subject Load', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('SUBJECT CODE', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('SUBJECT DESCRIPTION', { exact: true })).toBeVisible();
 
     await expect(printedForm.getByRole('table')).toBeVisible();
-    await expect(printedForm.getByText('Assessment of Tuition and Other School Fees', { exact: true })).toBeVisible();
-    await expect(printedForm.getByText('Tuition Fee', { exact: true })).toBeVisible();
-    await expect(printedForm.getByText('Other School Fees', { exact: true })).toBeVisible();
-    await expect(printedForm.getByText('Scholarship', { exact: true })).toBeVisible();
-    await expect(printedForm.getByText('Total Assessment', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('ASSESSMENT OF TUITION AND OTHER SCHOOL FEES (TOSF)', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('TUITION FEE:', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('NSTP FEE (CWTS):', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('SCHOLARSHIP:', { exact: true })).toBeVisible();
+    await expect(printedForm.getByText('TOTAL TOSF:', { exact: true })).toBeVisible();
 
     // Single semantic locator for Clearance signature lines region
-    const signatureSection = page.getByRole('region', { name: 'Clearance signature lines' });
+    const signatureSection = printedForm.getByRole('region', { name: 'Authenticated clearance signatures' });
     await expect(signatureSection).toBeVisible();
+    await expect(signatureSection.getByText('Student', { exact: true })).toBeVisible();
     await expect(signatureSection.getByText('Dean', { exact: true })).toBeVisible();
     await expect(signatureSection.getByText('Librarian', { exact: true })).toBeVisible();
-    await expect(signatureSection.getByText('Nurse', { exact: true })).toBeVisible();
+    await expect(signatureSection.getByText('School Nurse', { exact: true })).toBeVisible();
+    await expect(signatureSection.getByText('Program Chair', { exact: true })).toBeVisible();
     await expect(signatureSection.getByText('Accountant', { exact: true })).toBeVisible();
-    await expect(signatureSection.getByText('Registrar', { exact: true })).toBeVisible();
 
     // Media checks with targeted elements
     const sidebar = page.getByRole('complementary', { name: 'Student Portal sidebar' });

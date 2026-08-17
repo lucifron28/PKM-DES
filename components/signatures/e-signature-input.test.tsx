@@ -21,10 +21,16 @@ function installCanvasMocks(window: { HTMLCanvasElement: { prototype: unknown } 
     getContext: () => CanvasRenderingContext2D;
     toDataURL: () => string;
     getBoundingClientRect: () => DOMRect;
+    setPointerCapture: () => void;
+    hasPointerCapture: () => boolean;
+    releasePointerCapture: () => void;
   };
 
   canvasPrototype.getContext = () => context;
   canvasPrototype.toDataURL = () => "data:image/png;base64,AAAA";
+  canvasPrototype.setPointerCapture = () => undefined;
+  canvasPrototype.hasPointerCapture = () => false;
+  canvasPrototype.releasePointerCapture = () => undefined;
   canvasPrototype.getBoundingClientRect = () => ({
     width: 640,
     height: 176,
@@ -56,7 +62,11 @@ async function setup() {
   return dom;
 }
 
-async function renderSignatureInput(container: HTMLElement, signedSignature?: { isCurrent: boolean }) {
+async function renderSignatureInput(
+  container: HTMLElement,
+  signedSignature?: { isCurrent: boolean },
+  savedSignature?: { id: string; signedUrl?: string | null }
+) {
   const { ESignatureInput } = await import("./e-signature-input");
   const root = createRoot(container);
   const action = async () => ({ success: true, message: "saved" });
@@ -78,12 +88,23 @@ async function renderSignatureInput(container: HTMLElement, signedSignature?: { 
               isCurrent: signedSignature.isCurrent,
               inputType: "DRAWN"
             }
-          : null
+          : null,
+        savedSignature
       })
     );
   });
 
   return root;
+}
+
+function pointerEvent(dom: JSDOM, type: string, clientX: number, clientY: number, pointerId: number) {
+  const event = new dom.window.Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    clientX: { value: clientX },
+    clientY: { value: clientY },
+    pointerId: { value: pointerId }
+  });
+  return event;
 }
 
 test("signature input is a real canvas with confirmation and no browser role field", async () => {
@@ -117,10 +138,121 @@ test("signature input is a real canvas with confirmation and no browser role fie
       form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
     });
     assert.match(hiddenSignature.value, /^data:image\/png;base64,/);
+
+    await act(async () => {
+      const untouched = new dom.window.Event("submit", { bubbles: true, cancelable: true });
+      form.dispatchEvent(untouched);
+    });
+    assert.match(hiddenSignature.value, /^data:image\/png;base64,/);
   } finally {
     await act(async () => {
       root?.unmount();
     });
+    dom.window.close();
+  }
+});
+
+test("pointer down and a one-pixel mark do not enable signing", async () => {
+  const dom = await setup();
+  const container = dom.window.document.createElement("div");
+  dom.window.document.body.appendChild(container);
+  let root: Root | undefined;
+
+  try {
+    root = await renderSignatureInput(container);
+    const canvas = container.querySelector<HTMLCanvasElement>("canvas");
+    const form = container.querySelector<HTMLFormElement>("form");
+    const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    assert.ok(canvas);
+    assert.ok(form);
+    assert.ok(submit);
+    assert.equal(submit.disabled, true);
+
+    await act(async () => {
+      canvas.dispatchEvent(pointerEvent(dom, "pointerdown", 10, 10, 1));
+      canvas.dispatchEvent(pointerEvent(dom, "pointerup", 10, 10, 1));
+    });
+    assert.equal(submit.disabled, true);
+
+    await act(async () => {
+      canvas.dispatchEvent(pointerEvent(dom, "pointerdown", 10, 10, 2));
+      canvas.dispatchEvent(pointerEvent(dom, "pointermove", 11, 10, 2));
+      canvas.dispatchEvent(pointerEvent(dom, "pointerup", 11, 10, 2));
+    });
+    assert.equal(submit.disabled, true);
+    await act(async () => form.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true })));
+    assert.match(container.textContent ?? "", /Draw a signature before applying it/);
+  } finally {
+    await act(async () => root?.unmount());
+    dom.window.close();
+  }
+});
+
+test("a real pointer stroke enables signing and Clear removes the mark", async () => {
+  const dom = await setup();
+  const container = dom.window.document.createElement("div");
+  dom.window.document.body.appendChild(container);
+  let root: Root | undefined;
+
+  try {
+    root = await renderSignatureInput(container);
+    const canvas = container.querySelector<HTMLCanvasElement>("canvas");
+    const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const clear = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Clear");
+    assert.ok(canvas);
+    assert.ok(submit);
+    assert.ok(clear);
+    assert.equal(submit.disabled, true);
+
+    await act(async () => {
+      canvas.dispatchEvent(pointerEvent(dom, "pointerdown", 10, 10, 1));
+      canvas.dispatchEvent(pointerEvent(dom, "pointermove", 24, 10, 1));
+      canvas.dispatchEvent(pointerEvent(dom, "pointerup", 24, 10, 1));
+    });
+    assert.equal(submit.disabled, false);
+
+    await act(async () => {
+      clear.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    });
+    assert.equal(submit.disabled, true);
+  } finally {
+    await act(async () => root?.unmount());
+    dom.window.close();
+  }
+});
+
+test("saved signature use requires a separate explicit confirmation", async () => {
+  const dom = await setup();
+  const container = dom.window.document.createElement("div");
+  dom.window.document.body.appendChild(container);
+  let root: Root | undefined;
+
+  try {
+    root = await renderSignatureInput(container, undefined, { id: "specimen-1" });
+    const useSaved = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Use Saved Signature");
+    const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const confirmation = container.querySelector<HTMLInputElement>('input[name="signature_confirmation"]');
+    const source = container.querySelector<HTMLInputElement>('input[name="signature_source"]');
+    assert.ok(useSaved);
+    assert.ok(submit);
+    assert.ok(confirmation);
+    assert.ok(source);
+    assert.equal(submit.disabled, true);
+    assert.equal(confirmation.checked, false);
+
+    await act(async () => {
+      useSaved.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+    });
+    const specimenId = container.querySelector<HTMLInputElement>('input[name="signature_specimen_id"]');
+    assert.equal(submit.disabled, false);
+    assert.equal(source.value, "SAVED");
+    assert.ok(specimenId);
+    assert.equal(specimenId.value, "specimen-1");
+    assert.equal(confirmation.required, true);
+    assert.match(container.textContent ?? "", /Apply Saved Signature/);
+    assert.match(container.textContent ?? "", /must confirm it again for this specific signing action/);
+  } finally {
+    await act(async () => root?.unmount());
     dom.window.close();
   }
 });

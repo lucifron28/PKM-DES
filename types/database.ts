@@ -170,6 +170,15 @@ export type EnrollmentSignature = {
   updated_at: string;
 };
 
+export type SignatureSpecimen = {
+  id: string;
+  profile_id: string;
+  signature_storage_path: string;
+  signature_hash: string;
+  created_at: string;
+  retired_at: string | null;
+};
+
 export type NurseHealthRequirementWorkItem = {
   enrollment_id: string;
   enrollment_status: "PENDING" | "APPROVED" | "REJECTED";

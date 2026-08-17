@@ -9,6 +9,7 @@ import { getRequirementApplicability } from "@/lib/requirements/rules";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
+import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
 import { formatName } from "@/lib/utils/format";
 
 export default async function StudentExplicitRegistrationFormPage({
@@ -34,6 +35,7 @@ export default async function StudentExplicitRegistrationFormPage({
   }
 
   const student = studentResult.student;
+  const signatureSpecimen = await loadCurrentSignatureSpecimen(supabase, profile.id);
 
   const { data, error } = await supabase
     .from("enrollments")
@@ -124,6 +126,7 @@ export default async function StudentExplicitRegistrationFormPage({
               isCurrent: studentSignature.is_current,
               inputType: "DRAWN"
             } : null}
+            savedSignature={signatureSpecimen}
           />
         )}
       </div>
