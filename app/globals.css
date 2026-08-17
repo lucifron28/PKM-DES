@@ -540,6 +540,7 @@ textarea {
 
   main {
     display: block !important;
+    padding: 0 !important;
     width: 100% !important;
   }
 
