@@ -72,7 +72,8 @@ export function EnrollmentReviewControls({
   semester,
   submittedAt,
   subjects,
-  healthRequirement
+  healthRequirement,
+  clearanceReadiness
 }: {
   enrollmentId: string;
   studentName: string;
@@ -94,6 +95,10 @@ export function EnrollmentReviewControls({
     nurseSignerName: string | null;
     nurseSignedAt: string | null;
   };
+  clearanceReadiness?: {
+    allCurrent: boolean;
+    missingLabels?: string[];
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -110,7 +115,8 @@ export function EnrollmentReviewControls({
     healthRequirement.unavailable ||
     healthRequirement.nurseSignatureStatus !== "SIGNED" ||
     (healthRequirement.applicability === "APPLICABLE" && healthRequirement.status !== "VERIFIED") ||
-    !hasValidSubjectLoad(subjects);
+    !hasValidSubjectLoad(subjects) ||
+    Boolean(clearanceReadiness && !clearanceReadiness.allCurrent);
 
   const approvalBlockReason = !hasValidSubjectLoad(subjects)
     ? "At least one valid attached subject with a positive total unit load is required."
@@ -126,6 +132,10 @@ export function EnrollmentReviewControls({
             ? "Nurse Health Clearance signature is invalidated and must be re-signed."
             : healthRequirement.nurseSignatureStatus === "UNAVAILABLE"
               ? "Nurse Health Clearance signature data is unavailable."
+              : clearanceReadiness && !clearanceReadiness.allCurrent
+                ? (clearanceReadiness.missingLabels?.length
+                    ? `Required clearance signatures are incomplete: ${clearanceReadiness.missingLabels.join(", ")}.`
+                    : "All required clearance signatures must be complete and current before approval.")
         : null;
 
   useEffect(() => {

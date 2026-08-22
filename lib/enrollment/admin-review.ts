@@ -42,7 +42,7 @@ export function getEnrollmentReviewRedirect(outcome: string) {
   if (!isEnrollmentReviewOutcome(outcome)) return { kind: "error" as const, value: "review_failed" };
   if (outcome === "approved" || outcome === "rejected") return { kind: "success" as const, value: outcome };
   if (outcome === "already_reviewed") return { kind: "error" as const, value: outcome };
-  if (outcome === "not_found" || outcome === "invalid_request" || outcome === "invalid_enrollment_load" || outcome === "unverified_requirements") return { kind: "error" as const, value: outcome };
+  if (outcome === "not_found" || outcome === "invalid_request" || outcome === "invalid_enrollment_load" || outcome === "unverified_requirements" || outcome === "incomplete_clearances") return { kind: "error" as const, value: outcome };
 
   return { kind: "error" as const, value: "review_failed" };
 }

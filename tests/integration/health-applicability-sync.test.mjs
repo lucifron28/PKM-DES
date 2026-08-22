@@ -670,3 +670,85 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
     END $$;
   `);
 });
+
+test("Audit Finding 3: Missing HEALTH_CLEARANCE row is recreated by reconciliation without fake signatures", () => {
+  const [prog] = query("SELECT id FROM public.programs WHERE code = 'BSAIS' LIMIT 1;");
+  const programId = prog[0];
+  const authUserId = "55555555-cccc-1111-2222-333333333333";
+
+  execute(`
+    DO $$
+    BEGIN
+      PERFORM set_config('pkm.demo_reset', 'true', true);
+      DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-RECREATE-01'));
+      DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-RECREATE-01'));
+      DELETE FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-RECREATE-01');
+      DELETE FROM public.student_requirements WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-RECREATE-01');
+      DELETE FROM public.students WHERE student_id_number = '25-RECREATE-01';
+      DELETE FROM public.profiles WHERE id = '${authUserId}';
+      DELETE FROM auth.users WHERE id = '${authUserId}';
+      DELETE FROM public.official_student_records WHERE student_id_number = '25-RECREATE-01';
+    END $$;
+  `);
+
+  // 1. Create Pending Enrollment
+  const [created] = query(`
+    WITH auth_u AS (INSERT INTO auth.users (id, email) VALUES ('${authUserId}', 'recreate1@example.com') ON CONFLICT (id) DO NOTHING RETURNING id),
+    prof AS (INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status) VALUES ('${authUserId}', 'recreate1@example.com', 'student', 'Rec', 'One', 'ACTIVE') ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name RETURNING id),
+    osr AS (INSERT INTO public.official_student_records (student_id_number, first_name, last_name, email, program_id, year_level, student_type, gender_sex, enrollment_status) VALUES ('25-RECREATE-01', 'Rec', 'One', 'recreate1@example.com', '${programId}', '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED') RETURNING id)
+    INSERT INTO public.students (profile_id, official_record_id, student_id_number, program_id, year_level, student_type, enrollment_status)
+    SELECT '${authUserId}', osr.id, '25-RECREATE-01', '${programId}', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED' FROM osr RETURNING id, official_record_id;
+  `);
+  const [studentId, osrId] = created;
+
+  const [sub] = query(`
+    SELECT outcome, enrollment_id
+    FROM (SELECT set_config('request.jwt.claim.sub', '${authUserId}', true) as set_jwt) s,
+    LATERAL public.submit_standard_student_enrollment('2025-2026', '2nd Semester');
+  `);
+  const enrollmentId = sub[1];
+
+  // Confirm seeded HEALTH_CLEARANCE exists
+  assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';`)[0][0], "PENDING");
+
+  // 2. Delete HEALTH_CLEARANCE row
+  execute(`
+    DELETE FROM public.enrollment_clearances
+    WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';
+  `);
+  assert.equal(query(`SELECT count(*) FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';`)[0][0], "0");
+
+  // 3. Run reconciliation through legitimate trigger/helper path
+  execute(`
+    SELECT private.reconcile_health_requirement_for_student('${studentId}');
+  `);
+  // 4. Assert HEALTH_CLEARANCE row is recreated
+  const [recreatedClr] = query(`
+    SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';
+  `);
+  assert.ok(recreatedClr);
+  // 5. Assert status is correct (PENDING)
+  assert.equal(recreatedClr[0], "PENDING");
+
+  // 6. Assert no fake signature was created
+  const [sigCount] = query(`
+    SELECT count(*) FROM public.enrollment_signatures WHERE enrollment_id = '${enrollmentId}';
+  `);
+  assert.equal(sigCount[0], "0");
+
+  // Cleanup
+  execute(`
+    DO $$
+    BEGIN
+      PERFORM set_config('pkm.demo_reset', 'true', true);
+      DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
+      DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
+      DELETE FROM public.enrollments WHERE id = '${enrollmentId}';
+      DELETE FROM public.student_requirements WHERE student_id = '${studentId}';
+      DELETE FROM public.students WHERE id = '${studentId}';
+      DELETE FROM public.profiles WHERE id = '${authUserId}';
+      DELETE FROM auth.users WHERE id = '${authUserId}';
+      DELETE FROM public.official_student_records WHERE id = '${osrId}';
+    END $$;
+  `);
+});

@@ -370,6 +370,7 @@ declare
   v_enrollment record;
   v_requirement public.student_requirements%rowtype;
   v_clearance_status text;
+  v_clearance_exists boolean;
   v_mode_changed boolean;
   v_is_current boolean;
   v_had_signed_signature boolean;
@@ -460,6 +461,8 @@ begin
       and ec.clearance_type = 'HEALTH_CLEARANCE'
     for update;
 
+    v_clearance_exists := found;
+
     select exists (
       select 1
       from public.enrollment_signatures es
@@ -468,7 +471,20 @@ begin
         and es.signer_role = 'NURSE'
     ) into v_had_signed_signature;
 
-    if v_mode_changed then
+    if not v_clearance_exists then
+      insert into public.enrollment_clearances (enrollment_id, clearance_type, status)
+      values (
+        v_enrollment.id,
+        'HEALTH_CLEARANCE',
+        case when v_mode_changed then (case when v_had_signed_signature then 'INVALIDATED' else 'PENDING' end)
+             when private.health_clearance_is_current(v_enrollment.id) then 'SIGNED'
+             else 'PENDING' end
+      )
+      on conflict (enrollment_id, clearance_type)
+      do update set
+        status = excluded.status,
+        updated_at = now();
+    elsif v_mode_changed then
       -- When workflow mode changes, previous evidence MUST NOT satisfy the new mode automatically.
       update public.enrollment_clearances
       set
@@ -479,34 +495,24 @@ begin
     else
       v_is_current := private.health_clearance_is_current(v_enrollment.id);
 
-      if not found then
-        insert into public.enrollment_clearances (enrollment_id, clearance_type, status)
-        values (
-          v_enrollment.id,
-          'HEALTH_CLEARANCE',
-          case when v_is_current then 'SIGNED' else 'PENDING' end
-        )
-        on conflict (enrollment_id, clearance_type) do nothing;
+      if v_is_current then
+        if v_clearance_status <> 'SIGNED' then
+          update public.enrollment_clearances
+          set status = 'SIGNED', updated_at = now()
+          where enrollment_id = v_enrollment.id
+            and clearance_type = 'HEALTH_CLEARANCE';
+        end if;
       else
-        if v_is_current then
-          if v_clearance_status <> 'SIGNED' then
-            update public.enrollment_clearances
-            set status = 'SIGNED', updated_at = now()
-            where enrollment_id = v_enrollment.id
-              and clearance_type = 'HEALTH_CLEARANCE';
-          end if;
-        else
-          if v_clearance_status = 'SIGNED' then
-            update public.enrollment_clearances
-            set status = 'INVALIDATED', updated_at = now()
-            where enrollment_id = v_enrollment.id
-              and clearance_type = 'HEALTH_CLEARANCE';
-          elsif v_clearance_status = 'NOT_APPLICABLE' then
-            update public.enrollment_clearances
-            set status = 'PENDING', updated_at = now()
-            where enrollment_id = v_enrollment.id
-              and clearance_type = 'HEALTH_CLEARANCE';
-          end if;
+        if v_clearance_status = 'SIGNED' then
+          update public.enrollment_clearances
+          set status = 'INVALIDATED', updated_at = now()
+          where enrollment_id = v_enrollment.id
+            and clearance_type = 'HEALTH_CLEARANCE';
+        elsif v_clearance_status = 'NOT_APPLICABLE' then
+          update public.enrollment_clearances
+          set status = 'PENDING', updated_at = now()
+          where enrollment_id = v_enrollment.id
+            and clearance_type = 'HEALTH_CLEARANCE';
         end if;
       end if;
     end if;

@@ -19,6 +19,8 @@ test("normalizes remarks and rejects malformed enrollment IDs", () => {
   assert.equal(normalizeEnrollmentReviewId("0fbbf16d-1f18-4d55-92ee-2d94c8c5555f"), "0fbbf16d-1f18-4d55-92ee-2d94c8c5555f");
 });
 
-test("handles unverified_requirements outcome", () => {
+test("handles unverified_requirements and incomplete_clearances outcomes", () => {
   assert.deepEqual(getEnrollmentReviewRedirect("unverified_requirements"), { kind: "error", value: "unverified_requirements" });
+  assert.deepEqual(getEnrollmentReviewRedirect("incomplete_clearances"), { kind: "error", value: "incomplete_clearances" });
+  assert.deepEqual(getEnrollmentReviewRedirect("completely_unknown_outcome"), { kind: "error", value: "review_failed" });
 });
