@@ -333,7 +333,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
 
         <section className="registration-print-signoff" aria-labelledby="registration-signatures">
           <h2 id="registration-signatures" className="sr-only">Authenticated clearance signatures</h2>
-          {REGISTRATION_FORM_SIGNATURE_BLOCKS.map((block) => (
+          {REGISTRATION_FORM_SIGNATURE_BLOCKS.filter((block) => block.label !== "Student").map((block) => (
             <SignatureBlock
               key={block.clearanceType}
               label={block.label}
@@ -346,7 +346,15 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
         </section>
 
         <section className="registration-print-privacy" aria-label="Privacy authorization">
-          I hereby authorize the Pambayang Kolehiyo ng Mauban to collect, process, store and utilize my personal data for the management of my academic records and related administrative purposes. This includes, but is not limited to, the use of my data for instructional purposes, research, data and system improvements.
+          <p className="registration-print-privacy-copy">
+            I hereby authorize the Pambayang Kolehiyo ng Mauban to collect, process, store and utilize my personal data for the management of my academic records and related administrative purposes. This includes, but is not limited to, the use of my data for instructional purposes, research, data and system improvements.
+          </p>
+          <div className="registration-print-privacy-footer">
+            <div className="registration-print-copy-label">STUDENT&apos;S COPY</div>
+            <div className="registration-print-privacy-signature">
+              <SignatureBlock label="Student" signature={signatures.get("STUDENT_ENROLLMENT_SIGNATURE")} />
+            </div>
+          </div>
         </section>
       </section>
     </div>

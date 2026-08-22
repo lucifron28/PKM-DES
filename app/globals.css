@@ -491,12 +491,40 @@ textarea {
 }
 
 .registration-print-privacy {
-  border-top: 1px solid #000000;
+  border: 1px solid #000000;
+  margin-top: 0.8rem;
+  padding: 0.65rem 0.75rem 0.45rem;
+}
+
+.registration-print-privacy-copy {
   font-size: 0.68rem;
   line-height: 1.35;
-  margin-top: 0.8rem;
-  padding-top: 0.45rem;
+  margin: 0;
   text-align: justify;
+}
+
+.registration-print-privacy-footer {
+  align-items: end;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 1fr);
+  margin-top: 0.8rem;
+}
+
+.registration-print-copy-label {
+  border: 1px solid #000000;
+  font-size: 0.68rem;
+  font-weight: 900;
+  justify-self: start;
+  padding: 0.3rem 0.45rem;
+}
+
+.registration-print-privacy-signature .registration-print-signature-image {
+  height: 2.2rem;
+}
+
+.registration-print-privacy-signature .registration-print-signature-meta {
+  font-size: 0.55rem;
 }
 
 @media (max-width: 639px) {
@@ -772,9 +800,31 @@ textarea {
   }
 
   .registration-print-privacy {
+    margin-top: 0.06in !important;
+    padding: 0.08in 0.1in 0.04in !important;
+  }
+
+  .registration-print-privacy-copy {
     font-size: 5.8pt !important;
     line-height: 1.2 !important;
+  }
+
+  .registration-print-privacy-footer {
+    gap: 0.08in !important;
+    grid-template-columns: minmax(0, 1fr) minmax(1.7in, 1fr) !important;
     margin-top: 0.06in !important;
-    padding-top: 0.03in !important;
+  }
+
+  .registration-print-copy-label {
+    font-size: 5.8pt !important;
+    padding: 0.04in 0.06in !important;
+  }
+
+  .registration-print-privacy-signature .registration-print-signature-image {
+    height: 0.28in !important;
+  }
+
+  .registration-print-privacy-signature .registration-print-signature-meta {
+    font-size: 5pt !important;
   }
 }
