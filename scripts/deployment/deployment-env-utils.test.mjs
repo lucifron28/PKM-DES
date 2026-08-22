@@ -57,6 +57,29 @@ test("accepts a valid fictional Vercel Supabase configuration", () => {
   });
 });
 
+test("accepts the confirmation phrase for an explicitly scoped deployed demo reset", () => {
+  assert.equal(
+    validateVercelRuntimeEnvironment(
+      validEnvironment({
+        DEMO_RESET_ENABLED: "true",
+        PKM_DEMO_ENVIRONMENT: "demo",
+        PKM_ALLOW_DEMO_SEED: "true",
+        DEMO_RESET_CONFIRM: "RESET_PKM_DES_DEMO",
+        PKM_DEMO_PROJECT_REF: "fictional-preview"
+      })
+    ).provider,
+    "supabase"
+  );
+});
+
+test("rejects the confirmation phrase when the deployed demo reset is not fully scoped", () => {
+  expectStage(
+    validEnvironment({ DEMO_RESET_CONFIRM: "RESET_PKM_DES_DEMO" }),
+    "local_operator_variable_present",
+    "DEMO_RESET_CONFIRM"
+  );
+});
+
 test("requires an explicit Supabase provider on Vercel", () => {
   expectStage(validEnvironment({ DATABASE_PROVIDER: "sqlite" }), "invalid_database_provider", "DATABASE_PROVIDER");
   const environment = validEnvironment();

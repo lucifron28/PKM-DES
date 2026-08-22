@@ -15,6 +15,9 @@ export const LOCAL_OPERATOR_VARIABLES = Object.freeze([
   "PREVIEW_CREDENTIALS_CONFIRM"
 ]);
 
+const DEPLOYED_DEMO_ENVIRONMENTS = new Set(["preview", "demo"]);
+const DEMO_RESET_CONFIRMATION = "RESET_PKM_DES_DEMO";
+
 export class DeploymentEnvironmentError extends Error {
   constructor(stage, variableName = null) {
     super(variableName ? `${stage}: ${variableName}` : stage);
@@ -70,6 +73,18 @@ export function validateSupabaseProjectUrl(value) {
   return url.toString();
 }
 
+function isExplicitDeployedDemoReset(environment, supabaseUrl) {
+  if (environment.DEMO_RESET_ENABLED !== "true") return false;
+  if (!DEPLOYED_DEMO_ENVIRONMENTS.has(String(environment.PKM_DEMO_ENVIRONMENT ?? "").trim().toLowerCase())) return false;
+  if (environment.PKM_ALLOW_DEMO_SEED !== "true") return false;
+  if (String(environment.DEMO_RESET_CONFIRM ?? "").trim() !== DEMO_RESET_CONFIRMATION) return false;
+
+  const projectRef = String(environment.PKM_DEMO_PROJECT_REF ?? "").trim().toLowerCase();
+  if (!projectRef) return false;
+
+  return new URL(supabaseUrl).hostname.toLowerCase() === `${projectRef}.supabase.co`;
+}
+
 export function validateVercelRuntimeEnvironment(environment = process.env) {
   if (!isVercelBuild(environment)) return { skipped: true };
 
@@ -77,16 +92,17 @@ export function validateVercelRuntimeEnvironment(environment = process.env) {
     throw new DeploymentEnvironmentError("invalid_database_provider", "DATABASE_PROVIDER");
   }
 
-  for (const key of LOCAL_OPERATOR_VARIABLES) {
-    if (hasOwn(environment, key)) {
-      throw new DeploymentEnvironmentError("local_operator_variable_present", key);
-    }
-  }
-
   const url = validateSupabaseProjectUrl(requireSecret(environment, "NEXT_PUBLIC_SUPABASE_URL"));
   const anonKey = requireSecret(environment, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
   const serviceRoleKey = requireSecret(environment, "SUPABASE_SERVICE_ROLE_KEY");
   const accountClaimSecret = requireSecret(environment, "ACCOUNT_CLAIM_SECRET");
+  const demoResetIsExplicitlyScoped = isExplicitDeployedDemoReset(environment, url);
+
+  for (const key of LOCAL_OPERATOR_VARIABLES) {
+    if (hasOwn(environment, key) && !(key === "DEMO_RESET_CONFIRM" && demoResetIsExplicitlyScoped)) {
+      throw new DeploymentEnvironmentError("local_operator_variable_present", key);
+    }
+  }
 
   if (anonKey === serviceRoleKey) {
     throw new DeploymentEnvironmentError("supabase_keys_must_differ");
