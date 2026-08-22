@@ -9,8 +9,8 @@ export type EnrollmentReviewOutcome =
   | "unauthorized"
   | "review_failed"
   | "invalid_enrollment_load"
-  | "unverified_requirements";
-
+  | "unverified_requirements"
+  | "incomplete_clearances";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function normalizeEnrollmentReviewId(value: FormDataEntryValue | null) {
@@ -33,7 +33,8 @@ export function isEnrollmentReviewOutcome(value: string): value is EnrollmentRev
     "unauthorized",
     "review_failed",
     "invalid_enrollment_load",
-    "unverified_requirements"
+    "unverified_requirements",
+    "incomplete_clearances"
   ].includes(value);
 }
 

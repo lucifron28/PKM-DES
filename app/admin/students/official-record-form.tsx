@@ -139,7 +139,7 @@ export function OfficialStudentRecordForm({
           ))}
         </SelectInput>
         <p className="mt-1 text-xs text-slateui-muted">
-          Health Record Update applies to students classified as Incoming 1st Year Student with Female in the official record.
+          Health Record Update applies to all Transferees, and to Incoming 1st Year Students whose official Gender/Sex is Female.
         </p>
       </div>
       <TextInput

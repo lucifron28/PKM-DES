@@ -152,6 +152,7 @@ export default async function PendingEnrollmentsPage({
     invalid_request: "Enrollment request could not be reviewed. Please try again.",
     review_failed: "Enrollment request could not be reviewed. Please try again.",
     invalid_enrollment_load: "This enrollment cannot be approved because its subject load is missing or invalid.",
+    incomplete_clearances: "All required clearance signatures must be complete and current before approval.",
     unverified_requirements: "Applicable Health Record Update verification is still pending for this enrollment term."
   };
 

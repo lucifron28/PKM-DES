@@ -118,15 +118,20 @@ as $$
       and sr.requirement_code = 'HEALTH_RECORD_UPDATE'
       and sr.academic_year = e.academic_year
       and sr.semester = e.semester
-    join public.enrollment_signatures es
-      on es.enrollment_id = e.id
-      and es.student_id = s.id
-      and es.signer_role = 'NURSE'
-      and es.clearance_type = 'HEALTH_CLEARANCE'
     join public.enrollment_clearances ec
       on ec.enrollment_id = e.id
       and ec.clearance_type = 'HEALTH_CLEARANCE'
       and ec.status = 'SIGNED'
+    join lateral (
+      select es_inner.*
+      from public.enrollment_signatures es_inner
+      where es_inner.enrollment_id = e.id
+        and es_inner.student_id = s.id
+        and es_inner.signer_role = 'NURSE'
+        and es_inner.clearance_type = 'HEALTH_CLEARANCE'
+      order by es_inner.signed_at desc, es_inner.id desc
+      limit 1
+    ) es on true
     where e.id = p_enrollment_id
       and (
         -- Mode A: Special Health Record Form is required
@@ -160,6 +165,161 @@ as $$
 $$;
 
 revoke all on function private.health_clearance_is_current(uuid) from public;
+
+-- 2b. Authoritative Check for All 6 Required Clearances
+create or replace function private.enrollment_required_clearances_are_current(p_enrollment_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select
+    -- 1. Health Clearance must be current (supporting either Special or Standard mode)
+    private.health_clearance_is_current(p_enrollment_id)
+    -- 2. Student signature must be current
+    and exists (
+      select 1
+      from public.enrollments e
+      join public.students s on s.id = e.student_id
+      join public.enrollment_clearances ec
+        on ec.enrollment_id = e.id
+        and ec.clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE'
+        and ec.status = 'SIGNED'
+      join lateral (
+        select es_inner.*
+        from public.enrollment_signatures es_inner
+        where es_inner.enrollment_id = e.id
+          and es_inner.student_id = s.id
+          and es_inner.signer_role = 'STUDENT'
+          and es_inner.clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE'
+          and es_inner.document_type = 'ENROLLMENT_REGISTRATION'
+        order by es_inner.signed_at desc, es_inner.id desc
+        limit 1
+      ) es on true
+      where e.id = p_enrollment_id
+        and es.document_hash = private.enrollment_document_hash(
+          e.id,
+          'STUDENT',
+          'STUDENT_ENROLLMENT_SIGNATURE',
+          'ENROLLMENT_REGISTRATION'
+        )
+    )
+    -- 3. Library Clearance must be current
+    and exists (
+      select 1
+      from public.enrollments e
+      join public.students s on s.id = e.student_id
+      join public.enrollment_clearances ec
+        on ec.enrollment_id = e.id
+        and ec.clearance_type = 'LIBRARY_CLEARANCE'
+        and ec.status = 'SIGNED'
+      join lateral (
+        select es_inner.*
+        from public.enrollment_signatures es_inner
+        where es_inner.enrollment_id = e.id
+          and es_inner.student_id = s.id
+          and es_inner.signer_role = 'LIBRARIAN'
+          and es_inner.clearance_type = 'LIBRARY_CLEARANCE'
+          and es_inner.document_type = 'ENROLLMENT_CLEARANCE'
+        order by es_inner.signed_at desc, es_inner.id desc
+        limit 1
+      ) es on true
+      where e.id = p_enrollment_id
+        and es.document_hash = private.enrollment_document_hash(
+          e.id,
+          'LIBRARIAN',
+          'LIBRARY_CLEARANCE',
+          'ENROLLMENT_CLEARANCE'
+        )
+    )
+    -- 4. Program Clearance must be current
+    and exists (
+      select 1
+      from public.enrollments e
+      join public.students s on s.id = e.student_id
+      join public.enrollment_clearances ec
+        on ec.enrollment_id = e.id
+        and ec.clearance_type = 'PROGRAM_CLEARANCE'
+        and ec.status = 'SIGNED'
+      join lateral (
+        select es_inner.*
+        from public.enrollment_signatures es_inner
+        where es_inner.enrollment_id = e.id
+          and es_inner.student_id = s.id
+          and es_inner.signer_role = 'PROGRAM_CHAIR'
+          and es_inner.clearance_type = 'PROGRAM_CLEARANCE'
+          and es_inner.document_type = 'ENROLLMENT_CLEARANCE'
+        order by es_inner.signed_at desc, es_inner.id desc
+        limit 1
+      ) es on true
+      where e.id = p_enrollment_id
+        and es.document_hash = private.enrollment_document_hash(
+          e.id,
+          'PROGRAM_CHAIR',
+          'PROGRAM_CLEARANCE',
+          'ENROLLMENT_CLEARANCE'
+        )
+    )
+    -- 5. Accounting Clearance must be current
+    and exists (
+      select 1
+      from public.enrollments e
+      join public.students s on s.id = e.student_id
+      join public.enrollment_clearances ec
+        on ec.enrollment_id = e.id
+        and ec.clearance_type = 'ACCOUNTING_CLEARANCE'
+        and ec.status = 'SIGNED'
+      join lateral (
+        select es_inner.*
+        from public.enrollment_signatures es_inner
+        where es_inner.enrollment_id = e.id
+          and es_inner.student_id = s.id
+          and es_inner.signer_role = 'ACCOUNTANT'
+          and es_inner.clearance_type = 'ACCOUNTING_CLEARANCE'
+          and es_inner.document_type = 'ENROLLMENT_CLEARANCE'
+        order by es_inner.signed_at desc, es_inner.id desc
+        limit 1
+      ) es on true
+      where e.id = p_enrollment_id
+        and es.document_hash = private.enrollment_document_hash(
+          e.id,
+          'ACCOUNTANT',
+          'ACCOUNTING_CLEARANCE',
+          'ENROLLMENT_CLEARANCE'
+        )
+    )
+    -- 6. Dean Clearance must be current
+    and exists (
+      select 1
+      from public.enrollments e
+      join public.students s on s.id = e.student_id
+      join public.enrollment_clearances ec
+        on ec.enrollment_id = e.id
+        and ec.clearance_type = 'DEAN_CLEARANCE'
+        and ec.status = 'SIGNED'
+      join lateral (
+        select es_inner.*
+        from public.enrollment_signatures es_inner
+        where es_inner.enrollment_id = e.id
+          and es_inner.student_id = s.id
+          and es_inner.signer_role = 'DEAN'
+          and es_inner.clearance_type = 'DEAN_CLEARANCE'
+          and es_inner.document_type = 'ENROLLMENT_CLEARANCE'
+        order by es_inner.signed_at desc, es_inner.id desc
+        limit 1
+      ) es on true
+      where e.id = p_enrollment_id
+        and es.document_hash = private.enrollment_document_hash(
+          e.id,
+          'DEAN',
+          'DEAN_CLEARANCE',
+          'ENROLLMENT_CLEARANCE'
+        )
+    );
+$$;
+
+revoke all on function private.enrollment_required_clearances_are_current(uuid) from public;
 
 -- 3. Health Requirement Write Guard
 create or replace function private.prevent_unscoped_health_requirement_verification()
@@ -205,17 +365,21 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
+  v_new_applicability text;
   v_special_applicable boolean;
   v_enrollment record;
   v_requirement public.student_requirements%rowtype;
   v_clearance_status text;
+  v_mode_changed boolean;
   v_is_current boolean;
+  v_had_signed_signature boolean;
 begin
   if p_student_id is null then
     return;
   end if;
 
-  v_special_applicable := (private.get_health_requirement_applicability(p_student_id) = 'APPLICABLE');
+  v_new_applicability := private.get_health_requirement_applicability(p_student_id);
+  v_special_applicable := (v_new_applicability = 'APPLICABLE');
 
   perform set_config('pkm.health_applicability_reconciliation', 'true', true);
 
@@ -227,8 +391,6 @@ begin
       and e.status = 'PENDING'
     for update of e
   loop
-    v_is_current := private.health_clearance_is_current(v_enrollment.id);
-
     -- 1. Reconcile student_requirements row for special form
     select * into v_requirement
     from public.student_requirements sr
@@ -239,6 +401,7 @@ begin
     for update;
 
     if not found then
+      v_mode_changed := false;
       insert into public.student_requirements (
         student_id,
         requirement_code,
@@ -256,32 +419,28 @@ begin
         'PENDING',
         v_enrollment.academic_year,
         v_enrollment.semester,
-        case when v_special_applicable then 'APPLICABLE' else 'NOT_APPLICABLE' end,
+        v_new_applicability,
         null,
         null,
         null
       );
     else
+      v_mode_changed := (v_requirement.applicability is distinct from v_new_applicability);
+
       if v_special_applicable then
-        if v_requirement.applicability <> 'APPLICABLE' then
-          if v_is_current then
-            update public.student_requirements
-            set applicability = 'APPLICABLE', updated_at = now()
-            where id = v_requirement.id;
-          else
-            update public.student_requirements
-            set
-              applicability = 'APPLICABLE',
-              status = 'PENDING',
-              verified_at = null,
-              verified_by = null,
-              updated_at = now()
-            where id = v_requirement.id;
-          end if;
+        if v_mode_changed then
+          update public.student_requirements
+          set
+            applicability = 'APPLICABLE',
+            status = 'PENDING',
+            verified_at = null,
+            verified_by = null,
+            updated_at = now()
+          where id = v_requirement.id;
         end if;
       else
         -- Special form not required
-        if v_requirement.applicability <> 'NOT_APPLICABLE' or v_requirement.status <> 'PENDING' or v_requirement.verified_at is not null then
+        if v_mode_changed or v_requirement.status <> 'PENDING' or v_requirement.verified_at is not null then
           update public.student_requirements
           set
             applicability = 'NOT_APPLICABLE',
@@ -301,41 +460,59 @@ begin
       and ec.clearance_type = 'HEALTH_CLEARANCE'
     for update;
 
-    if not found then
-      insert into public.enrollment_clearances (enrollment_id, clearance_type, status)
-      values (
-        v_enrollment.id,
-        'HEALTH_CLEARANCE',
-        case when v_is_current then 'SIGNED' else 'PENDING' end
-      )
-      on conflict (enrollment_id, clearance_type) do nothing;
+    select exists (
+      select 1
+      from public.enrollment_signatures es
+      where es.enrollment_id = v_enrollment.id
+        and es.clearance_type = 'HEALTH_CLEARANCE'
+        and es.signer_role = 'NURSE'
+    ) into v_had_signed_signature;
+
+    if v_mode_changed then
+      -- When workflow mode changes, previous evidence MUST NOT satisfy the new mode automatically.
+      update public.enrollment_clearances
+      set
+        status = case when v_had_signed_signature then 'INVALIDATED' else 'PENDING' end,
+        updated_at = now()
+      where enrollment_id = v_enrollment.id
+        and clearance_type = 'HEALTH_CLEARANCE';
     else
-      if v_is_current then
-        if v_clearance_status <> 'SIGNED' then
-          update public.enrollment_clearances
-          set status = 'SIGNED', updated_at = now()
-          where enrollment_id = v_enrollment.id
-            and clearance_type = 'HEALTH_CLEARANCE';
-        end if;
+      v_is_current := private.health_clearance_is_current(v_enrollment.id);
+
+      if not found then
+        insert into public.enrollment_clearances (enrollment_id, clearance_type, status)
+        values (
+          v_enrollment.id,
+          'HEALTH_CLEARANCE',
+          case when v_is_current then 'SIGNED' else 'PENDING' end
+        )
+        on conflict (enrollment_id, clearance_type) do nothing;
       else
-        -- Not current: if previously signed, invalidate; otherwise set PENDING (never NOT_APPLICABLE)
-        if v_clearance_status = 'SIGNED' then
-          update public.enrollment_clearances
-          set status = 'INVALIDATED', updated_at = now()
-          where enrollment_id = v_enrollment.id
-            and clearance_type = 'HEALTH_CLEARANCE';
-        elsif v_clearance_status = 'NOT_APPLICABLE' then
-          update public.enrollment_clearances
-          set status = 'PENDING', updated_at = now()
-          where enrollment_id = v_enrollment.id
-            and clearance_type = 'HEALTH_CLEARANCE';
+        if v_is_current then
+          if v_clearance_status <> 'SIGNED' then
+            update public.enrollment_clearances
+            set status = 'SIGNED', updated_at = now()
+            where enrollment_id = v_enrollment.id
+              and clearance_type = 'HEALTH_CLEARANCE';
+          end if;
+        else
+          if v_clearance_status = 'SIGNED' then
+            update public.enrollment_clearances
+            set status = 'INVALIDATED', updated_at = now()
+            where enrollment_id = v_enrollment.id
+              and clearance_type = 'HEALTH_CLEARANCE';
+          elsif v_clearance_status = 'NOT_APPLICABLE' then
+            update public.enrollment_clearances
+            set status = 'PENDING', updated_at = now()
+            where enrollment_id = v_enrollment.id
+              and clearance_type = 'HEALTH_CLEARANCE';
+          end if;
         end if;
       end if;
     end if;
   end loop;
 end;
 $$;
-
 revoke all on function private.reconcile_health_requirement_for_student(uuid) from public;
 
 -- 5. Triggers on Authoritative Data Changes
@@ -1572,9 +1749,9 @@ begin
       return;
     end if;
 
-    -- ALL students require current Nurse Health Clearance before approval
-    if not private.health_clearance_is_current(v_enrollment.id) then
-      return query select 'unverified_requirements'::text, v_enrollment.id, v_enrollment.status, null::text;
+    -- ALL students require all 6 required clearances to be complete and current before approval
+    if not private.enrollment_required_clearances_are_current(v_enrollment.id) then
+      return query select 'incomplete_clearances'::text, v_enrollment.id, v_enrollment.status, null::text;
       return;
     end if;
   end if;

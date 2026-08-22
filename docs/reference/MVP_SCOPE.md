@@ -99,7 +99,7 @@ The following routes show proposed system scope but are not operational modules:
 - Balances
 - Encode Grades/Schedule
 
-The draft registration form also contains non-operational placeholders for schedule values, section, address, fees, scholarship, and payment details. Its signature/clearance blocks are operational within this branch but remain a research-MVP workflow, not an official institutional approval record. It targets readable A4 browser printing; a larger subject load may continue onto an additional page rather than produce an official PDF.
+The draft registration form also contains non-operational placeholders for schedule values, section, address, fees, scholarship, and payment details. Its signature/clearance blocks are operational within this branch but remain a research-MVP workflow, not an official institutional approval record. It targets readable Letter browser printing and fits the standard load on a single page.
 
 ## 6. Explicit MVP Non-Goals
 
