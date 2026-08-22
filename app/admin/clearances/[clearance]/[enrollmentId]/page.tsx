@@ -80,15 +80,13 @@ export default async function OfficialClearanceReviewPage({
   const latestSignature = signatureResult.signatures
     .filter((signature) => signature.clearance_type === workspace.clearanceType)
     .at(-1) ?? null;
-  const isHealthNotApplicable = workspace.role === "NURSE" && healthApplicability !== "APPLICABLE";
-  const isHealthSyncMismatch = workspace.role === "NURSE" && healthApplicability === "APPLICABLE" && healthRequirement?.applicability === "NOT_APPLICABLE";
-  const clearanceStatus: EnrollmentClearanceStatus = isHealthNotApplicable
-    ? "NOT_APPLICABLE"
-    : latestSignature?.is_current
-      ? "SIGNED"
-      : latestSignature
-        ? "INVALIDATED"
-        : "PENDING";
+  const isSpecialFormRequired = workspace.role === "NURSE" && healthApplicability === "APPLICABLE";
+  const isHealthSyncMismatch = isSpecialFormRequired && healthRequirement?.applicability === "NOT_APPLICABLE";
+  const clearanceStatus: EnrollmentClearanceStatus = latestSignature?.is_current
+    ? "SIGNED"
+    : latestSignature
+      ? "INVALIDATED"
+      : "PENDING";
   const signedSignature = latestSignature
     ? {
         signerName: latestSignature.signer_name_snapshot,
@@ -99,15 +97,15 @@ export default async function OfficialClearanceReviewPage({
       }
     : null;
   const signableEnrollment = enrollment.status === "PENDING" || enrollment.status === "APPROVED";
-  const canSign = workspace.role === "NURSE"
-    ? enrollment.status === "PENDING" && healthApplicability === "APPLICABLE" && healthRequirement?.applicability === "APPLICABLE" && (
+  const canSign = isSpecialFormRequired
+    ? enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && (
         healthRequirement.status === "PENDING" ||
         healthRequirement.status === "REJECTED" ||
         (healthRequirement.status === "VERIFIED" && !latestSignature?.is_current)
       )
-    : signableEnrollment;
-  const canReject = workspace.role === "NURSE" && enrollment.status === "PENDING" && healthApplicability === "APPLICABLE" && healthRequirement?.applicability === "APPLICABLE" && !latestSignature?.is_current;
-  const healthVerificationState = workspace.role === "NURSE"
+    : signableEnrollment && !latestSignature?.is_current;
+  const canReject = isSpecialFormRequired && enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && !latestSignature?.is_current;
+  const healthVerificationState = isSpecialFormRequired
     ? getHealthVerificationViewState({
         applicability: healthRequirement?.applicability ?? healthApplicability,
         status: healthRequirement?.status ?? "PENDING",
@@ -158,11 +156,9 @@ export default async function OfficialClearanceReviewPage({
         <CardHeader title={`${workspace.label} evidence`} description={workspace.description} />
         {signatureResult.error ? (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" role="alert">Signature evidence could not be loaded safely. Signing controls are unavailable until the page is refreshed.</p>
-        ) : workspace.role === "NURSE" && isHealthSyncMismatch ? (
+        ) : isHealthSyncMismatch ? (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" role="alert">Health clearance status is being synchronized. Please refresh the record.</p>
-        ) : workspace.role === "NURSE" && isHealthNotApplicable ? (
-          <p className="rounded-md border border-slateui-border bg-slateui-surfaceAlt px-3 py-2 text-sm text-slateui-secondary">Health Record Update is not applicable to this student. No Nurse signature is requested.</p>
-        ) : workspace.role === "NURSE" ? (
+        ) : isSpecialFormRequired ? (
           <HealthRecordVerificationForm
             enrollmentId={enrollment.id}
             studentName={studentName}

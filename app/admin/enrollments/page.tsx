@@ -7,7 +7,7 @@ import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { formatDate, formatName } from "@/lib/utils/format";
-import { computeHealthRecordDocumentHash } from "@/lib/signatures/fingerprint";
+import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash } from "@/lib/signatures/fingerprint";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import type { Enrollment, OfficialStudentRecord, Profile, Semester, Student } from "@/types/database";
 
@@ -331,29 +331,36 @@ export default async function PendingEnrollmentsPage({
                       ? requirement?.status ?? "PENDING"
                       : "PENDING";
                     const nurseSignature = nurseSignatureByEnrollmentId.get(enrollment.id);
+                    const isSpecial = healthRequirementApplicability === "APPLICABLE";
                     const nurseSignatureIsCurrent = Boolean(
                       nurseSignature &&
                       healthClearanceStatusByEnrollmentId.get(enrollment.id) === "SIGNED" &&
-                      requirement?.status === "VERIFIED" &&
-                      nurseSignature.document_hash === computeHealthRecordDocumentHash({
-                        enrollmentId: enrollment.id,
-                        studentId: enrollment.student_id,
-                        academicYear: enrollment.academic_year,
-                        semester: enrollment.semester,
-                        applicability: "APPLICABLE",
-                        status: "VERIFIED"
-                      })
+                      (
+                        isSpecial
+                          ? requirement?.status === "VERIFIED" &&
+                            nurseSignature.document_hash === computeHealthRecordDocumentHash({
+                              enrollmentId: enrollment.id,
+                              studentId: enrollment.student_id,
+                              academicYear: enrollment.academic_year,
+                              semester: enrollment.semester,
+                              applicability: "APPLICABLE",
+                              status: "VERIFIED"
+                            })
+                          : nurseSignature.document_hash === computeEnrollmentDocumentHash(
+                              enrollment,
+                              "NURSE",
+                              "HEALTH_CLEARANCE",
+                              "ENROLLMENT_CLEARANCE"
+                            )
+                      )
                     );
-                    const nurseSignatureStatus = healthRequirementApplicability !== "APPLICABLE"
-                      ? "NOT_REQUIRED"
-                      : requirementDataUnavailable
-                        ? "UNAVAILABLE"
-                        : nurseSignatureIsCurrent
-                          ? "SIGNED"
-                          : nurseSignature
-                            ? "INVALIDATED"
-                            : "MISSING";
-
+                    const nurseSignatureStatus = requirementDataUnavailable
+                      ? "UNAVAILABLE"
+                      : nurseSignatureIsCurrent
+                        ? "SIGNED"
+                        : nurseSignature
+                          ? "INVALIDATED"
+                          : "MISSING";
                     return (
                       <tr key={enrollment.id} className="bg-white align-top">
                         <td className="whitespace-nowrap px-4 py-3 font-semibold text-slateui-text">

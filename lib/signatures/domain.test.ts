@@ -24,14 +24,16 @@ test("role and clearance mappings fail closed", () => {
   assert.equal(isValidOfficialRoleClearance("REGISTRAR", "DEAN_CLEARANCE"), false);
 });
 
-test("health clearance is conditional and missing signatures prevent completion", () => {
-  const notApplicable = getEnrollmentClearanceOverview("NOT_APPLICABLE", {});
-  assert.equal(notApplicable.find((item) => item.clearanceType === "HEALTH_CLEARANCE")?.status, "NOT_APPLICABLE");
-  assert.equal(getEnrollmentClearanceOverallStatus(notApplicable), "INCOMPLETE");
+test("health clearance is always required and missing signatures prevent completion", () => {
+  const notApplicableSpecialForm = getEnrollmentClearanceOverview("NOT_APPLICABLE", {});
+  assert.equal(notApplicableSpecialForm.find((item) => item.clearanceType === "HEALTH_CLEARANCE")?.status, "PENDING");
+  assert.equal(notApplicableSpecialForm.find((item) => item.clearanceType === "HEALTH_CLEARANCE")?.required, true);
+  assert.equal(getEnrollmentClearanceOverallStatus(notApplicableSpecialForm), "INCOMPLETE");
 
-  const pending = getEnrollmentClearanceOverview("APPLICABLE", {});
-  assert.equal(pending.find((item) => item.clearanceType === "HEALTH_CLEARANCE")?.status, "PENDING");
-  assert.equal(getEnrollmentClearanceOverallStatus(pending), "INCOMPLETE");
+  const pendingSpecialForm = getEnrollmentClearanceOverview("APPLICABLE", {});
+  assert.equal(pendingSpecialForm.find((item) => item.clearanceType === "HEALTH_CLEARANCE")?.status, "PENDING");
+  assert.equal(pendingSpecialForm.find((item) => item.clearanceType === "HEALTH_CLEARANCE")?.required, true);
+  assert.equal(getEnrollmentClearanceOverallStatus(pendingSpecialForm), "INCOMPLETE");
 
   const unavailable = getEnrollmentClearanceOverview(null, {});
   assert.equal(unavailable.find((item) => item.clearanceType === "HEALTH_CLEARANCE")?.status, "PENDING");

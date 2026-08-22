@@ -19,8 +19,12 @@ export function getRequirementApplicability(
 ): RequirementApplicability {
   if (code !== "HEALTH_RECORD_UPDATE") return "NOT_APPLICABLE";
 
+  const studentType = student.student_type?.trim();
   const confirmedFemale = student.official_gender_sex?.trim().toLowerCase() === "female";
-  return student.student_type === "Incoming 1st Year Student" && confirmedFemale
+  return (
+    studentType === "Transferee" ||
+    (studentType === "Incoming 1st Year Student" && confirmedFemale)
+  )
     ? "APPLICABLE"
     : "NOT_APPLICABLE";
 }

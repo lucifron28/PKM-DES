@@ -1,11 +1,14 @@
--- Health Record / Nurse Clearance applicability synchronization
+-- Health Record / Nurse Clearance applicability synchronization & decoupled workflow
 --
--- Centralizes the canonical Health Record applicability rule, introduces an
--- idempotent reconciliation mechanism for mutable/pending enrollment workflows,
--- wires reconciliation triggers to official record and student updates, updates
--- submission, seeding, nurse verification, and worklist RPCs, and repairs any
--- existing stale current-term pending records.
+-- 1. All students require Nurse Health Clearance (HEALTH_CLEARANCE).
+-- 2. The special Health Record Update form (HEALTH_RECORD_UPDATE) applies only to:
+--    - Transferee (all sexes); OR
+--    - Incoming 1st Year Student + Female in official record.
+-- 3. Standard students receive standard Nurse Health Clearance E-Signature.
+-- 4. Centralizes canonical applicability rules, reconciliation, write guards,
+--    and atomic signing RPCs with strict bypass prevention.
 
+-- Domain table grants
 grant select, insert, update on table public.profiles to authenticated;
 grant select on table public.official_student_records to authenticated;
 grant select on table public.students to authenticated;
@@ -21,7 +24,33 @@ grant select on table public.enrollment_clearances to authenticated;
 grant select on table public.enrollment_signatures to authenticated;
 grant select on table public.official_role_assignments to authenticated;
 
--- 1. Canonical Health Requirement Applicability Helper
+-- Allow Nurse signature to carry either HEALTH_RECORD (special form) or ENROLLMENT_CLEARANCE (standard clearance)
+alter table public.enrollment_signatures
+  drop constraint if exists enrollment_signatures_role_clearance_document_check;
+
+alter table public.enrollment_signatures
+  add constraint enrollment_signatures_role_clearance_document_check check (
+    (signer_role = 'STUDENT'
+      and clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE'
+      and document_type = 'ENROLLMENT_REGISTRATION')
+    or (signer_role = 'LIBRARIAN'
+      and clearance_type = 'LIBRARY_CLEARANCE'
+      and document_type = 'ENROLLMENT_CLEARANCE')
+    or (signer_role = 'NURSE'
+      and clearance_type = 'HEALTH_CLEARANCE'
+      and document_type in ('HEALTH_RECORD', 'ENROLLMENT_CLEARANCE'))
+    or (signer_role = 'PROGRAM_CHAIR'
+      and clearance_type = 'PROGRAM_CLEARANCE'
+      and document_type = 'ENROLLMENT_CLEARANCE')
+    or (signer_role = 'ACCOUNTANT'
+      and clearance_type = 'ACCOUNTING_CLEARANCE'
+      and document_type = 'ENROLLMENT_CLEARANCE')
+    or (signer_role = 'DEAN'
+      and clearance_type = 'DEAN_CLEARANCE'
+      and document_type = 'ENROLLMENT_CLEARANCE')
+  );
+
+-- 1. Canonical Special Health Requirement Applicability Helper
 create or replace function private.get_health_requirement_applicability(p_student_id uuid)
 returns text
 language plpgsql
@@ -58,8 +87,11 @@ begin
     return 'NOT_APPLICABLE';
   end if;
 
-  if v_student_type = 'Incoming 1st Year Student'
-     and lower(btrim(coalesce(v_gender_sex, ''))) = 'female' then
+  if v_student_type = 'Transferee'
+     or (
+       v_student_type = 'Incoming 1st Year Student'
+       and lower(btrim(coalesce(v_gender_sex, ''))) = 'female'
+     ) then
     return 'APPLICABLE';
   else
     return 'NOT_APPLICABLE';
@@ -69,8 +101,67 @@ $$;
 
 revoke all on function private.get_health_requirement_applicability(uuid) from public;
 
--- 2. Health Requirement Write Guard
--- Distinguishes Nurse verification mutations from internal applicability reconciliation.
+-- 2. Decoupled Health Clearance Currentness Helper
+create or replace function private.health_clearance_is_current(p_enrollment_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.enrollments e
+    join public.students s on s.id = e.student_id
+    left join public.student_requirements sr
+      on sr.student_id = s.id
+      and sr.requirement_code = 'HEALTH_RECORD_UPDATE'
+      and sr.academic_year = e.academic_year
+      and sr.semester = e.semester
+    join public.enrollment_signatures es
+      on es.enrollment_id = e.id
+      and es.student_id = s.id
+      and es.signer_role = 'NURSE'
+      and es.clearance_type = 'HEALTH_CLEARANCE'
+    join public.enrollment_clearances ec
+      on ec.enrollment_id = e.id
+      and ec.clearance_type = 'HEALTH_CLEARANCE'
+      and ec.status = 'SIGNED'
+    where e.id = p_enrollment_id
+      and (
+        -- Mode A: Special Health Record Form is required
+        (
+          private.get_health_requirement_applicability(s.id) = 'APPLICABLE'
+          and sr.applicability = 'APPLICABLE'
+          and sr.status = 'VERIFIED'
+          and es.document_type = 'HEALTH_RECORD'
+          and es.document_hash = private.health_record_document_hash(
+            e.id,
+            s.id,
+            e.academic_year,
+            e.semester,
+            sr.applicability,
+            sr.status::text
+          )
+        )
+        -- Mode B: Standard Nurse Health Clearance
+        or (
+          private.get_health_requirement_applicability(s.id) = 'NOT_APPLICABLE'
+          and es.document_type = 'ENROLLMENT_CLEARANCE'
+          and es.document_hash = private.enrollment_document_hash(
+            e.id,
+            'NURSE',
+            'HEALTH_CLEARANCE',
+            'ENROLLMENT_CLEARANCE'
+          )
+        )
+      )
+  );
+$$;
+
+revoke all on function private.health_clearance_is_current(uuid) from public;
+
+-- 3. Health Requirement Write Guard
 create or replace function private.prevent_unscoped_health_requirement_verification()
 returns trigger
 language plpgsql
@@ -87,8 +178,6 @@ begin
       end if;
     elsif tg_op = 'UPDATE' then
       if v_reconcile_transaction then
-        -- Reconciliation may update applicability and reset status to PENDING with null verification metadata,
-        -- but can never set status to VERIFIED or REJECTED.
         if new.status not in ('PENDING') and new.status is distinct from old.status then
           raise exception 'Health applicability reconciliation cannot set non-pending status.';
         end if;
@@ -108,7 +197,7 @@ begin
 end;
 $$;
 
--- 3. Controlled Idempotent Reconciliation Function
+-- 4. Controlled Idempotent Reconciliation Function
 create or replace function private.reconcile_health_requirement_for_student(p_student_id uuid)
 returns void
 language plpgsql
@@ -116,19 +205,18 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_applicability text;
+  v_special_applicable boolean;
   v_enrollment record;
   v_requirement public.student_requirements%rowtype;
   v_clearance_status text;
-  v_has_current_sig boolean;
+  v_is_current boolean;
 begin
   if p_student_id is null then
     return;
   end if;
 
-  v_applicability := private.get_health_requirement_applicability(p_student_id);
+  v_special_applicable := (private.get_health_requirement_applicability(p_student_id) = 'APPLICABLE');
 
-  -- Enable reconciliation guard for student_requirements update
   perform set_config('pkm.health_applicability_reconciliation', 'true', true);
 
   -- Focus on mutable / current workflow records: PENDING enrollments
@@ -139,7 +227,9 @@ begin
       and e.status = 'PENDING'
     for update of e
   loop
-    -- 1. Ensure requirement row exists and matches applicability
+    v_is_current := private.health_clearance_is_current(v_enrollment.id);
+
+    -- 1. Reconcile student_requirements row for special form
     select * into v_requirement
     from public.student_requirements sr
     where sr.student_id = p_student_id
@@ -147,8 +237,6 @@ begin
       and sr.academic_year = v_enrollment.academic_year
       and sr.semester = v_enrollment.semester
     for update;
-
-    v_has_current_sig := private.health_clearance_is_current(v_enrollment.id);
 
     if not found then
       insert into public.student_requirements (
@@ -168,15 +256,15 @@ begin
         'PENDING',
         v_enrollment.academic_year,
         v_enrollment.semester,
-        v_applicability,
+        case when v_special_applicable then 'APPLICABLE' else 'NOT_APPLICABLE' end,
         null,
         null,
         null
       );
     else
-      if v_applicability = 'APPLICABLE' then
+      if v_special_applicable then
         if v_requirement.applicability <> 'APPLICABLE' then
-          if v_has_current_sig then
+          if v_is_current then
             update public.student_requirements
             set applicability = 'APPLICABLE', updated_at = now()
             where id = v_requirement.id;
@@ -192,7 +280,7 @@ begin
           end if;
         end if;
       else
-        -- NOT_APPLICABLE
+        -- Special form not required
         if v_requirement.applicability <> 'NOT_APPLICABLE' or v_requirement.status <> 'PENDING' or v_requirement.verified_at is not null then
           update public.student_requirements
           set
@@ -206,7 +294,7 @@ begin
       end if;
     end if;
 
-    -- 2. Reconcile enrollment_clearances row
+    -- 2. Reconcile enrollment_clearances row (HEALTH_CLEARANCE is ALWAYS required for every student)
     select ec.status into v_clearance_status
     from public.enrollment_clearances ec
     where ec.enrollment_id = v_enrollment.id
@@ -218,26 +306,27 @@ begin
       values (
         v_enrollment.id,
         'HEALTH_CLEARANCE',
-        case when v_applicability = 'APPLICABLE' then (case when v_has_current_sig then 'SIGNED' else 'PENDING' end) else 'NOT_APPLICABLE' end
+        case when v_is_current then 'SIGNED' else 'PENDING' end
       )
       on conflict (enrollment_id, clearance_type) do nothing;
     else
-      if v_applicability = 'APPLICABLE' then
-        if v_clearance_status = 'NOT_APPLICABLE' then
+      if v_is_current then
+        if v_clearance_status <> 'SIGNED' then
           update public.enrollment_clearances
-          set
-            status = case when v_has_current_sig then 'SIGNED' else 'PENDING' end,
-            updated_at = now()
+          set status = 'SIGNED', updated_at = now()
           where enrollment_id = v_enrollment.id
             and clearance_type = 'HEALTH_CLEARANCE';
         end if;
       else
-        -- NOT_APPLICABLE
-        if v_clearance_status <> 'NOT_APPLICABLE' then
+        -- Not current: if previously signed, invalidate; otherwise set PENDING (never NOT_APPLICABLE)
+        if v_clearance_status = 'SIGNED' then
           update public.enrollment_clearances
-          set
-            status = 'NOT_APPLICABLE',
-            updated_at = now()
+          set status = 'INVALIDATED', updated_at = now()
+          where enrollment_id = v_enrollment.id
+            and clearance_type = 'HEALTH_CLEARANCE';
+        elsif v_clearance_status = 'NOT_APPLICABLE' then
+          update public.enrollment_clearances
+          set status = 'PENDING', updated_at = now()
           where enrollment_id = v_enrollment.id
             and clearance_type = 'HEALTH_CLEARANCE';
         end if;
@@ -249,7 +338,7 @@ $$;
 
 revoke all on function private.reconcile_health_requirement_for_student(uuid) from public;
 
--- 4. Triggers on Authoritative Data Changes
+-- 5. Triggers on Authoritative Data Changes
 create or replace function private.reconcile_health_on_official_record_change()
 returns trigger
 language plpgsql
@@ -304,7 +393,69 @@ create trigger reconcile_health_after_student_change
 after update of student_type, official_record_id, student_id_number on public.students
 for each row execute function private.reconcile_health_on_student_change();
 
--- 5. Update Official Record Synchronization RPC
+-- 6. Update Invalidation Trigger on Official Record Change (Scoped to mutable pending enrollments)
+create or replace function private.invalidate_health_clearance_on_official_record_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  update public.enrollment_clearances ec
+  set status = 'INVALIDATED', updated_at = now()
+  from public.enrollments e
+  join public.students s on s.id = e.student_id
+  where ec.enrollment_id = e.id
+    and ec.clearance_type = 'HEALTH_CLEARANCE'
+    and ec.status = 'SIGNED'
+    and e.status = 'PENDING'
+    and (
+      s.official_record_id = new.id
+      or s.official_record_id = old.id
+      or (
+        s.official_record_id is null
+        and s.student_id_number is not null
+        and s.student_id_number <> ''
+        and (s.student_id_number = new.student_id_number or s.student_id_number = old.student_id_number)
+      )
+    );
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function private.invalidate_health_clearance_on_requirement_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if new.requirement_code = 'HEALTH_RECORD_UPDATE'
+     and (
+       old.status is distinct from new.status
+       or old.applicability is distinct from new.applicability
+       or old.academic_year is distinct from new.academic_year
+       or old.semester is distinct from new.semester
+     ) then
+    update public.enrollment_clearances ec
+    set status = 'INVALIDATED', updated_at = now()
+    from public.enrollments e
+    where ec.enrollment_id = e.id
+      and ec.clearance_type = 'HEALTH_CLEARANCE'
+      and ec.status = 'SIGNED'
+      and e.status = 'PENDING'
+      and e.student_id = new.student_id
+      and e.academic_year = new.academic_year
+      and e.semester = new.semester;
+  end if;
+  return new;
+end;
+$$;
+
+-- 7. Update Official Record Synchronization RPC
 create or replace function public.update_official_student_record_and_sync(
   p_record_id uuid,
   p_student_id_number text,
@@ -438,7 +589,6 @@ begin
       updated_at = now()
     where id = v_student.id;
 
-    -- Reconcile current health applicability for the student
     perform private.reconcile_health_requirement_for_student(v_student.id);
   end if;
 
@@ -450,7 +600,7 @@ revoke all on function public.update_official_student_record_and_sync from publi
 revoke execute on function public.update_official_student_record_and_sync from anon;
 grant execute on function public.update_official_student_record_and_sync to authenticated;
 
--- 6. Update Enrollment Submission to Use Canonical Applicability
+-- 8. Update Enrollment Submission
 create or replace function private.submit_standard_student_enrollment_unlocked(
   p_academic_year text,
   p_semester text
@@ -703,18 +853,14 @@ begin
 end;
 $$;
 
--- 7. Update Clearance Seeding Trigger Function
+-- 9. Update Clearance Seeding (Every enrollment gets HEALTH_CLEARANCE = PENDING)
 create or replace function private.seed_enrollment_clearances()
 returns trigger
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
-declare
-  v_health_applicability text;
 begin
-  v_health_applicability := private.get_health_requirement_applicability(new.student_id);
-
   insert into public.enrollment_clearances (enrollment_id, clearance_type, status)
   values
     (new.id, 'LIBRARY_CLEARANCE', 'PENDING'),
@@ -722,76 +868,14 @@ begin
     (new.id, 'ACCOUNTING_CLEARANCE', 'PENDING'),
     (new.id, 'DEAN_CLEARANCE', 'PENDING'),
     (new.id, 'STUDENT_ENROLLMENT_SIGNATURE', 'PENDING'),
-    (new.id, 'HEALTH_CLEARANCE', case when v_health_applicability = 'APPLICABLE' then 'PENDING' else 'NOT_APPLICABLE' end)
+    (new.id, 'HEALTH_CLEARANCE', 'PENDING')
   on conflict (enrollment_id, clearance_type) do nothing;
 
   return new;
 end;
 $$;
 
--- 8. Update Invalidation Trigger on Official Record Change (Scoped to mutable pending enrollments)
-create or replace function private.invalidate_health_clearance_on_official_record_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-begin
-  update public.enrollment_clearances ec
-  set status = 'INVALIDATED', updated_at = now()
-  from public.enrollments e
-  join public.students s on s.id = e.student_id
-  where ec.enrollment_id = e.id
-    and ec.clearance_type = 'HEALTH_CLEARANCE'
-    and ec.status = 'SIGNED'
-    and e.status = 'PENDING'
-    and (
-      s.official_record_id = new.id
-      or s.official_record_id = old.id
-      or (
-        s.official_record_id is null
-        and s.student_id_number is not null
-        and s.student_id_number <> ''
-        and (s.student_id_number = new.student_id_number or s.student_id_number = old.student_id_number)
-      )
-    );
-  if tg_op = 'DELETE' then
-    return old;
-  end if;
-  return new;
-end;
-$$;
-
-create or replace function private.invalidate_health_clearance_on_requirement_change()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-begin
-  if new.requirement_code = 'HEALTH_RECORD_UPDATE'
-     and (
-       old.status is distinct from new.status
-       or old.applicability is distinct from new.applicability
-       or old.academic_year is distinct from new.academic_year
-       or old.semester is distinct from new.semester
-     ) then
-    update public.enrollment_clearances ec
-    set status = 'INVALIDATED', updated_at = now()
-    from public.enrollments e
-    where ec.enrollment_id = e.id
-      and ec.clearance_type = 'HEALTH_CLEARANCE'
-      and ec.status = 'SIGNED'
-      and e.status = 'PENDING'
-      and e.student_id = new.student_id
-      and e.academic_year = new.academic_year
-      and e.semester = new.semester;
-  end if;
-  return new;
-end;
-$$;
-
--- 9. Update Nurse Verification RPC
+-- 10. Special Nurse Health Record Verification RPC
 create or replace function public.verify_health_requirement_with_signature(
   p_enrollment_id uuid,
   p_signature_id uuid,
@@ -811,7 +895,6 @@ declare
   v_student public.students%rowtype;
   v_profile public.profiles%rowtype;
   v_requirement public.student_requirements%rowtype;
-  v_applicability text;
   v_expected_document_hash text;
   v_clearance_status text;
   v_note text;
@@ -871,10 +954,9 @@ begin
     return;
   end if;
 
-  v_applicability := private.get_health_requirement_applicability(v_student.id);
-
-  if v_applicability <> 'APPLICABLE' then
-    return query select 'not_applicable'::text, null::uuid, null::uuid, null::timestamptz;
+  -- Must strictly require special form
+  if private.get_health_requirement_applicability(v_student.id) <> 'APPLICABLE' then
+    return query select 'special_form_not_required'::text, null::uuid, null::uuid, null::timestamptz;
     return;
   end if;
 
@@ -970,7 +1052,162 @@ exception
 end;
 $$;
 
--- 10. Update Nurse Rejection RPC
+revoke all on function public.verify_health_requirement_with_signature(uuid, uuid, text, text, text, boolean, text) from public;
+revoke execute on function public.verify_health_requirement_with_signature(uuid, uuid, text, text, text, boolean, text) from anon;
+grant execute on function public.verify_health_requirement_with_signature(uuid, uuid, text, text, text, boolean, text) to authenticated;
+
+-- 11. Standard Nurse Health Clearance Signing RPC (For non-special students)
+create or replace function public.record_standard_nurse_health_clearance_signature(
+  p_enrollment_id uuid,
+  p_signature_id uuid,
+  p_signature_storage_path text,
+  p_signature_hash text,
+  p_document_hash text
+)
+returns table (outcome text, signature_id uuid, signed_at timestamptz)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_enrollment public.enrollments%rowtype;
+  v_student public.students%rowtype;
+  v_profile public.profiles%rowtype;
+  v_expected_document_hash text;
+  v_clearance_status text;
+  v_signed_at timestamptz := now();
+begin
+  if auth.uid() is null or not private.has_official_role('NURSE') then
+    return query select 'unauthorized'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  if p_enrollment_id is null
+    or p_signature_id is null
+    or p_signature_storage_path is null
+    or p_signature_hash is null
+    or p_signature_hash !~ '^[0-9a-f]{64}$'
+    or p_document_hash is null
+    or p_document_hash !~ '^[0-9a-f]{64}$'
+    or p_signature_storage_path <> format('%s/NURSE/%s.png', p_enrollment_id, p_signature_id) then
+    return query select 'invalid_request'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  select e.*
+  into v_enrollment
+  from public.enrollments e
+  where e.id = p_enrollment_id
+  for update;
+
+  if not found then
+    return query select 'not_found'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  select s.* into v_student
+  from public.students s
+  where s.id = v_enrollment.student_id
+  for update;
+
+  select p.* into v_profile
+  from public.profiles p
+  where p.id = auth.uid();
+
+  if not private.has_official_role_for_program('NURSE', v_enrollment.program_id) then
+    return query select 'unauthorized'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  if v_enrollment.status not in ('PENDING', 'APPROVED') then
+    return query select 'not_signable'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  -- PREVENT SPECIAL-FORM BYPASS: If student requires special health record form, refuse standard path
+  if private.get_health_requirement_applicability(v_student.id) = 'APPLICABLE' then
+    return query select 'special_form_required'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  v_expected_document_hash := private.enrollment_document_hash(
+    v_enrollment.id,
+    'NURSE',
+    'HEALTH_CLEARANCE',
+    'ENROLLMENT_CLEARANCE'
+  );
+
+  if p_document_hash <> v_expected_document_hash then
+    return query select 'fingerprint_mismatch'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  select ec.status
+  into v_clearance_status
+  from public.enrollment_clearances ec
+  where ec.enrollment_id = v_enrollment.id
+    and ec.clearance_type = 'HEALTH_CLEARANCE'
+  for update;
+
+  if v_clearance_status = 'SIGNED'
+     and exists (
+       select 1 from public.enrollment_signatures es
+       where es.enrollment_id = v_enrollment.id
+         and es.clearance_type = 'HEALTH_CLEARANCE'
+         and es.signer_role = 'NURSE'
+         and es.document_hash = v_expected_document_hash
+     ) then
+    return query select 'duplicate'::text, null::uuid, null::timestamptz;
+    return;
+  end if;
+
+  if v_clearance_status = 'SIGNED' then
+    update public.enrollment_clearances
+    set status = 'INVALIDATED', updated_at = now()
+    where enrollment_id = v_enrollment.id
+      and clearance_type = 'HEALTH_CLEARANCE';
+  end if;
+
+  insert into public.enrollment_signatures (
+    id, enrollment_id, student_id, signer_profile_id, signer_role,
+    clearance_type, document_type, signer_name_snapshot,
+    signature_storage_path, signature_hash, document_hash, signed_at
+  )
+  values (
+    p_signature_id,
+    v_enrollment.id,
+    v_student.id,
+    auth.uid(),
+    'NURSE',
+    'HEALTH_CLEARANCE',
+    'ENROLLMENT_CLEARANCE',
+    btrim(concat_ws(' ', v_profile.first_name, v_profile.last_name)),
+    p_signature_storage_path,
+    p_signature_hash,
+    p_document_hash,
+    v_signed_at
+  );
+
+  insert into public.enrollment_clearances (enrollment_id, clearance_type, status)
+  values (v_enrollment.id, 'HEALTH_CLEARANCE', 'SIGNED')
+  on conflict (enrollment_id, clearance_type)
+  do update set status = 'SIGNED', updated_at = now();
+
+  insert into public.audit_logs (actor_profile_id, action, target_table, target_id)
+  values (auth.uid(), 'NURSE_APPLY_STANDARD_HEALTH_CLEARANCE', 'enrollment_signatures', p_signature_id);
+
+  return query select 'signed'::text, p_signature_id, v_signed_at;
+exception
+  when unique_violation then
+    return query select 'duplicate'::text, null::uuid, null::timestamptz;
+end;
+$$;
+
+revoke all on function public.record_standard_nurse_health_clearance_signature(uuid, uuid, text, text, text) from public;
+revoke execute on function public.record_standard_nurse_health_clearance_signature(uuid, uuid, text, text, text) from anon;
+grant execute on function public.record_standard_nurse_health_clearance_signature(uuid, uuid, text, text, text) to authenticated;
+
+-- 12. Nurse Rejection RPC
 create or replace function public.reject_health_requirement(
   p_enrollment_id uuid,
   p_note text
@@ -984,7 +1221,6 @@ declare
   v_enrollment public.enrollments%rowtype;
   v_student public.students%rowtype;
   v_requirement public.student_requirements%rowtype;
-  v_applicability text;
   v_clearance_status text;
   v_note text;
   v_rejected_at timestamptz := now();
@@ -1026,10 +1262,8 @@ begin
   where s.id = v_enrollment.student_id
   for update;
 
-  v_applicability := private.get_health_requirement_applicability(v_student.id);
-
-  if v_applicability <> 'APPLICABLE' then
-    return query select 'not_applicable'::text, null::uuid, null::timestamptz;
+  if private.get_health_requirement_applicability(v_student.id) <> 'APPLICABLE' then
+    return query select 'special_form_not_required'::text, null::uuid, null::timestamptz;
     return;
   end if;
 
@@ -1082,7 +1316,11 @@ begin
 end;
 $$;
 
--- 11. Update Nurse Health Requirement Worklist Rows
+-- 13. Nurse Worklist Rows (Shows ALL students in authorized program scope)
+drop function if exists public.get_nurse_health_requirement(uuid);
+drop function if exists public.list_nurse_health_requirements();
+drop function if exists private.nurse_health_requirement_rows(uuid);
+
 create or replace function private.nurse_health_requirement_rows(p_enrollment_id uuid default null)
 returns table (
   enrollment_id uuid,
@@ -1090,11 +1328,17 @@ returns table (
   student_id uuid,
   student_id_number text,
   student_name text,
+  program_id uuid,
+  program_name text,
+  year_level text,
+  student_type text,
+  gender_sex text,
   academic_year text,
   semester text,
   requirement_id uuid,
   requirement_status text,
   requirement_applicability text,
+  special_form_required boolean,
   verified_at timestamptz,
   verified_by uuid,
   nurse_signature_id uuid,
@@ -1102,6 +1346,7 @@ returns table (
   nurse_signature_signed_at timestamptz,
   nurse_signature_storage_path text,
   nurse_signature_document_hash text,
+  nurse_signature_document_type text,
   nurse_signature_is_current boolean
 )
 language sql
@@ -1110,63 +1355,140 @@ security definer
 set search_path = public, pg_temp
 as $$
   select
-    e.id,
-    e.status,
-    s.id,
+    e.id as enrollment_id,
+    e.status as enrollment_status,
+    s.id as student_id,
     s.student_id_number,
-    btrim(concat_ws(' ', student_profile.first_name, student_profile.last_name)),
+    btrim(concat_ws(' ', student_profile.first_name, student_profile.last_name)) as student_name,
+    e.program_id,
+    p.name as program_name,
+    e.year_level,
+    s.student_type,
+    osr.gender_sex,
     e.academic_year,
     e.semester,
-    sr.id,
-    sr.status::text,
-    sr.applicability,
+    sr.id as requirement_id,
+    sr.status::text as requirement_status,
+    coalesce(sr.applicability, private.get_health_requirement_applicability(s.id)) as requirement_applicability,
+    (private.get_health_requirement_applicability(s.id) = 'APPLICABLE') as special_form_required,
     sr.verified_at,
     sr.verified_by,
-    es.id,
-    es.signer_name_snapshot,
-    es.signed_at,
-    es.signature_storage_path,
-    es.document_hash,
-    coalesce((
-      sr.status = 'VERIFIED'
-      and ec.status = 'SIGNED'
-      and es.document_hash = private.health_record_document_hash(
-        e.id,
-        s.id,
-        e.academic_year,
-        e.semester,
-        sr.applicability,
-        sr.status::text
-      )
-    ), false)
+    es.id as nurse_signature_id,
+    es.signer_name_snapshot as nurse_signature_name,
+    es.signed_at as nurse_signature_signed_at,
+    es.signature_storage_path as nurse_signature_storage_path,
+    es.document_hash as nurse_signature_document_hash,
+    es.document_type as nurse_signature_document_type,
+    coalesce(private.health_clearance_is_current(e.id), false) as nurse_signature_is_current
   from public.enrollments e
   join public.students s on s.id = e.student_id
   join public.profiles student_profile on student_profile.id = s.profile_id
-  join public.student_requirements sr
+  join public.programs p on p.id = e.program_id
+  left join public.official_student_records osr
+    on osr.id = s.official_record_id
+    or (
+      s.official_record_id is null
+      and s.student_id_number is not null
+      and s.student_id_number <> ''
+      and osr.student_id_number = s.student_id_number
+    )
+  left join public.student_requirements sr
     on sr.student_id = s.id
     and sr.requirement_code = 'HEALTH_RECORD_UPDATE'
     and sr.academic_year = e.academic_year
     and sr.semester = e.semester
-  left join public.enrollment_clearances ec
-    on ec.enrollment_id = e.id
-    and ec.clearance_type = 'HEALTH_CLEARANCE'
   left join lateral (
-    select es.*
-    from public.enrollment_signatures es
-    where es.enrollment_id = e.id
-      and es.clearance_type = 'HEALTH_CLEARANCE'
-      and es.signer_role = 'NURSE'
-    order by es.signed_at desc, es.id desc
+    select es_inner.*
+    from public.enrollment_signatures es_inner
+    where es_inner.enrollment_id = e.id
+      and es_inner.clearance_type = 'HEALTH_CLEARANCE'
+      and es_inner.signer_role = 'NURSE'
+    order by es_inner.signed_at desc, es_inner.id desc
     limit 1
   ) es on true
   where private.has_official_role_for_program('NURSE', e.program_id)
     and (p_enrollment_id is null or e.id = p_enrollment_id)
-    and e.status in ('PENDING', 'APPROVED')
-    and private.get_health_requirement_applicability(s.id) = 'APPLICABLE'
-    and sr.applicability = 'APPLICABLE';
+    and e.status in ('PENDING', 'APPROVED');
 $$;
 
--- 12. Update Registrar Review Pending Enrollment RPC
+create or replace function public.list_nurse_health_requirements()
+returns table (
+  enrollment_id uuid,
+  enrollment_status text,
+  student_id uuid,
+  student_id_number text,
+  student_name text,
+  program_id uuid,
+  program_name text,
+  year_level text,
+  student_type text,
+  gender_sex text,
+  academic_year text,
+  semester text,
+  requirement_id uuid,
+  requirement_status text,
+  requirement_applicability text,
+  special_form_required boolean,
+  verified_at timestamptz,
+  verified_by uuid,
+  nurse_signature_id uuid,
+  nurse_signature_name text,
+  nurse_signature_signed_at timestamptz,
+  nurse_signature_storage_path text,
+  nurse_signature_document_hash text,
+  nurse_signature_document_type text,
+  nurse_signature_is_current boolean
+)
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  select * from private.nurse_health_requirement_rows(null);
+$$;
+revoke all on function public.list_nurse_health_requirements() from public;
+revoke execute on function public.list_nurse_health_requirements() from anon;
+grant execute on function public.list_nurse_health_requirements() to authenticated;
+
+create or replace function public.get_nurse_health_requirement(p_enrollment_id uuid)
+returns table (
+  enrollment_id uuid,
+  enrollment_status text,
+  student_id uuid,
+  student_id_number text,
+  student_name text,
+  program_id uuid,
+  program_name text,
+  year_level text,
+  student_type text,
+  gender_sex text,
+  academic_year text,
+  semester text,
+  requirement_id uuid,
+  requirement_status text,
+  requirement_applicability text,
+  special_form_required boolean,
+  verified_at timestamptz,
+  verified_by uuid,
+  nurse_signature_id uuid,
+  nurse_signature_name text,
+  nurse_signature_signed_at timestamptz,
+  nurse_signature_storage_path text,
+  nurse_signature_document_hash text,
+  nurse_signature_document_type text,
+  nurse_signature_is_current boolean
+)
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  select * from private.nurse_health_requirement_rows(p_enrollment_id);
+$$;
+
+revoke all on function public.get_nurse_health_requirement(uuid) from public;
+revoke execute on function public.get_nurse_health_requirement(uuid) from anon;
+grant execute on function public.get_nurse_health_requirement(uuid) to authenticated;
+
+-- 14. Registrar Review Pending Enrollment RPC
 create or replace function public.review_pending_enrollment(
   p_enrollment_id uuid,
   p_decision text,
@@ -1187,7 +1509,6 @@ declare
   v_student public.students%rowtype;
   v_remarks text;
   v_student_status text;
-  v_health_requirement_applies boolean;
   v_subject_count integer;
   v_invalid_subject_count integer;
   v_total_units numeric;
@@ -1250,15 +1571,12 @@ begin
       return query select 'invalid_enrollment_load'::text, v_enrollment.id, v_enrollment.status, null::text;
       return;
     end if;
-  end if;
 
-  v_health_requirement_applies := (private.get_health_requirement_applicability(v_student.id) = 'APPLICABLE');
-
-  if p_decision = 'APPROVED'
-    and v_health_requirement_applies
-    and not private.health_clearance_is_current(v_enrollment.id) then
-    return query select 'unverified_requirements'::text, v_enrollment.id, v_enrollment.status, null::text;
-    return;
+    -- ALL students require current Nurse Health Clearance before approval
+    if not private.health_clearance_is_current(v_enrollment.id) then
+      return query select 'unverified_requirements'::text, v_enrollment.id, v_enrollment.status, null::text;
+      return;
+    end if;
   end if;
 
   v_remarks := case
@@ -1311,7 +1629,7 @@ begin
 end;
 $$;
 
--- 13. One-Time Data Repair for Current-Term Pending Enrollments
+-- 15. Safe One-Time Backfill for Current-Term Pending Enrollments
 do $$
 declare
   v_rec record;
