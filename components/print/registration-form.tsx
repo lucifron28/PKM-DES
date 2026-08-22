@@ -1,12 +1,10 @@
-import { BrandMarks } from "@/components/layout/pkm-mark";
+import { MaubanMark, PkmMark } from "@/components/layout/pkm-mark";
 import { PrintButton } from "@/components/print/print-button";
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
 import {
-  getAcademicClassificationLabel,
   getRegistrationClassificationMarks,
   getRegistrationTotalUnits,
   REGISTRATION_FORM_MISCELLANEOUS_FEE_LABELS,
-  REGISTRATION_FORM_SIGNATURE_BLOCKS,
   REGISTRATION_FORM_SUBJECT_ROW_COUNT,
   sortRegistrationSubjects
 } from "@/lib/registration-form/presentation";
@@ -115,16 +113,18 @@ function FeeLine({ label, value, emphasis = false }: { label: string; value: str
 function SignatureBlock({
   label,
   signature,
-  unsignedLabel = "Pending Signature"
+  unsignedLabel = "Pending Signature",
+  className = ""
 }: {
   label: string;
   signature?: PresentedEnrollmentSignature | null;
   unsignedLabel?: string;
+  className?: string;
 }) {
   const signatureIsCurrent = Boolean(signature?.is_current);
 
   return (
-    <div className="registration-print-signature">
+    <div className={`registration-print-signature ${className}`}>
       <div className="registration-print-signature-image">
         {signatureIsCurrent && signature?.signed_url ? (
           <img src={signature.signed_url} alt={`${label} electronic signature`} />
@@ -156,7 +156,8 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
   const totalUnits = getRegistrationTotalUnits(subjects);
   const marks = getRegistrationClassificationMarks(student?.student_type);
   const studentName = formatName(profile?.first_name, profile?.last_name);
-  const classification = getAcademicClassificationLabel(student?.student_type);
+  const yearNumber = enrollment.year_level.match(/\d+/)?.[0] ?? enrollment.year_level;
+  const yearSection = enrollment.programs?.code ? `${enrollment.programs.code} ${yearNumber}` : enrollment.year_level;
   const healthApplicability = enrollment.health_requirement_applicability ?? getRequirementApplicability("HEALTH_RECORD_UPDATE", {
     student_type: student?.student_type ?? "",
     official_gender_sex: student?.official_student_records?.gender_sex ?? null
@@ -183,49 +184,48 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
       <section className="registration-print print-page mx-auto max-w-[960px] rounded-lg border border-black bg-white p-4 sm:p-6" aria-labelledby="registration-form-title">
         <header className="registration-print-header">
           <div className="registration-print-brand-row">
-            <BrandMarks className="registration-print-marks" />
+            <PkmMark />
             <div className="registration-print-institution">
               <p>PAMBAYANG KOLEHIYO NG MAUBAN</p>
               <p>Mauban-Atimonan Bypass Road Sitio Looban, Mauban, Quezon 4330</p>
             </div>
-            <span className="registration-print-draft-label">DRAFT — NOT OFFICIAL COR</span>
+            <MaubanMark />
           </div>
-          <h1 id="registration-form-title">REGISTRATION FORM</h1>
         </header>
 
         <section className="registration-print-details" aria-labelledby="registration-student-details">
           <h2 id="registration-student-details" className="sr-only">Student and enrollment details</h2>
-          <div className="registration-print-detail-row">
+          <div className="registration-print-details-column registration-print-details-primary">
             <FormField label="STUDENT NO:" value={printableValue(student?.student_id_number)} />
-            <FormField label="DATE:" value={printableDate(enrollment.submitted_at)} />
-          </div>
-          <div className="registration-print-detail-row">
             <FormField label="NAME:" value={studentName} />
-            <FormField label="YEAR/SECTION:" value={`${enrollment.year_level} / Section not configured`} />
-          </div>
-          <div className="registration-print-detail-row">
             <FormField label="COURSE:" value={printableValue(enrollment.programs?.name)} />
-            <FormField label="SEMESTER/AY:" value={`${semesterCode(enrollment.semester)}/${enrollment.academic_year}`} />
-          </div>
-          <div className="registration-print-detail-row">
             <FormField label="ADDRESS:" value={printableValue(student?.official_student_records?.address)} />
-            <FormField label="STATUS:" value={classification.toUpperCase()} />
+            <div className="registration-print-classification" aria-label="Student classification">
+              <span className="registration-print-classification-label">CLASSIFICATION:</span>
+              <MarkBox label="NEW" checked={marks.newStudent} />
+              <MarkBox label="OLD" checked={marks.oldStudent} />
+              <MarkBox label="TRANSFEREE" checked={marks.transferee} />
+            </div>
           </div>
-          <div className="registration-print-classification" aria-label="Student classification">
-            <span className="registration-print-classification-label">CLASSIFICATION:</span>
-            <MarkBox label="NEW" checked={marks.newStudent} />
-            <MarkBox label="OLD" checked={marks.oldStudent} />
-            <MarkBox label="TRANSFEREE" checked={marks.transferee} />
-            <MarkBox label="REGULAR" checked={marks.regular} />
-            <MarkBox label="IRREGULAR" checked={marks.irregular} />
+
+          <div className="registration-print-details-column registration-print-details-secondary">
+            <FormField label="DATE:" value={printableDate(enrollment.submitted_at)} />
+            <FormField label="YEAR/SECTION:" value={yearSection} />
+            <FormField label="SEMESTER/AY:" value={`${semesterCode(enrollment.semester)}/${enrollment.academic_year}`} />
+            <div className="registration-print-status" aria-label="Academic status">
+              <span className="registration-print-field-label">STATUS:</span>
+              <span className="registration-print-status-marks">
+                <MarkBox label="REGULAR" checked={marks.regular} />
+                <MarkBox label="IRREGULAR" checked={marks.irregular} />
+              </span>
+            </div>
           </div>
         </section>
 
+        <h1 id="registration-form-title" className="registration-print-title">REGISTRATION FORM</h1>
+
         <section className="registration-print-subjects" aria-labelledby="registration-subject-load">
           <h2 id="registration-subject-load" className="sr-only">Subject load</h2>
-          <div className="print-hidden registration-print-subject-note">
-            Time, day, and room are not configured in the current enrollment record and remain TBA.
-          </div>
           <div className="registration-print-table-wrap">
             <table className="registration-print-table">
               <colgroup>
@@ -273,6 +273,7 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
                 </tr>
               </tfoot>
             </table>
+            {enrollment.status === "APPROVED" ? <span className="registration-print-enrolled-stamp">ENROLLED</span> : null}
           </div>
           <p className="registration-print-warning">Warning: Subject Taken without pre-requisites will not be credited.</p>
         </section>
@@ -322,40 +323,42 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
                   ))}
                 </tbody>
               </table>
+
+              <div className="registration-print-accounting-signatures" aria-label="Accounting and dean signatures">
+                <SignatureBlock label="Accountant" signature={signatures.get("ACCOUNTING_CLEARANCE")} />
+                <SignatureBlock label="Dean" signature={signatures.get("DEAN_CLEARANCE")} />
+              </div>
             </div>
 
-            <div className="registration-print-scholarship">
-              <h3>SCHOLARSHIP:</h3>
-              <div className="registration-print-scholarship-line"><span>Not configured</span></div>
+            <div className="registration-print-approvals">
+              <div className="registration-print-scholarship">
+                <h3>SCHOLARSHIP:</h3>
+                <div className="registration-print-scholarship-line"><span>Not configured</span></div>
+              </div>
+              <div className="registration-print-approval-signatures" aria-label="Clearance signatures">
+                <SignatureBlock label="Librarian" signature={signatures.get("LIBRARY_CLEARANCE")} />
+                <SignatureBlock
+                  label="School Nurse"
+                  signature={signatures.get("HEALTH_CLEARANCE")}
+                  unsignedLabel={healthApplicability === "NOT_APPLICABLE" ? "Not Applicable" : "Pending Nurse Verification"}
+                />
+                <SignatureBlock label="Program Chair" signature={signatures.get("PROGRAM_CLEARANCE")} />
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="registration-print-signoff" aria-labelledby="registration-signatures">
-          <h2 id="registration-signatures" className="sr-only">Authenticated clearance signatures</h2>
-          {REGISTRATION_FORM_SIGNATURE_BLOCKS.filter((block) => block.label !== "Student").map((block) => (
-            <SignatureBlock
-              key={block.clearanceType}
-              label={block.label}
-              signature={signatures.get(block.clearanceType)}
-              unsignedLabel={block.clearanceType === "HEALTH_CLEARANCE"
-                ? healthApplicability === "NOT_APPLICABLE" ? "Not Applicable" : "Pending Nurse Verification"
-                : "Pending Signature"}
-            />
-          ))}
-        </section>
-
-        <section className="registration-print-privacy" aria-label="Privacy authorization">
-          <p className="registration-print-privacy-copy">
-            I hereby authorize the Pambayang Kolehiyo ng Mauban to collect, process, store and utilize my personal data for the management of my academic records and related administrative purposes. This includes, but is not limited to, the use of my data for instructional purposes, research, data and system improvements.
-          </p>
-          <div className="registration-print-privacy-footer">
-            <div className="registration-print-copy-label">STUDENT&apos;S COPY</div>
+        <div className="registration-print-bottom">
+          <div className="registration-print-copy-label">STUDENT&apos;S COPY</div>
+          <section className="registration-print-privacy" aria-label="Privacy authorization">
+            <p className="registration-print-privacy-copy">
+              I hereby authorize the Pambayang Kolehiyo ng Mauban to collect, process, store and utilize my personal data for the management of my academic records and related administrative purposes. This includes, but is not limited to, the use of my data for instructional purposes, research, data and system improvements.
+            </p>
             <div className="registration-print-privacy-signature">
               <SignatureBlock label="Student" signature={signatures.get("STUDENT_ENROLLMENT_SIGNATURE")} />
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </section>
     </div>
   );
