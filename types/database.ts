@@ -185,11 +185,17 @@ export type NurseHealthRequirementWorkItem = {
   student_id: string;
   student_id_number: string | null;
   student_name: string;
+  program_id: string;
+  program_name: string;
+  year_level: string;
+  student_type: string;
+  gender_sex: string | null;
   academic_year: string;
   semester: Semester;
-  requirement_id: string;
-  requirement_status: "PENDING" | "VERIFIED" | "REJECTED";
+  requirement_id: string | null;
+  requirement_status: "PENDING" | "VERIFIED" | "REJECTED" | null;
   requirement_applicability: "APPLICABLE" | "NOT_APPLICABLE";
+  special_form_required: boolean;
   verified_at: string | null;
   verified_by: string | null;
   nurse_signature_id: string | null;
@@ -197,6 +203,7 @@ export type NurseHealthRequirementWorkItem = {
   nurse_signature_signed_at: string | null;
   nurse_signature_storage_path: string | null;
   nurse_signature_document_hash: string | null;
+  nurse_signature_document_type: string | null;
   nurse_signature_is_current: boolean;
 };
 

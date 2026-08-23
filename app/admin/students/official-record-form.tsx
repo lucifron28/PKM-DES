@@ -125,18 +125,23 @@ export function OfficialStudentRecordForm({
           <option key={year} value={year}>{year}</option>
         ))}
       </SelectInput>
-      <SelectInput
-        label="Student Type / Classification"
-        name="student_type"
-        required
-        defaultValue={getValue("student_type", record?.student_type)}
-        error={state.fieldErrors?.student_type}
-      >
-        <option value="" disabled>Select student type</option>
-        {STUDENT_TYPE_TAGS.map((type) => (
-          <option key={type} value={type}>{type}</option>
-        ))}
-      </SelectInput>
+      <div>
+        <SelectInput
+          label="Student Type / Classification"
+          name="student_type"
+          required
+          defaultValue={getValue("student_type", record?.student_type)}
+          error={state.fieldErrors?.student_type}
+        >
+          <option value="" disabled>Select student type</option>
+          {STUDENT_TYPE_TAGS.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </SelectInput>
+        <p className="mt-1 text-xs text-slateui-muted">
+          Health Record Update applies to all Transferees, and to Incoming 1st Year Students whose official Gender/Sex is Female.
+        </p>
+      </div>
       <TextInput
         label="Birthdate"
         name="birthdate"

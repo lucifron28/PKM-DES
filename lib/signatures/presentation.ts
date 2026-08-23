@@ -57,16 +57,25 @@ export async function loadEnrollmentSignaturePresentation(
     const definition = getClearanceDefinition(row.clearance_type);
     let expectedHash: string | null = null;
 
-    if (row.clearance_type === "HEALTH_CLEARANCE" && healthRequirement?.applicability === "APPLICABLE" && healthRequirement.status === "VERIFIED") {
-      expectedHash = computeHealthRecordDocumentHash({
-        enrollmentId: enrollment.id,
-        studentId: row.student_id,
-        academicYear: enrollment.academic_year,
-        semester: enrollment.semester,
-        applicability: "APPLICABLE",
-        status: "VERIFIED"
-      });
-    } else if (definition && row.clearance_type !== "HEALTH_CLEARANCE") {
+    if (row.clearance_type === "HEALTH_CLEARANCE") {
+      if (healthRequirement?.applicability === "APPLICABLE" && healthRequirement.status === "VERIFIED" && row.document_type === "HEALTH_RECORD") {
+        expectedHash = computeHealthRecordDocumentHash({
+          enrollmentId: enrollment.id,
+          studentId: row.student_id,
+          academicYear: enrollment.academic_year,
+          semester: enrollment.semester,
+          applicability: "APPLICABLE",
+          status: "VERIFIED"
+        });
+      } else if (healthRequirement?.applicability !== "APPLICABLE" && row.document_type === "ENROLLMENT_CLEARANCE") {
+        expectedHash = computeEnrollmentDocumentHash(
+          enrollment,
+          "NURSE",
+          "HEALTH_CLEARANCE",
+          "ENROLLMENT_CLEARANCE"
+        );
+      }
+    } else if (definition) {
       expectedHash = computeEnrollmentDocumentHash(
         enrollment,
         row.signer_role,

@@ -7,7 +7,7 @@ import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { formatDate, formatName } from "@/lib/utils/format";
-import { computeHealthRecordDocumentHash } from "@/lib/signatures/fingerprint";
+import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash } from "@/lib/signatures/fingerprint";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import type { Enrollment, OfficialStudentRecord, Profile, Semester, Student } from "@/types/database";
 
@@ -21,16 +21,20 @@ type RequirementRow = Pick<
 >;
 
 type OfficialRecordGenderRow = Pick<OfficialStudentRecord, "student_id_number" | "gender_sex">;
-type NurseSignatureRow = {
+type EnrollmentSignatureRow = {
   id: string;
   enrollment_id: string;
+  student_id: string;
+  signer_role: string;
+  clearance_type: string;
+  document_type: string;
   signer_name_snapshot: string;
   document_hash: string;
   signed_at: string;
 };
 type ClearanceStatusRow = {
   enrollment_id: string;
-  clearance_type: "HEALTH_CLEARANCE";
+  clearance_type: string;
   status: "PENDING" | "SIGNED" | "NOT_APPLICABLE" | "INVALIDATED";
 };
 
@@ -152,6 +156,7 @@ export default async function PendingEnrollmentsPage({
     invalid_request: "Enrollment request could not be reviewed. Please try again.",
     review_failed: "Enrollment request could not be reviewed. Please try again.",
     invalid_enrollment_load: "This enrollment cannot be approved because its subject load is missing or invalid.",
+    incomplete_clearances: "All required clearance signatures must be complete and current before approval.",
     unverified_requirements: "Applicable Health Record Update verification is still pending for this enrollment term."
   };
 
@@ -169,7 +174,7 @@ export default async function PendingEnrollmentsPage({
   const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.student_id))];
   const studentIdNumbers = [...new Set(enrollments.map((enrollment) => enrollment.students?.student_id_number).filter(Boolean))] as string[];
 
-  const [requirementsResult, officialRecordsResult, nurseSignaturesResult, clearanceStatusesResult] = await Promise.all([
+  const [requirementsResult, officialRecordsResult, signaturesResult, clearanceStatusesResult] = await Promise.all([
     studentIds.length
       ? supabase
           .from("student_requirements")
@@ -188,10 +193,8 @@ export default async function PendingEnrollmentsPage({
     enrollments.length
       ? supabase
           .from("enrollment_signatures")
-          .select("id, enrollment_id, signer_name_snapshot, document_hash, signed_at")
+          .select("id, enrollment_id, student_id, signer_role, clearance_type, document_type, signer_name_snapshot, document_hash, signed_at")
           .in("enrollment_id", enrollments.map((enrollment) => enrollment.id))
-          .eq("signer_role", "NURSE")
-          .eq("clearance_type", "HEALTH_CLEARANCE")
           .order("signed_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     enrollments.length
@@ -199,13 +202,12 @@ export default async function PendingEnrollmentsPage({
           .from("enrollment_clearances")
           .select("enrollment_id, clearance_type, status")
           .in("enrollment_id", enrollments.map((enrollment) => enrollment.id))
-          .eq("clearance_type", "HEALTH_CLEARANCE")
       : Promise.resolve({ data: [], error: null })
   ]);
 
   if (requirementsResult.error) console.error("pending_enrollments:requirement_load");
   if (officialRecordsResult.error) console.error("pending_enrollments:official_record_load");
-  if (nurseSignaturesResult.error) console.error("pending_enrollments:nurse_signature_load");
+  if (signaturesResult.error) console.error("pending_enrollments:signatures_load");
   if (clearanceStatusesResult.error) console.error("pending_enrollments:clearance_status_load");
 
   const requirementsByTerm = new Map(
@@ -217,16 +219,18 @@ export default async function PendingEnrollmentsPage({
   const officialGenderByStudentId = new Map(
     ((officialRecordsResult.data as OfficialRecordGenderRow[] | null) ?? []).map((record) => [record.student_id_number ?? "", record.gender_sex])
   );
-  const nurseSignatureByEnrollmentId = new Map<string, NurseSignatureRow>();
-  for (const signature of (nurseSignaturesResult.data as NurseSignatureRow[] | null) ?? []) {
-    if (!nurseSignatureByEnrollmentId.has(signature.enrollment_id)) {
-      nurseSignatureByEnrollmentId.set(signature.enrollment_id, signature);
+  const latestSignatureByEnrollmentAndType = new Map<string, EnrollmentSignatureRow>();
+  for (const signature of (signaturesResult.data as EnrollmentSignatureRow[] | null) ?? []) {
+    const key = `${signature.enrollment_id}:${signature.clearance_type}`;
+    if (!latestSignatureByEnrollmentAndType.has(key)) {
+      latestSignatureByEnrollmentAndType.set(key, signature);
     }
   }
-  const healthClearanceStatusByEnrollmentId = new Map(
-    ((clearanceStatusesResult.data as ClearanceStatusRow[] | null) ?? []).map((clearance) => [clearance.enrollment_id, clearance.status])
-  );
-  const requirementDataUnavailable = Boolean(requirementsResult.error || officialRecordsResult.error || nurseSignaturesResult.error || clearanceStatusesResult.error);
+  const clearanceStatusByEnrollmentAndType = new Map<string, "PENDING" | "SIGNED" | "NOT_APPLICABLE" | "INVALIDATED">();
+  for (const clearance of (clearanceStatusesResult.data as ClearanceStatusRow[] | null) ?? []) {
+    clearanceStatusByEnrollmentAndType.set(`${clearance.enrollment_id}:${clearance.clearance_type}`, clearance.status);
+  }
+  const requirementDataUnavailable = Boolean(requirementsResult.error || officialRecordsResult.error || signaturesResult.error || clearanceStatusesResult.error);
 
   const isActiveTermFilter = Boolean(
     activeTerm && academicYear === activeTerm.academicYear && semester === activeTerm.semester
@@ -330,29 +334,88 @@ export default async function PendingEnrollmentsPage({
                     const healthRequirementStatus = healthRequirementApplicability === "APPLICABLE"
                       ? requirement?.status ?? "PENDING"
                       : "PENDING";
-                    const nurseSignature = nurseSignatureByEnrollmentId.get(enrollment.id);
+                    const nurseSignature = latestSignatureByEnrollmentAndType.get(`${enrollment.id}:HEALTH_CLEARANCE`);
+                    const healthClearanceStatus = clearanceStatusByEnrollmentAndType.get(`${enrollment.id}:HEALTH_CLEARANCE`);
+                    const isSpecial = healthRequirementApplicability === "APPLICABLE";
                     const nurseSignatureIsCurrent = Boolean(
                       nurseSignature &&
-                      healthClearanceStatusByEnrollmentId.get(enrollment.id) === "SIGNED" &&
-                      requirement?.status === "VERIFIED" &&
-                      nurseSignature.document_hash === computeHealthRecordDocumentHash({
-                        enrollmentId: enrollment.id,
-                        studentId: enrollment.student_id,
-                        academicYear: enrollment.academic_year,
-                        semester: enrollment.semester,
-                        applicability: "APPLICABLE",
-                        status: "VERIFIED"
-                      })
+                      healthClearanceStatus === "SIGNED" &&
+                      (
+                        isSpecial
+                          ? requirement?.status === "VERIFIED" &&
+                            nurseSignature.document_type === "HEALTH_RECORD" &&
+                            nurseSignature.document_hash === computeHealthRecordDocumentHash({
+                              enrollmentId: enrollment.id,
+                              studentId: enrollment.student_id,
+                              academicYear: enrollment.academic_year,
+                              semester: enrollment.semester,
+                              applicability: "APPLICABLE",
+                              status: "VERIFIED"
+                            })
+                          : nurseSignature.document_type === "ENROLLMENT_CLEARANCE" &&
+                            nurseSignature.document_hash === computeEnrollmentDocumentHash(
+                              enrollment,
+                              "NURSE",
+                              "HEALTH_CLEARANCE",
+                              "ENROLLMENT_CLEARANCE"
+                            )
+                      )
                     );
-                    const nurseSignatureStatus = healthRequirementApplicability !== "APPLICABLE"
-                      ? "NOT_REQUIRED"
-                      : requirementDataUnavailable
-                        ? "UNAVAILABLE"
-                        : nurseSignatureIsCurrent
-                          ? "SIGNED"
-                          : nurseSignature
-                            ? "INVALIDATED"
-                            : "MISSING";
+                    const nurseSignatureStatus = requirementDataUnavailable
+                      ? "UNAVAILABLE"
+                      : nurseSignatureIsCurrent
+                        ? "SIGNED"
+                        : nurseSignature
+                          ? "INVALIDATED"
+                          : "MISSING";
+
+                    const studentSig = latestSignatureByEnrollmentAndType.get(`${enrollment.id}:STUDENT_ENROLLMENT_SIGNATURE`);
+                    const studentSigCurrent = Boolean(
+                      studentSig &&
+                      clearanceStatusByEnrollmentAndType.get(`${enrollment.id}:STUDENT_ENROLLMENT_SIGNATURE`) === "SIGNED" &&
+                      studentSig.document_hash === computeEnrollmentDocumentHash(enrollment, "STUDENT", "STUDENT_ENROLLMENT_SIGNATURE", "ENROLLMENT_REGISTRATION")
+                    );
+
+                    const libSig = latestSignatureByEnrollmentAndType.get(`${enrollment.id}:LIBRARY_CLEARANCE`);
+                    const libSigCurrent = Boolean(
+                      libSig &&
+                      clearanceStatusByEnrollmentAndType.get(`${enrollment.id}:LIBRARY_CLEARANCE`) === "SIGNED" &&
+                      libSig.document_hash === computeEnrollmentDocumentHash(enrollment, "LIBRARIAN", "LIBRARY_CLEARANCE", "ENROLLMENT_CLEARANCE")
+                    );
+
+                    const chairSig = latestSignatureByEnrollmentAndType.get(`${enrollment.id}:PROGRAM_CLEARANCE`);
+                    const chairSigCurrent = Boolean(
+                      chairSig &&
+                      clearanceStatusByEnrollmentAndType.get(`${enrollment.id}:PROGRAM_CLEARANCE`) === "SIGNED" &&
+                      chairSig.document_hash === computeEnrollmentDocumentHash(enrollment, "PROGRAM_CHAIR", "PROGRAM_CLEARANCE", "ENROLLMENT_CLEARANCE")
+                    );
+
+                    const acctSig = latestSignatureByEnrollmentAndType.get(`${enrollment.id}:ACCOUNTING_CLEARANCE`);
+                    const acctSigCurrent = Boolean(
+                      acctSig &&
+                      clearanceStatusByEnrollmentAndType.get(`${enrollment.id}:ACCOUNTING_CLEARANCE`) === "SIGNED" &&
+                      acctSig.document_hash === computeEnrollmentDocumentHash(enrollment, "ACCOUNTANT", "ACCOUNTING_CLEARANCE", "ENROLLMENT_CLEARANCE")
+                    );
+
+                    const deanSig = latestSignatureByEnrollmentAndType.get(`${enrollment.id}:DEAN_CLEARANCE`);
+                    const deanSigCurrent = Boolean(
+                      deanSig &&
+                      clearanceStatusByEnrollmentAndType.get(`${enrollment.id}:DEAN_CLEARANCE`) === "SIGNED" &&
+                      deanSig.document_hash === computeEnrollmentDocumentHash(enrollment, "DEAN", "DEAN_CLEARANCE", "ENROLLMENT_CLEARANCE")
+                    );
+
+                    const missingLabels: string[] = [];
+                    if (!studentSigCurrent) missingLabels.push("Student Signature");
+                    if (!libSigCurrent) missingLabels.push("Library Clearance");
+                    if (!nurseSignatureIsCurrent) missingLabels.push("Health Clearance");
+                    if (!chairSigCurrent) missingLabels.push("Program Clearance");
+                    if (!acctSigCurrent) missingLabels.push("Accounting Clearance");
+                    if (!deanSigCurrent) missingLabels.push("Dean Clearance");
+
+                    const clearanceReadiness = {
+                      allCurrent: missingLabels.length === 0,
+                      missingLabels
+                    };
 
                     return (
                       <tr key={enrollment.id} className="bg-white align-top">
@@ -408,6 +471,7 @@ export default async function PendingEnrollmentsPage({
                                 nurseSignerName: nurseSignature?.signer_name_snapshot ?? null,
                                 nurseSignedAt: nurseSignature?.signed_at ?? null
                               }}
+                              clearanceReadiness={clearanceReadiness}
                             />
                           </div>
                         </td>

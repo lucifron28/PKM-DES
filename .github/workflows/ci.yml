@@ -43,6 +43,9 @@ jobs:
       - name: Run Unit & Domain Tests
         run: |
           npm run test:smoke-env
+          npm run test:signatures
+          npm run test:health-record
+          npm run test:signature-ui
           npm run test:account-claim
           npm run test:admin-enrollment-review
           npm run test:admin-student-records
@@ -56,6 +59,7 @@ jobs:
           npx tsx --test lib/requirements/*.test.ts
           npx tsx --test lib/auth/*.test.ts
           npx tsx --test components/ui/*.test.ts
+          npm run test:demo-reset
       - name: Build Application
         run: npm run build
         env:

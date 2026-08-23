@@ -53,8 +53,8 @@ export const OFFICIAL_WORKSPACES: Record<OfficialSignerRole, OfficialWorkspaceDe
     label: "Health Clearance",
     navigationLabel: "Health Clearance",
     signerLabel: "School Nurse",
-    description: "Review only applicable status-only Health Record Update requirements.",
-    pendingDescription: "Applicable students awaiting Nurse verification and signature."
+    description: "Health Clearance applies to all students, with special Health Record Update verification for Transferees and Incoming 1st Year Female students.",
+    pendingDescription: "Students awaiting School Nurse health clearance signature."
   },
   PROGRAM_CHAIR: {
     role: "PROGRAM_CHAIR",

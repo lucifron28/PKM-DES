@@ -97,27 +97,20 @@ export type ClearanceOverviewItem = ClearanceDefinition & {
 export type ClearanceOverallStatus = "COMPLETE" | "INCOMPLETE" | "BLOCKED";
 
 export function getEnrollmentClearanceOverview(
-  healthApplicability: RequirementApplicability | null | undefined,
+  _healthApplicability: RequirementApplicability | null | undefined,
   evidenceByClearance: Partial<Record<SignatureClearanceType, ClearanceSignatureEvidence>>
 ): ClearanceOverviewItem[] {
   return CLEARANCE_DEFINITIONS.map((definition) => {
     const evidence = evidenceByClearance[definition.clearanceType] ?? { exists: false, isCurrent: false };
-    const notApplicable = definition.clearanceType === "HEALTH_CLEARANCE" && healthApplicability === "NOT_APPLICABLE";
-    const applicabilityUnknown = definition.clearanceType === "HEALTH_CLEARANCE" && healthApplicability == null;
-    const status: EnrollmentClearanceStatus = notApplicable
-      ? "NOT_APPLICABLE"
-      : applicabilityUnknown
-        ? "PENDING"
-      : !evidence.exists
-        ? "PENDING"
-        : evidence.isCurrent
-          ? "SIGNED"
-          : "INVALIDATED";
+    const status: EnrollmentClearanceStatus = !evidence.exists
+      ? "PENDING"
+      : evidence.isCurrent
+        ? "SIGNED"
+        : "INVALIDATED";
 
     return { ...definition, status, evidence };
   });
 }
-
 export function getEnrollmentClearanceOverallStatus(items: ClearanceOverviewItem[]): ClearanceOverallStatus {
   if (items.some((item) => item.status === "INVALIDATED")) return "BLOCKED";
   return items.every((item) => !item.required || item.status === "SIGNED" || item.status === "NOT_APPLICABLE")

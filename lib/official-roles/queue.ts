@@ -30,6 +30,9 @@ export type OfficialClearanceQueueRow = {
   actionable: boolean;
   requirementStatus?: RequirementStatus;
   healthVerificationState?: HealthVerificationViewState;
+  specialFormRequired?: boolean;
+  studentType?: string;
+  genderSex?: string | null;
 };
 
 type GenericEnrollmentRow = {
@@ -127,35 +130,41 @@ async function loadNurseQueue(
         return currentTermMatches(item, activeTerm) && Boolean(context) && assignmentAllowsProgram(assignments, role, context!.program_id);
       })
       .map((item) => {
-        const context = contextById.get(item.enrollment_id);
-        const healthVerificationState = getHealthVerificationViewState({
-          applicability: item.requirement_applicability,
-          status: item.requirement_status,
-          nurseSignatureIsCurrent: item.nurse_signature_is_current
-        });
-        const clearanceStatus: ClearanceQueueStatus = healthVerificationState === "REJECTED"
+        const specialFormRequired = Boolean(item.special_form_required);
+        const healthVerificationState = specialFormRequired
+          ? getHealthVerificationViewState({
+              applicability: item.requirement_applicability,
+              status: item.requirement_status ?? "PENDING",
+              nurseSignatureIsCurrent: item.nurse_signature_is_current
+            })
+          : undefined;
+        const clearanceStatus: ClearanceQueueStatus = specialFormRequired && healthVerificationState === "REJECTED"
           ? "REJECTED"
           : item.nurse_signature_is_current
             ? "SIGNED"
             : item.nurse_signature_id
               ? "INVALIDATED"
               : "PENDING";
+        const actionable = item.enrollment_status === "PENDING" && !item.nurse_signature_is_current;
         return {
           enrollmentId: item.enrollment_id,
           studentId: item.student_id,
           studentName: item.student_name || "Student name unavailable",
           studentIdNumber: item.student_id_number,
-          programName: context?.programs?.name ?? "Program unavailable",
-          yearLevel: context?.year_level ?? "Year level unavailable",
+          programName: item.program_name || "Program unavailable",
+          yearLevel: item.year_level || "Year level unavailable",
           academicYear: item.academic_year,
           semester: item.semester,
           enrollmentStatus: item.enrollment_status,
           clearanceStatus,
           signerName: item.nurse_signature_name,
           signedAt: item.nurse_signature_signed_at,
-          actionable: item.enrollment_status === "PENDING" && healthVerificationState !== "NOT_APPLICABLE" && healthVerificationState !== "VERIFIED",
-          requirementStatus: item.requirement_status,
-          healthVerificationState
+          actionable,
+          requirementStatus: item.requirement_status ?? undefined,
+          healthVerificationState,
+          specialFormRequired,
+          studentType: item.student_type,
+          genderSex: item.gender_sex
         } satisfies OfficialClearanceQueueRow;
       }),
     error: null

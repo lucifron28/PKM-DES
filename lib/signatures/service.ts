@@ -130,6 +130,10 @@ function resultMessage(outcome: string | undefined, signerLabel: string) {
       return { success: false, message: "Health Record Update status is controlled by the assigned Nurse form." } satisfies ServiceResult;
     case "requirement_unavailable":
       return { success: false, message: "The Health Record Update requirement could not be loaded safely." } satisfies ServiceResult;
+    case "special_form_required":
+      return { success: false, message: "This student requires the dedicated Health Record Update verification form." } satisfies ServiceResult;
+    case "special_form_not_required":
+      return { success: false, message: "This student does not require the special Health Record Update form; use standard Health Clearance." } satisfies ServiceResult;
     case "unauthorized":
       return { success: false, message: "Your account is not authorized for this signing role." } satisfies ServiceResult;
     default:
@@ -204,7 +208,7 @@ export async function recordOfficialClearanceSignature(
   const definition = getClearanceDefinition(clearanceType);
   const parsed = await signatureFormPayload(supabase, profileId, formData);
 
-  if (!enrollmentId || !definition || definition.signerRole === "STUDENT" || clearanceType === "HEALTH_CLEARANCE") {
+  if (!enrollmentId || !definition || definition.signerRole === "STUDENT") {
     return { success: false, message: "The requested clearance is not authorized for this account." };
   }
   const officialRole = definition.signerRole as OfficialSignerRole;
@@ -235,14 +239,27 @@ export async function recordOfficialClearanceSignature(
     clearanceType,
     "ENROLLMENT_CLEARANCE"
   );
-  const { data, error: rpcError } = await supabase.rpc("record_official_clearance_signature", {
-    p_enrollment_id: enrollmentId,
-    p_clearance_type: clearanceType,
-    p_signature_id: signatureId,
-    p_signature_storage_path: path,
-    p_signature_hash: payload.signatureHash,
-    p_document_hash: documentHash
-  });
+  const rpcName = clearanceType === "HEALTH_CLEARANCE"
+    ? "record_standard_nurse_health_clearance_signature"
+    : "record_official_clearance_signature";
+  const rpcArgs = clearanceType === "HEALTH_CLEARANCE"
+    ? {
+        p_enrollment_id: enrollmentId,
+        p_signature_id: signatureId,
+        p_signature_storage_path: path,
+        p_signature_hash: payload.signatureHash,
+        p_document_hash: documentHash
+      }
+    : {
+        p_enrollment_id: enrollmentId,
+        p_clearance_type: clearanceType,
+        p_signature_id: signatureId,
+        p_signature_storage_path: path,
+        p_signature_hash: payload.signatureHash,
+        p_document_hash: documentHash
+      };
+
+  const { data, error: rpcError } = await supabase.rpc(rpcName, rpcArgs);
 
   if (rpcError) {
     await cleanupSignature(admin, path);
@@ -275,7 +292,7 @@ export async function verifyHealthClearance(
   }
   const requirement = (data as NurseRequirementRow[] | null)?.[0] ?? null;
   if (!requirement || requirement.requirement_applicability !== "APPLICABLE") {
-    return resultMessage("not_applicable", "Nurse");
+    return resultMessage("special_form_not_required", "Nurse");
   }
   if (requirement.enrollment_status !== "PENDING") {
     return resultMessage("not_signable", "Nurse");

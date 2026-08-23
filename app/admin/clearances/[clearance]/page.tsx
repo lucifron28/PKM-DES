@@ -145,9 +145,18 @@ export default async function OfficialClearanceQueuePage({
                   <div><dt className="text-slateui-muted">Academic year</dt><dd className="font-semibold text-slateui-text">{row.academicYear}</dd></div>
                   <div><dt className="text-slateui-muted">Semester</dt><dd className="font-semibold text-slateui-text">{row.semester}</dd></div>
                 </dl>
+                {workspace.role === "NURSE" ? (
+                  row.specialFormRequired ? (
+                    <p className="mt-2 text-xs font-semibold text-primary-800">Health Record Form Required</p>
+                  ) : (
+                    <p className="mt-2 text-xs text-slateui-muted">Standard Health Clearance</p>
+                  )
+                ) : null}
                 {row.signerName && row.signedAt ? <p className="mt-3 text-xs text-slateui-muted">Latest signer: {row.signerName} · {new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(row.signedAt))}</p> : null}
                 <ButtonLink href={`/admin/clearances/${workspace.slug}/${row.enrollmentId}`} variant={row.actionable ? "primary" : "outline"} className="mt-4 w-full">
-                  {row.actionable ? "Review & E-Sign" : "Review clearance"}
+                  {workspace.role === "NURSE" && row.specialFormRequired
+                    ? (row.actionable ? "Review Health Form" : "Review health form")
+                    : (row.actionable ? "Review & E-Sign" : "Review clearance")}
                 </ButtonLink>
               </article>
             ))}

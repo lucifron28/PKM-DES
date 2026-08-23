@@ -72,7 +72,8 @@ export function EnrollmentReviewControls({
   semester,
   submittedAt,
   subjects,
-  healthRequirement
+  healthRequirement,
+  clearanceReadiness
 }: {
   enrollmentId: string;
   studentName: string;
@@ -94,6 +95,10 @@ export function EnrollmentReviewControls({
     nurseSignerName: string | null;
     nurseSignedAt: string | null;
   };
+  clearanceReadiness?: {
+    allCurrent: boolean;
+    missingLabels?: string[];
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -108,25 +113,29 @@ export function EnrollmentReviewControls({
 
   const isApprovalBlocked =
     healthRequirement.unavailable ||
-    (healthRequirement.applicability === "APPLICABLE" && (
-      healthRequirement.status !== "VERIFIED" || healthRequirement.nurseSignatureStatus !== "SIGNED"
-    )) ||
-    !hasValidSubjectLoad(subjects);
+    healthRequirement.nurseSignatureStatus !== "SIGNED" ||
+    (healthRequirement.applicability === "APPLICABLE" && healthRequirement.status !== "VERIFIED") ||
+    !hasValidSubjectLoad(subjects) ||
+    Boolean(clearanceReadiness && !clearanceReadiness.allCurrent);
 
   const approvalBlockReason = !hasValidSubjectLoad(subjects)
     ? "At least one valid attached subject with a positive total unit load is required."
     : healthRequirement.unavailable
     ? "Requirement status data is currently unavailable."
-    : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "PENDING"
-      ? "Health Record Update verification is PENDING."
-      : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "REJECTED"
-        ? "Health Record Update status is REJECTED."
-        : healthRequirement.applicability === "APPLICABLE" && healthRequirement.nurseSignatureStatus === "MISSING"
+    : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "REJECTED"
+      ? "Health Record Update was rejected."
+      : healthRequirement.applicability === "APPLICABLE" && healthRequirement.status === "PENDING"
+        ? "Health Record Update verification is pending."
+        : healthRequirement.nurseSignatureStatus === "MISSING"
           ? "Nurse Health Clearance signature is missing."
-          : healthRequirement.applicability === "APPLICABLE" && healthRequirement.nurseSignatureStatus === "INVALIDATED"
+          : healthRequirement.nurseSignatureStatus === "INVALIDATED"
             ? "Nurse Health Clearance signature is invalidated and must be re-signed."
-            : healthRequirement.applicability === "APPLICABLE" && healthRequirement.nurseSignatureStatus === "UNAVAILABLE"
+            : healthRequirement.nurseSignatureStatus === "UNAVAILABLE"
               ? "Nurse Health Clearance signature data is unavailable."
+              : clearanceReadiness && !clearanceReadiness.allCurrent
+                ? (clearanceReadiness.missingLabels?.length
+                    ? `Required clearance signatures are incomplete: ${clearanceReadiness.missingLabels.join(", ")}.`
+                    : "All required clearance signatures must be complete and current before approval.")
         : null;
 
   useEffect(() => {
