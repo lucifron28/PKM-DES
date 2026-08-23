@@ -249,10 +249,11 @@ export default async function EnrollmentStatusPage() {
             <p className="mt-3 border-l-4 border-amber-500 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950">Current-term requirement information could not be loaded. Please contact the Registrar.</p>
           ) : healthRequirementApplicability === "APPLICABLE" ? (
             <div className="mt-3 space-y-2 text-sm leading-6 text-slateui-secondary">
-              <p>Submit the required paper form directly to PKM Health Services. PKM-DES records only the verification status; do not upload medical details.</p>
+              <p>Complete the Health Record Update form online, then the School Nurse will review it before enrollment approval.</p>
+              {currentTermEnrollment ? <ButtonLink href={`/student/enrollments/${currentTermEnrollment.id}/health-record`} variant="secondary">Open Health Record Update</ButtonLink> : null}
               {signatureResult.error ? <p className="font-semibold text-amber-900">Current Nurse signature evidence is unavailable. Refresh or contact the Registrar before relying on this status.</p> : null}
-              {healthVerificationState === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this paper form is verified with a current Nurse signature for the current term.</p> : null}
-              {healthVerificationState === "REJECTED" ? <p className="font-semibold text-red-800">The paper-form verification was rejected. Please contact PKM Health Services for follow-up.</p> : null}
+              {healthVerificationState === "PENDING" ? <p className="font-semibold text-amber-900">Registrar approval remains unavailable until this form is verified with a current Nurse signature for the current term.</p> : null}
+              {healthVerificationState === "REJECTED" ? <p className="font-semibold text-red-800">The Health Record Update verification was rejected. Please contact PKM Health Services for follow-up.</p> : null}
               {healthVerificationState === "LEGACY_VERIFICATION" ? <p className="font-semibold text-amber-900">This record has legacy verification without a current Nurse signature. It does not satisfy the approval gate.</p> : null}
               {healthVerificationState === "VERIFIED" && nurseSignature?.is_current ? (
                 <p className="text-sm text-slateui-secondary">

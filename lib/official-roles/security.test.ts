@@ -4,6 +4,7 @@ import test from "node:test";
 
 const migrationPath = "supabase/migrations/20260814000000_official_signer_management.sql";
 const healthMigrationPath = "supabase/migrations/20260815000000_digital_health_record_verification.sql";
+const healthFormMigrationPath = "supabase/migrations/20260823131029_health_record_update_form.sql";
 const signatureServicePath = "lib/signatures/service.ts";
 const signatureInputPath = "components/signatures/e-signature-input.tsx";
 
@@ -45,4 +46,17 @@ test("Health Record Update writes are Nurse-controlled and signature-aware", asy
   assert.match(migration, /grant execute on function public\.reject_health_requirement\(uuid, text\) to authenticated/i);
   assert.match(migration, /revoke execute on function public\.update_enrollment_requirement_status\(uuid, text, text, text\) from authenticated/i);
   assert.doesNotMatch(migration, /medical_condition|allergy|medication|menstrual|pregnancy|blood_pressure/i);
+});
+
+test("submitted Health Record Update details stay behind RLS and authenticated RPCs", async () => {
+  const migration = await readFile(healthFormMigrationPath, "utf8");
+
+  assert.match(migration, /alter table public\.health_record_updates enable row level security/i);
+  assert.match(migration, /revoke all on table public\.health_record_updates from public, anon, authenticated/i);
+  assert.match(migration, /create policy "health_record_updates_select_owner_or_nurse"/i);
+  assert.match(migration, /private\.has_official_role_for_program\('NURSE', e\.program_id\)/i);
+  assert.match(migration, /create or replace function public\.save_health_record_update/i);
+  assert.match(migration, /s\.profile_id = auth\.uid\(\)/i);
+  assert.match(migration, /grant execute on function public\.save_health_record_update[\s\S]*to authenticated/i);
+  assert.match(migration, /health_record_not_submitted/i);
 });

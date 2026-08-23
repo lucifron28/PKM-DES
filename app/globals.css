@@ -98,6 +98,353 @@ textarea {
   font-family: Arial, "Segoe UI", sans-serif;
 }
 
+.health-record-paper {
+  box-sizing: border-box;
+  color: #111111;
+  font-family: Arial, "Segoe UI", sans-serif;
+  margin-inline: auto;
+  max-width: 8.5in;
+  padding: 0.45in 0.58in 0.38in;
+}
+
+.health-record-paper-header {
+  position: relative;
+  display: block;
+  margin-bottom: 0.2in;
+}
+
+.health-record-paper-mark {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 0.04in;
+  padding-top: 0;
+}
+
+.health-record-paper-mark img {
+  height: 0.52in;
+  width: 0.52in;
+}
+
+.health-record-paper-heading {
+  text-align: center;
+}
+
+.health-record-paper-header > .print-hidden {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.health-record-paper-school {
+  font-size: 13pt;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.health-record-paper-service {
+  font-size: 11pt;
+  letter-spacing: 0.03em;
+  margin: 0.03in 0 0;
+}
+
+.health-record-paper-heading h2 {
+  font-size: 14pt;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin: 0.26in 0 0;
+  text-decoration: underline;
+}
+
+.health-record-paper-identification {
+  display: grid;
+  gap: 0.2in;
+  grid-template-columns: minmax(0, 1fr) minmax(2.1in, 0.78fr);
+  margin: 0 auto 0.18in;
+  max-width: 92%;
+}
+
+.health-record-paper-identification p {
+  font-size: 10pt;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.health-record-paper-identification strong {
+  display: inline-block;
+  min-width: 0.72in;
+}
+
+.health-record-paper-year {
+  align-self: end;
+  padding-bottom: 0.07in;
+}
+
+.health-record-paper-section-label {
+  font-size: 10pt;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  margin: 0 0 0.04in;
+}
+
+.health-record-paper-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.health-record-paper-table th,
+.health-record-paper-table td {
+  border: 1px solid #111111;
+  font-size: 8.3pt;
+  height: 0.31in;
+  padding: 0.04in 0.06in;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.health-record-paper-table th {
+  font-size: 9pt;
+  font-weight: 700;
+}
+
+.health-record-paper-table th:first-child,
+.health-record-paper-table td:first-child {
+  width: 36%;
+}
+
+.health-record-paper-table th:nth-child(2),
+.health-record-paper-table td:nth-child(2) {
+  width: 32%;
+}
+
+.health-record-paper-table th:nth-child(3),
+.health-record-paper-table td:nth-child(3) {
+  width: 32%;
+}
+
+.health-record-paper-control {
+  border: 0;
+  border-bottom: 1px solid transparent;
+  color: #111111;
+  min-width: 0;
+}
+
+.health-record-paper-control:focus {
+  border-bottom-color: #004aad;
+}
+
+.health-record-paper-value {
+  display: inline-block;
+  min-height: 1.15em;
+  min-width: 1.1in;
+  white-space: pre-wrap;
+}
+
+.health-record-paper-labeled-cell {
+  align-items: center;
+  display: flex;
+  gap: 0.04in;
+  text-align: left;
+}
+
+.health-record-paper-labeled-cell strong {
+  white-space: nowrap;
+}
+
+.health-record-paper-female-line,
+.health-record-paper-others-line {
+  align-items: flex-end;
+  display: flex;
+  font-size: 10pt;
+  gap: 0.08in;
+  margin-top: 0.18in;
+}
+
+.health-record-paper-female-line > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.06in;
+  max-width: 3.15in;
+}
+
+.health-record-paper-female-line em {
+  flex-basis: 100%;
+  font-size: 9pt;
+}
+
+.health-record-paper-underline {
+  border-bottom: 1px solid #111111;
+  flex: 0 1 2.25in;
+  min-height: 0.25in;
+}
+
+.health-record-paper-signature-row {
+  align-items: end;
+  display: grid;
+  gap: 0.45in;
+  grid-template-columns: minmax(0, 1fr) 1.55in;
+  margin-top: 0.25in;
+}
+
+.health-record-paper-student-signature {
+  max-width: 3.2in;
+}
+
+.health-record-paper-signature-line {
+  border-bottom: 1px solid #111111;
+  height: 0.5in;
+  margin-bottom: 0.04in;
+}
+
+.health-record-paper-signature-line img,
+.health-record-paper-service-box img {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  width: 100%;
+}
+
+.health-record-paper-student-signature > span {
+  display: block;
+  font-size: 10pt;
+  font-style: italic;
+}
+
+.health-record-paper-student-signature small,
+.health-record-paper-service-box small {
+  display: block;
+  font-size: 7pt;
+  line-height: 1.15;
+  margin-top: 0.03in;
+  text-align: center;
+}
+
+.health-record-paper-service-box {
+  border: 1px solid #111111;
+  min-height: 1.15in;
+  padding: 0.1in;
+  text-align: center;
+}
+
+.health-record-paper-service-box > strong {
+  display: block;
+  font-size: 9pt;
+  text-align: left;
+}
+
+.health-record-paper-service-box img {
+  height: 0.48in;
+  margin: 0.03in auto 0;
+}
+
+@media (max-width: 640px) {
+  .health-record-paper {
+    padding: 0.3in 0.18in;
+  }
+
+  .health-record-paper-header {
+    display: block;
+  }
+
+  .health-record-paper-header > .print-hidden {
+    margin-top: 0.12in;
+    position: static;
+  }
+
+  .health-record-paper-school {
+    font-size: 9pt;
+  }
+
+  .health-record-paper-service,
+  .health-record-paper-heading h2 {
+    font-size: 9pt;
+  }
+
+  .health-record-paper-identification {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .health-record-paper-year {
+    padding-bottom: 0;
+  }
+
+  .health-record-paper-table th,
+  .health-record-paper-table td {
+    font-size: 7pt;
+    padding-inline: 0.025in;
+  }
+
+  .health-record-paper-signature-row {
+    gap: 0.2in;
+    grid-template-columns: minmax(0, 1fr) 1.25in;
+  }
+}
+
+@media print {
+  .health-record-paper {
+    max-width: none !important;
+    min-height: 5.2in !important;
+    padding: 0.15in 0.3in !important;
+  }
+
+  .health-record-paper-header {
+    margin-bottom: 0.12in !important;
+  }
+
+  .health-record-paper-school {
+    font-size: 10pt !important;
+  }
+
+  .health-record-paper-service,
+  .health-record-paper-heading h2 {
+    font-size: 9pt !important;
+  }
+
+  .health-record-paper-heading h2 {
+    margin-top: 0.14in !important;
+  }
+
+  .health-record-paper-identification {
+    margin-bottom: 0.08in !important;
+  }
+
+  .health-record-paper-identification p,
+  .health-record-paper-section-label,
+  .health-record-paper-female-line,
+  .health-record-paper-others-line,
+  .health-record-paper-student-signature > span {
+    font-size: 8pt !important;
+  }
+
+  .health-record-paper-female-line,
+  .health-record-paper-others-line {
+    margin-top: 0.08in !important;
+  }
+
+  .health-record-paper-table th,
+  .health-record-paper-table td {
+    font-size: 7pt !important;
+    height: 0.24in !important;
+  }
+
+  .health-record-paper-signature-row {
+    margin-top: 0.12in !important;
+  }
+
+  .health-record-paper-signature-line {
+    height: 0.34in !important;
+  }
+
+  .health-record-paper-service-box {
+    min-height: 0.8in !important;
+  }
+}
+
 .registration-print-header {
   margin-bottom: 0.9rem;
 }
