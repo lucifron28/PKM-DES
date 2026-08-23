@@ -15,9 +15,9 @@ export function HealthRecordRejectionForm({ enrollmentId }: { enrollmentId: stri
     <form action={formAction} className="print-hidden space-y-3 rounded-lg border border-red-200 bg-red-50 p-4">
       <input type="hidden" name="enrollment_id" value={enrollmentId} />
       <div>
-        <h3 className="font-bold text-red-900">Cannot verify this paper-form submission?</h3>
+        <h3 className="font-bold text-red-900">Cannot verify this Health Record Update?</h3>
         <p className="mt-1 text-sm leading-6 text-red-900">
-          Mark the administrative verification as rejected without drawing or storing a Nurse signature. Do not enter clinical details.
+          Mark the administrative verification as rejected without drawing or storing a Nurse signature. Use only an administrative note. Do not enter clinical details here.
         </p>
       </div>
       <TextArea

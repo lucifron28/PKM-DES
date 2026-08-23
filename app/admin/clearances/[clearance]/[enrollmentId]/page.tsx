@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { applyOfficialClearanceSignatureAction } from "@/app/admin/enrollments/signature-actions";
 import { requireOfficialSignerRole } from "@/lib/auth/session";
 import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
+import { loadHealthRecordUpdate } from "@/lib/health-records/repository";
 import { hasActiveOfficialRoleForProgram } from "@/lib/official-roles/repository";
 import { getOfficialWorkspaceBySlug } from "@/lib/official-roles/roles";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
@@ -73,12 +74,20 @@ export default async function OfficialClearanceReviewPage({
   if (requirementResult.error) console.error("official_clearance_review:health_requirement_load");
 
   const healthRequirement = (requirementResult.data as StudentRequirementRecord | null) ?? null;
+  const healthRecordResult = workspace.role === "NURSE" && healthApplicability === "APPLICABLE"
+    ? await loadHealthRecordUpdate(supabase, enrollment.id)
+    : { record: null, error: null };
+  if (healthRecordResult.error) console.error("official_clearance_review:health_record_load");
+  const healthRecord = healthRecordResult.record;
   const signatureResult = await loadEnrollmentSignaturePresentation(supabase, enrollment, {
     applicability: healthApplicability,
     status: healthRequirement?.status ?? "PENDING"
   });
   const latestSignature = signatureResult.signatures
     .filter((signature) => signature.clearance_type === workspace.clearanceType)
+    .at(-1) ?? null;
+  const studentSignature = signatureResult.signatures
+    .filter((signature) => signature.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE")
     .at(-1) ?? null;
   const isSpecialFormRequired = workspace.role === "NURSE" && healthApplicability === "APPLICABLE";
   const isHealthSyncMismatch = isSpecialFormRequired && healthRequirement?.applicability === "NOT_APPLICABLE";
@@ -98,13 +107,13 @@ export default async function OfficialClearanceReviewPage({
     : null;
   const signableEnrollment = enrollment.status === "PENDING" || enrollment.status === "APPROVED";
   const canSign = isSpecialFormRequired
-    ? enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && (
+    ? enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && Boolean(healthRecord) && (
         healthRequirement.status === "PENDING" ||
         healthRequirement.status === "REJECTED" ||
         (healthRequirement.status === "VERIFIED" && !latestSignature?.is_current)
       )
     : signableEnrollment && !latestSignature?.is_current;
-  const canReject = isSpecialFormRequired && enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && !latestSignature?.is_current;
+  const canReject = isSpecialFormRequired && enrollment.status === "PENDING" && healthRequirement?.applicability === "APPLICABLE" && Boolean(healthRecord) && !latestSignature?.is_current;
   const healthVerificationState = isSpecialFormRequired
     ? getHealthVerificationViewState({
         applicability: healthRequirement?.applicability ?? healthApplicability,
@@ -171,6 +180,14 @@ export default async function OfficialClearanceReviewPage({
             applicability={healthRequirement?.applicability ?? healthApplicability}
             status={healthRequirement?.status ?? "PENDING"}
             note={healthRequirement?.note ?? null}
+            healthRecord={healthRecord}
+            studentSignature={studentSignature ? {
+              signerName: studentSignature.signer_name_snapshot,
+              signedAt: studentSignature.signed_at,
+              signedUrl: studentSignature.signed_url,
+              isCurrent: studentSignature.is_current,
+              inputType: "DRAWN"
+            } : null}
             signerName={signerName}
             signedSignature={signedSignature}
             canVerify={canSign}

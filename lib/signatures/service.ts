@@ -130,6 +130,8 @@ function resultMessage(outcome: string | undefined, signerLabel: string) {
       return { success: false, message: "Health Record Update status is controlled by the assigned Nurse form." } satisfies ServiceResult;
     case "requirement_unavailable":
       return { success: false, message: "The Health Record Update requirement could not be loaded safely." } satisfies ServiceResult;
+    case "health_record_not_submitted":
+      return { success: false, message: "The student must complete the Health Record Update form before Nurse verification." } satisfies ServiceResult;
     case "special_form_required":
       return { success: false, message: "This student requires the dedicated Health Record Update verification form." } satisfies ServiceResult;
     case "special_form_not_required":
