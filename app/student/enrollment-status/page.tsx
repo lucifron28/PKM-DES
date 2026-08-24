@@ -108,8 +108,12 @@ export default async function EnrollmentStatusPage() {
     }
   }
 
+  // The term-scoped requirement is the authoritative result of the server-side
+  // applicability check. Students cannot read the Registrar-only official
+  // record directly, so deriving this again from the nested record would hide
+  // an applicable Health Record Update from incoming female students.
   const healthRequirementApplicability = activeTerm
-    ? getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+    ? currentTermRequirement?.applicability ?? getRequirementApplicability("HEALTH_RECORD_UPDATE", {
         student_type: student.student_type,
         official_gender_sex: student.official_student_records?.gender_sex ?? null
       })

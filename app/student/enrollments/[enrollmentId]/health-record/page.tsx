@@ -60,20 +60,10 @@ export default async function StudentHealthRecordPage({
 
   const studentType = enrollment.students?.student_type ?? studentResult.student.student_type;
   const officialGender = enrollment.students?.official_student_records?.gender_sex ?? studentResult.student.official_student_records?.gender_sex ?? null;
-  const applicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
+  const fallbackApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
     student_type: studentType,
     official_gender_sex: officialGender
   });
-
-  if (applicability !== "APPLICABLE") {
-    return (
-      <EmptyState
-        title="Health Record Update not required"
-        description="This form is only required for Transferees and Incoming 1st Year Students whose official Gender/Sex is Female."
-        action={<ButtonLink href="/student/enrollment-status" variant="outline">Back to Enrollment Status</ButtonLink>}
-      />
-    );
-  }
 
   const [requirementResult, healthRecordResult] = await Promise.all([
     supabase
@@ -87,8 +77,27 @@ export default async function StudentHealthRecordPage({
     loadHealthRecordUpdate(supabase, enrollment.id)
   ]);
 
+  if (requirementResult.error || healthRecordResult.error) {
+    return <EmptyState title="Health Record Update could not be loaded." description="Please refresh and try again." />;
+  }
+
   const requirement = (requirementResult.data as StudentRequirementRecord | null) ?? null;
   const record = healthRecordResult.record;
+  // Prefer the persisted term requirement. Its applicability was evaluated by
+  // the server with the Registrar's official record access and is the value the
+  // approval workflow uses as well.
+  const applicability = requirement?.applicability ?? fallbackApplicability;
+
+  if (applicability !== "APPLICABLE") {
+    return (
+      <EmptyState
+        title="Health Record Update not required"
+        description="This form is only required for Transferees and Incoming 1st Year Students whose official Gender/Sex is Female."
+        action={<ButtonLink href="/student/enrollment-status" variant="outline">Back to Enrollment Status</ButtonLink>}
+      />
+    );
+  }
+
   // A legacy enrollment may already be approved while the new form record is
   // missing. Allow that record to be completed once so the Nurse can review it.
   const editable = enrollment.status !== "REJECTED"
