@@ -138,4 +138,6 @@ test("the printable registration form does not render an enrolled stamp", () => 
 
   assert.doesNotMatch(componentSource, /registration-print-enrolled-stamp/);
   assert.doesNotMatch(componentSource, />ENROLLED</);
+  assert.match(componentSource, /STUDENT&apos;S COPY/);
+  assert.match(componentSource, /<RegistrationForm|export function RegistrationForm/);
 });
