@@ -137,8 +137,7 @@ function SignatureBlock({
       {signatureIsCurrent && signature ? (
         <div className="registration-print-signature-meta">
           <span>{signature.signer_name_snapshot}</span>
-          <span>Electronically Signed</span>
-          <span>{formatDate(signature.signed_at)}</span>
+          <span>Electronically Signed — {formatDate(signature.signed_at)}</span>
         </div>
       ) : null}
     </div>
@@ -273,7 +272,6 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
                 </tr>
               </tfoot>
             </table>
-            {enrollment.status === "APPROVED" ? <span className="registration-print-enrolled-stamp">ENROLLED</span> : null}
           </div>
           <p className="registration-print-warning">Warning: Subject Taken without pre-requisites will not be credited.</p>
         </section>

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   canStudentPrintRegistrationForm,
@@ -127,4 +128,14 @@ test("keeps the source form sections and signature blocks explicit", () => {
     "Accountant",
     "Dean"
   ]);
+});
+
+test("the printable registration form does not render an enrolled stamp", () => {
+  const componentSource = readFileSync(
+    new URL("../../components/print/registration-form.tsx", import.meta.url),
+    "utf8"
+  );
+
+  assert.doesNotMatch(componentSource, /registration-print-enrolled-stamp/);
+  assert.doesNotMatch(componentSource, />ENROLLED</);
 });
