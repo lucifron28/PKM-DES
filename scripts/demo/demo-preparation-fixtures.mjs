@@ -3,6 +3,15 @@ import { resolveDemoTerm } from "./demo-records.mjs";
 export const DEMO_SHARED_PASSWORD = "Demo1234!";
 export const DEMO_PREPARATION_CONFIRMATION = "PREPARE_PKM_DES_DEMO";
 export const DEMO_ENVIRONMENT_VARIABLE = "PKM_DEMO_ENVIRONMENT";
+export const DEMO_ENVIRONMENT_BLOCKED_MESSAGE =
+  "BLOCKED — Supabase environment cannot be confirmed as demo/development.";
+export const DEMO_ALLOWED_ENVIRONMENTS = Object.freeze([
+  "local",
+  "dev",
+  "development",
+  "preview",
+  "demo"
+]);
 
 export const DEMO_ACCOUNTS = Object.freeze([
   {
@@ -77,6 +86,10 @@ export const DEMO_ACCOUNTS = Object.freeze([
   }
 ]);
 
+export const DEMO_OFFICIAL_ACCOUNTS = Object.freeze(
+  DEMO_ACCOUNTS.filter((account) => account.role === "admin")
+);
+
 export const PRIMARY_DEMO_STUDENT = Object.freeze({
   key: "primary-student",
   email: "pkm.demo.student@example.com",
@@ -112,11 +125,15 @@ export function requireEnvironmentValue(name, value) {
 export function readDemoPreparationConfiguration(environment = process.env, { requireMutationOptIn = true } = {}) {
   const url = requireEnvironmentValue("NEXT_PUBLIC_SUPABASE_URL", environment.NEXT_PUBLIC_SUPABASE_URL);
   const serviceRoleKey = requireEnvironmentValue("SUPABASE_SERVICE_ROLE_KEY", environment.SUPABASE_SERVICE_ROLE_KEY);
-  const targetEnvironment = requireEnvironmentValue(DEMO_ENVIRONMENT_VARIABLE, environment[DEMO_ENVIRONMENT_VARIABLE]);
+  const targetEnvironment = requireEnvironmentValue(DEMO_ENVIRONMENT_VARIABLE, environment[DEMO_ENVIRONMENT_VARIABLE]).toLowerCase();
   const projectRef = requireEnvironmentValue("PKM_DEMO_PROJECT_REF", environment.PKM_DEMO_PROJECT_REF).toLowerCase();
   const parsedUrl = new URL(url);
   const isLocalTarget = projectRef === "local";
   const expectedHost = isLocalTarget ? parsedUrl.hostname : `${projectRef}.supabase.co`;
+
+  if (!DEMO_ALLOWED_ENVIRONMENTS.includes(targetEnvironment)) {
+    throw new Error(DEMO_ENVIRONMENT_BLOCKED_MESSAGE);
+  }
 
   if (isLocalTarget && !["localhost", "127.0.0.1"].includes(parsedUrl.hostname.toLowerCase())) {
     throw new Error("PKM_DEMO_PROJECT_REF=local requires a localhost Supabase URL.");
@@ -141,19 +158,32 @@ export function readDemoPreparationConfiguration(environment = process.env, { re
     }
   }
 
-  const password = environment.DEMO_ACCOUNT_PASSWORD?.trim() || DEMO_SHARED_PASSWORD;
-  if (!password) {
-    throw new Error("DEMO_ACCOUNT_PASSWORD must not be empty.");
+  if (Object.prototype.hasOwnProperty.call(environment, "DEMO_ACCOUNT_PASSWORD")) {
+    const configuredPassword = String(environment.DEMO_ACCOUNT_PASSWORD ?? "").trim();
+    if (!configuredPassword) {
+      throw new Error("DEMO_ACCOUNT_PASSWORD must not be empty.");
+    }
+    if (configuredPassword !== DEMO_SHARED_PASSWORD) {
+      throw new Error("DEMO_ACCOUNT_PASSWORD must match the fixed demo password.");
+    }
   }
 
   return {
     url,
     serviceRoleKey,
-    password,
+    password: DEMO_SHARED_PASSWORD,
     projectRef,
     targetEnvironment,
     targetHost: parsedUrl.host,
     term: resolveDemoTerm(environment)
+  };
+}
+
+export function readDemoVerificationConfiguration(environment = process.env) {
+  const configuration = readDemoPreparationConfiguration(environment);
+  return {
+    ...configuration,
+    anonKey: requireEnvironmentValue("NEXT_PUBLIC_SUPABASE_ANON_KEY", environment.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   };
 }
 

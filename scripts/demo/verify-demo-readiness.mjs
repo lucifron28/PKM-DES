@@ -1,12 +1,14 @@
 import {
   DEMO_ACCOUNTS,
+  DEMO_OFFICIAL_ACCOUNTS,
   PRIMARY_DEMO_STUDENT,
   fullName,
-  readDemoPreparationConfiguration
+  readDemoVerificationConfiguration
 } from "./demo-preparation-fixtures.mjs";
 import {
   assertNoError,
   createSupabaseAdminClient,
+  createSupabaseAuthClient,
   preflightDemoData,
   resolveProgramAndSubjects
 } from "./demo-preparation-utils.mjs";
@@ -24,12 +26,31 @@ async function readAssignments(admin, profileId) {
   return data ?? [];
 }
 
+async function verifyIndependentLogins(authClient, configuration, preflight, failures) {
+  for (const account of DEMO_OFFICIAL_ACCOUNTS) {
+    const expectedAuthUser = preflight.authByEmail.get(account.email);
+    const { data, error } = await authClient.auth.signInWithPassword({
+      email: account.email,
+      password: configuration.password
+    });
+    check(!error && Boolean(data.user), `${account.portalRole}: independent login failed`, failures);
+    if (data.user && expectedAuthUser) {
+      check(data.user.id === expectedAuthUser.id, `${account.portalRole}: login resolved to the wrong Auth identity`, failures);
+    }
+    await authClient.auth.signOut();
+  }
+}
+
 async function main() {
-  const configuration = readDemoPreparationConfiguration();
+  const configuration = readDemoVerificationConfiguration();
   const admin = createSupabaseAdminClient(configuration);
+  const authClient = createSupabaseAuthClient(configuration);
   const { program, subjects } = await resolveProgramAndSubjects(admin, configuration.term);
   const preflight = await preflightDemoData(admin);
   const failures = [];
+  const accountsOnly = process.argv.includes("--accounts-only");
+
+  await verifyIndependentLogins(authClient, configuration, preflight, failures);
 
   for (const account of DEMO_ACCOUNTS) {
     const authUser = preflight.authByEmail.get(account.email);
@@ -75,9 +96,11 @@ async function main() {
 
   const officialRecord = preflight.officialRecord;
   const student = preflight.student;
-  check(Boolean(officialRecord), "Official student record is missing", failures);
-  check(Boolean(student), "Application student row is missing", failures);
-  if (officialRecord) {
+  if (!accountsOnly) {
+    check(Boolean(officialRecord), "Official student record is missing", failures);
+    check(Boolean(student), "Application student row is missing", failures);
+  }
+  if (!accountsOnly && officialRecord) {
     check(officialRecord.email === PRIMARY_DEMO_STUDENT.email, "Official record email mismatch", failures);
     check(officialRecord.student_id_number === PRIMARY_DEMO_STUDENT.studentIdNumber, "Official record Student ID mismatch", failures);
     check(officialRecord.program_id === program.id, "Official record program mismatch", failures);
@@ -86,7 +109,7 @@ async function main() {
     check(officialRecord.gender_sex === PRIMARY_DEMO_STUDENT.genderSex, "Official record gender/sex is not Female", failures);
     check(officialRecord.enrollment_status === "NOT ENROLLED", "Official record is not reset to NOT ENROLLED", failures);
   }
-  if (student) {
+  if (!accountsOnly && student) {
     check(student.profile_id === preflight.profileByEmail.get(PRIMARY_DEMO_STUDENT.email)?.id, "Student profile link mismatch", failures);
     check(student.official_record_id === officialRecord?.id, "Student official-record link mismatch", failures);
     check(student.student_id_number === PRIMARY_DEMO_STUDENT.studentIdNumber, "Student ID mismatch", failures);
@@ -129,12 +152,14 @@ async function main() {
     return;
   }
 
-  console.log("PKM-DES DEMO READINESS VERIFIED");
+  console.log(accountsOnly ? "PKM-DES DEMO ACCOUNT READINESS VERIFIED" : "PKM-DES DEMO READINESS VERIFIED");
   console.log(`Environment: ${configuration.targetEnvironment}`);
   console.log(`Supabase host: ${configuration.targetHost}`);
   console.log(`Program/term: ${program.code} · AY ${configuration.term.academicYear} · ${configuration.term.semester}`);
-  console.log(`Accounts: ${DEMO_ACCOUNTS.length} ACTIVE and email-confirmed`);
+  console.log(`Accounts: ${DEMO_OFFICIAL_ACCOUNTS.length} official accounts independently authenticated`);
   console.log("Official assignments: LIBRARIAN, NURSE, PROGRAM_CHAIR, ACCOUNTANT, DEAN");
+  console.log("Password: fixed shared demo password verified without printing its value");
+  if (accountsOnly) return;
   console.log(`Primary student: ${PRIMARY_DEMO_STUDENT.email} · ${PRIMARY_DEMO_STUDENT.studentIdNumber}`);
   console.log("Official record: Female Incoming 1st Year BSAIS");
   console.log("Current enrollment: NONE");

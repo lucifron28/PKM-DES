@@ -56,6 +56,16 @@ export function createSupabaseAdminClient({ url, serviceRoleKey }) {
   });
 }
 
+export function createSupabaseAuthClient({ url, anonKey }) {
+  return createClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  });
+}
+
 export function targetHost(url) {
   return new URL(url).host;
 }

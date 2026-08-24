@@ -38,6 +38,36 @@ test("admin assignment is required and revoked assignments cannot sign", () => {
   assert.equal(canSignClearance(assignments, "DEAN_CLEARANCE", "program-a"), false);
 });
 
+test("standard demo role assignments reject every cross-role clearance", () => {
+  const clearanceForRole = {
+    LIBRARIAN: "LIBRARY_CLEARANCE",
+    NURSE: "HEALTH_CLEARANCE",
+    PROGRAM_CHAIR: "PROGRAM_CLEARANCE",
+    ACCOUNTANT: "ACCOUNTING_CLEARANCE",
+    DEAN: "DEAN_CLEARANCE"
+  } as const;
+  const allClearances = Object.values(clearanceForRole);
+  const forbiddenClearances = {
+    LIBRARIAN: ["HEALTH_CLEARANCE", "PROGRAM_CLEARANCE", "ACCOUNTING_CLEARANCE", "DEAN_CLEARANCE"],
+    NURSE: ["LIBRARY_CLEARANCE", "PROGRAM_CLEARANCE", "ACCOUNTING_CLEARANCE", "DEAN_CLEARANCE"],
+    PROGRAM_CHAIR: ["LIBRARY_CLEARANCE", "HEALTH_CLEARANCE", "ACCOUNTING_CLEARANCE", "DEAN_CLEARANCE"],
+    ACCOUNTANT: ["LIBRARY_CLEARANCE", "HEALTH_CLEARANCE", "PROGRAM_CLEARANCE", "DEAN_CLEARANCE"],
+    DEAN: ["LIBRARY_CLEARANCE", "HEALTH_CLEARANCE", "PROGRAM_CLEARANCE", "ACCOUNTING_CLEARANCE"]
+  } as const;
+
+  for (const [role, clearance] of Object.entries(clearanceForRole)) {
+    const roleAssignments = [assignment(role as keyof typeof clearanceForRole)];
+    assert.equal(canSignClearance(roleAssignments, clearance, "program-a"), true);
+    for (const forbidden of forbiddenClearances[role as keyof typeof forbiddenClearances]) {
+      assert.equal(canSignClearance(roleAssignments, forbidden, "program-a"), false);
+    }
+  }
+
+  for (const clearance of allClearances) {
+    assert.equal(canSignClearance([], clearance, "program-a"), false);
+  }
+});
+
 test("one admin may hold multiple roles, but each clearance remains separate", () => {
   const assignments = [assignment("PROGRAM_CHAIR"), assignment("DEAN")];
 

@@ -21,6 +21,7 @@
     "demo:prepare": "node --env-file-if-exists=.env.local scripts/demo/prepare-demo.mjs",
     "demo:reset": "node --env-file-if-exists=.env.local scripts/demo/reset-demo-workflow.mjs",
     "demo:verify": "node --env-file-if-exists=.env.local scripts/demo/verify-demo-readiness.mjs",
+    "demo:verify:accounts": "node --env-file-if-exists=.env.local scripts/demo/verify-demo-readiness.mjs --accounts-only",
     "demo:reset:legacy": "node --env-file-if-exists=.env.local scripts/demo/reset-demo-data.mjs",
     "demo:verify:legacy": "node --env-file-if-exists=.env.local scripts/demo/verify-demo-data.mjs",
     "demo:test": "node --test scripts/demo/*.test.mjs",

@@ -1,5 +1,6 @@
 import {
   DEMO_ACCOUNTS,
+  DEMO_OFFICIAL_ACCOUNTS,
   PRIMARY_DEMO_STUDENT,
   readDemoPreparationConfiguration
 } from "./demo-preparation-fixtures.mjs";
@@ -20,6 +21,7 @@ import {
 } from "./demo-preparation-utils.mjs";
 
 const isDryRun = process.argv.includes("--dry-run");
+const accountsOnly = process.argv.includes("--accounts-only");
 
 async function main() {
   const configuration = readDemoPreparationConfiguration();
@@ -33,21 +35,29 @@ async function main() {
     return;
   }
 
+  const accountsToPrepare = accountsOnly ? DEMO_OFFICIAL_ACCOUNTS : DEMO_ACCOUNTS;
   const profilesByKey = new Map();
-  for (const account of DEMO_ACCOUNTS) {
+  for (const account of accountsToPrepare) {
     const authUser = await ensureAuthUser(admin, account, configuration.password, preflight.authByEmail);
     preflight.authByEmail.set(account.email, authUser);
     const profile = await ensureProfile(admin, authUser, account);
     profilesByKey.set(account.key, profile);
   }
 
-  for (const account of DEMO_ACCOUNTS) {
+  for (const account of accountsToPrepare) {
     const profile = profilesByKey.get(account.key);
     if (account.officialRole) {
       await ensureOfficialAssignment(admin, profile.id, account.officialRole);
     } else {
       await deactivateAllOfficialAssignments(admin, profile.id);
     }
+  }
+
+  if (accountsOnly) {
+    console.log("Official demo accounts prepared; primary student workflow was not changed.");
+    console.log(`Auth identities prepared: ${accountsToPrepare.length}`);
+    console.log(`Active official assignments: ${DEMO_OFFICIAL_ACCOUNTS.length - 1}`);
+    return;
   }
 
   await resetPrimaryWorkflow(admin, {
@@ -69,7 +79,7 @@ async function main() {
   });
   await ensurePrimaryCleanState(admin, { student, officialRecord, term: configuration.term });
 
-  const assignmentCount = DEMO_ACCOUNTS.filter((account) => account.officialRole).length;
+  const assignmentCount = DEMO_OFFICIAL_ACCOUNTS.filter((account) => account.officialRole).length;
   printReadinessReport({
     configuration,
     program,

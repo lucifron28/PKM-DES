@@ -9,10 +9,11 @@ import {
 import {
   assertNoError,
   createSupabaseAdminClient,
+  createSupabaseAuthClient,
   resolveProgramAndSubjects
 } from "./demo-utils.mjs";
 
-export { assertNoError, createSupabaseAdminClient, resolveProgramAndSubjects };
+export { assertNoError, createSupabaseAdminClient, createSupabaseAuthClient, resolveProgramAndSubjects };
 
 export async function listAllAuthUsers(admin) {
   const users = [];
@@ -240,10 +241,12 @@ export async function ensureOfficialAssignment(admin, profileId, officialRole) {
     .eq("profile_id", profileId);
   assertNoError(error, "Could not read demo official-role assignments");
 
-  let globalAssignment = null;
+  const matchingAssignments = (assignments ?? []).filter(
+    (assignment) => assignment.official_role === officialRole && assignment.program_id === null
+  );
+  const globalAssignment = matchingAssignments.find((assignment) => assignment.active) ?? matchingAssignments[0] ?? null;
   for (const assignment of assignments ?? []) {
-    const shouldBeActive = assignment.official_role === officialRole && assignment.program_id === null;
-    if (shouldBeActive) globalAssignment = assignment;
+    const shouldBeActive = assignment.id === globalAssignment?.id;
     if (assignment.active !== shouldBeActive) {
       await setAssignmentActive(admin, assignment.id, shouldBeActive);
     }
