@@ -648,19 +648,6 @@ textarea {
   text-align: center !important;
 }
 
-.registration-print-enrolled-stamp {
-  bottom: 1.65rem;
-  color: rgba(37, 99, 235, 0.42);
-  font-family: Arial, "Segoe UI", sans-serif;
-  font-size: 3.4rem;
-  font-weight: 900;
-  left: 43%;
-  letter-spacing: 0.04em;
-  pointer-events: none;
-  position: absolute;
-  transform: rotate(-2deg);
-}
-
 .registration-print-warning {
   font-size: 0.72rem;
   font-style: italic;
@@ -968,54 +955,55 @@ textarea {
     display: flex !important;
     flex-direction: column !important;
     font-family: Arial, "Segoe UI", sans-serif !important;
-    font-size: 7pt !important;
-    line-height: 1.05 !important;
+    font-size: 8pt !important;
+    line-height: 1.08 !important;
     margin: 0 !important;
     max-width: none !important;
-    min-height: 10.45in !important;
+    min-height: 0 !important;
+    padding-top: 0.52in !important;
     width: 100% !important;
   }
 
   .registration-print-header {
-    margin-bottom: 0.09in !important;
+    margin-bottom: 0.1in !important;
   }
 
   .registration-print-brand-row {
     gap: 0.12in !important;
     grid-template-columns: auto minmax(0, 1fr) auto !important;
-    padding-inline: 0.75in !important;
+    padding-inline: 0.68in !important;
   }
 
   .registration-print-brand-row img {
-    height: 0.52in !important;
-    width: 0.52in !important;
+    height: 0.5in !important;
+    width: 0.5in !important;
   }
 
   .registration-print-institution p:first-child {
-    font-size: 9.8pt !important;
+    font-size: 11pt !important;
   }
 
   .registration-print-institution p:last-child {
-    font-size: 6.3pt !important;
+    font-size: 7.4pt !important;
     margin-top: 0.01in !important;
   }
 
   .registration-print-details {
-    gap: 0.45in !important;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) !important;
+    gap: 0.25in !important;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) !important;
     margin: 0 auto 0.05in !important;
-    max-width: 90% !important;
+    max-width: 96% !important;
   }
 
   .registration-print-field {
     gap: 0.035in !important;
-    grid-template-columns: 0.82in minmax(0, 1fr) !important;
+    grid-template-columns: 0.9in minmax(0, 1fr) !important;
     padding: 0.018in 0 !important;
   }
 
   .registration-print-details-secondary .registration-print-field,
   .registration-print-status {
-    grid-template-columns: 0.75in minmax(0, 1fr) !important;
+    grid-template-columns: 0.97in minmax(0, 1fr) !important;
   }
 
   .registration-print-status {
@@ -1024,11 +1012,11 @@ textarea {
   }
 
   .registration-print-field-label {
-    font-size: 6.4pt !important;
+    font-size: 7.5pt !important;
   }
 
   .registration-print-field-value {
-    font-size: 6.6pt !important;
+    font-size: 7.7pt !important;
     line-height: 1.05 !important;
   }
 
@@ -1039,7 +1027,7 @@ textarea {
 
   .registration-print-classification-label,
   .registration-print-mark {
-    font-size: 6.3pt !important;
+    font-size: 7pt !important;
   }
 
   .registration-print-mark {
@@ -1047,9 +1035,9 @@ textarea {
   }
 
   .registration-print-mark-box {
-    font-size: 5.8pt !important;
-    height: 0.115in !important;
-    width: 0.115in !important;
+    font-size: 6.4pt !important;
+    height: 0.125in !important;
+    width: 0.125in !important;
   }
 
   .registration-print-status-marks {
@@ -1057,8 +1045,8 @@ textarea {
   }
 
   .registration-print-title {
-    font-size: 11.5pt !important;
-    margin: 0.065in 0 0.055in !important;
+    font-size: 13pt !important;
+    margin: 0.075in 0 0.065in !important;
   }
 
   .registration-print-subjects {
@@ -1071,55 +1059,47 @@ textarea {
 
   .registration-print-table {
     border-width: 1px !important;
-    font-size: 6.3pt !important;
+    font-size: 7.3pt !important;
     min-width: 100% !important;
   }
 
   .registration-print-table th,
   .registration-print-table td {
-    padding: 0.012in 0.025in !important;
+    padding: 0.014in 0.026in !important;
   }
 
   .registration-print-table thead th,
   .registration-print-table tfoot th {
-    font-size: 6.3pt !important;
+    font-size: 7.3pt !important;
   }
 
   .registration-print-table tbody td {
-    font-size: 6.2pt !important;
-    height: 0.19in !important;
+    font-size: 7.2pt !important;
+    height: 0.205in !important;
     min-height: 0 !important;
   }
 
-  .registration-print-enrolled-stamp {
-    bottom: 0.28in !important;
-    font-size: 28pt !important;
-  }
-
   .registration-print-warning {
-    font-size: 5.8pt !important;
-    margin-top: 0.015in !important;
+    font-size: 6.6pt !important;
+    margin-top: 0.02in !important;
   }
 
   .registration-print-assessment {
     break-inside: avoid !important;
-    display: flex !important;
-    flex: 1 1 auto !important;
-    flex-direction: column !important;
-    margin-top: 0.04in !important;
+    display: block !important;
+    margin-top: 0.055in !important;
     page-break-inside: avoid !important;
   }
 
   .registration-print-assessment > h2 {
-    font-size: 7.2pt !important;
-    padding: 0.02in 0.03in !important;
+    font-size: 8.2pt !important;
+    padding: 0.025in 0.03in !important;
   }
 
   .registration-print-assessment-grid {
-    align-items: stretch !important;
-    flex: 1 1 auto !important;
-    gap: 0.06in !important;
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr) minmax(0, 1.36fr) !important;
+    align-items: start !important;
+    gap: 0.08in !important;
+    grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.03fr) minmax(0, 1.28fr) !important;
   }
 
   .registration-print-misc-fees,
@@ -1131,38 +1111,37 @@ textarea {
 
   .registration-print-tuition,
   .registration-print-approvals {
-    display: flex !important;
-    flex-direction: column !important;
+    display: block !important;
   }
 
   .registration-print-misc-fees h3,
   .registration-print-scholarship h3 {
-    font-size: 6.2pt !important;
-    margin-bottom: 0.018in !important;
+    font-size: 7.2pt !important;
+    margin-bottom: 0.025in !important;
   }
 
   .registration-print-fee-table th,
   .registration-print-fee-table td,
   .registration-print-payment-table th,
   .registration-print-payment-table td {
-    font-size: 5.3pt !important;
-    padding: 0.012in 0.02in !important;
+    font-size: 6.1pt !important;
+    padding: 0.012in 0.022in !important;
   }
 
   .registration-print-fee-table tbody tr,
   .registration-print-fee-table tfoot tr {
-    height: 0.18in !important;
+    height: 0.19in !important;
   }
 
   .registration-print-fee-line {
-    font-size: 6pt !important;
-    min-height: 0.2in !important;
+    font-size: 7pt !important;
+    min-height: 0.22in !important;
     padding: 0.018in 0.025in !important;
   }
 
   .registration-print-fee-line span:last-child {
-    font-size: 5.2pt !important;
-    min-width: 0.68in !important;
+    font-size: 5.8pt !important;
+    min-width: 0.72in !important;
     padding: 0.01in 0.018in !important;
   }
 
@@ -1171,7 +1150,7 @@ textarea {
   }
 
   .registration-print-fee-line-emphasis span:first-child {
-    font-size: 6.2pt !important;
+    font-size: 7.1pt !important;
   }
 
   .registration-print-payment-table {
@@ -1187,7 +1166,7 @@ textarea {
   }
 
   .registration-print-scholarship-line {
-    font-size: 5.3pt !important;
+    font-size: 6pt !important;
     min-height: 0.2in !important;
     padding: 0.025in 0.02in !important;
   }
@@ -1195,45 +1174,49 @@ textarea {
   .registration-print-accounting-signatures,
   .registration-print-approval-signatures {
     align-items: center !important;
-    flex: 1 1 auto !important;
-    gap: 0.08in !important;
+    gap: 0.14in !important;
+    grid-auto-rows: auto !important;
   }
 
   .registration-print-accounting-signatures {
-    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
-    margin-top: 0.1in !important;
+    grid-template-rows: none !important;
+    margin-top: 0.16in !important;
   }
 
   .registration-print-approval-signatures {
-    grid-template-rows: repeat(3, minmax(0, 1fr)) !important;
-    margin-top: 0.12in !important;
+    grid-template-rows: none !important;
+    margin-top: 0.16in !important;
   }
 
   .registration-print-signature-image {
-    height: 0.28in !important;
+    height: 0.3in !important;
   }
 
   .registration-print-signature-image span {
-    font-size: 4.8pt !important;
+    font-size: 5.6pt !important;
+  }
+
+  .registration-print-signature-line {
+    width: 78% !important;
   }
 
   .registration-print-signature-label {
-    font-size: 5.8pt !important;
-    margin-top: 0.012in !important;
+    font-size: 7.2pt !important;
+    margin-top: 0.018in !important;
   }
 
   .registration-print-signature-meta {
-    font-size: 4.5pt !important;
-    line-height: 1.05 !important;
-    margin-top: 0.006in !important;
+    font-size: 5.8pt !important;
+    line-height: 1.1 !important;
+    margin-top: 0.01in !important;
   }
 
   .registration-print-bottom {
     break-inside: avoid !important;
     gap: 0.1in !important;
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 2.2fr) !important;
-    margin-top: 0.06in !important;
-    min-height: 0.96in !important;
+    margin-top: 0.16in !important;
+    min-height: 0 !important;
     page-break-inside: avoid !important;
   }
 
@@ -1241,30 +1224,30 @@ textarea {
     border-radius: 0.12in !important;
     display: flex !important;
     flex-direction: column !important;
-    min-height: 0.96in !important;
-    padding: 0.055in 0.08in 0.035in !important;
+    min-height: 0.9in !important;
+    padding: 0.065in 0.09in 0.04in !important;
   }
 
   .registration-print-privacy-copy {
-    font-size: 5.4pt !important;
-    line-height: 1.15 !important;
+    font-size: 6.2pt !important;
+    line-height: 1.18 !important;
   }
 
   .registration-print-copy-label {
-    font-size: 5.6pt !important;
-    padding: 0.035in 0.055in !important;
+    font-size: 6.5pt !important;
+    padding: 0.04in 0.06in !important;
   }
 
   .registration-print-privacy-signature {
-    margin-top: auto !important;
+    margin-top: 0.04in !important;
     width: 50% !important;
   }
 
   .registration-print-privacy-signature .registration-print-signature-image {
-    height: 0.22in !important;
+    height: 0.24in !important;
   }
 
   .registration-print-privacy-signature .registration-print-signature-meta {
-    font-size: 4.4pt !important;
+    font-size: 5.4pt !important;
   }
 }
