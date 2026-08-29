@@ -24,6 +24,15 @@ npm run demo:verify
 
 `demo:prepare` is idempotent for the allowlisted demo emails and Student ID. It updates only those demo-owned profiles, passwords, role assignments, official record, and primary workflow state. It does not truncate tables or target other students.
 
+When the primary student already has immutable signature history, repair only the six staff accounts without touching the student workflow:
+
+```powershell
+npm run demo:prepare -- --accounts-only
+npm run demo:verify:accounts
+```
+
+The account-only path uses the fixed `Demo1234!` password, repairs duplicate or stale assignments on the named fictional demo profiles, and never deletes signatures.
+
 ## Reset the primary workflow
 
 ```powershell

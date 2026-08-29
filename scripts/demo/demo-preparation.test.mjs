@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DEMO_ACCOUNTS,
+  DEMO_OFFICIAL_ACCOUNTS,
+  DEMO_SHARED_PASSWORD,
   DEMO_PREPARATION_CONFIRMATION,
   PRIMARY_DEMO_STUDENT,
-  readDemoPreparationConfiguration
+  readDemoPreparationConfiguration,
+  readDemoVerificationConfiguration
 } from "./demo-preparation-fixtures.mjs";
 
 function environment(overrides = {}) {
@@ -15,6 +18,7 @@ function environment(overrides = {}) {
     PKM_DEMO_ENVIRONMENT: "preview",
     PKM_ALLOW_DEMO_SEED: "true",
     PKM_DEMO_CONFIRM: DEMO_PREPARATION_CONFIRMATION,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key-placeholder",
     ...overrides
   };
 }
@@ -33,6 +37,14 @@ test("demo configuration requires an exact project URL and explicit opt-in", () 
   assert.throws(
     () => readDemoPreparationConfiguration(environment({ PKM_ALLOW_DEMO_SEED: "false" })),
     /PKM_ALLOW_DEMO_SEED=true/i
+  );
+  assert.throws(
+    () => readDemoPreparationConfiguration(environment({ PKM_DEMO_ENVIRONMENT: "production" })),
+    /BLOCKED.*demo\/development/i
+  );
+  assert.throws(
+    () => readDemoPreparationConfiguration(environment({ DEMO_ACCOUNT_PASSWORD: "not-the-demo-password" })),
+    /fixed demo password/i
   );
 });
 
@@ -54,9 +66,34 @@ test("local demo configuration stays on the local Supabase port", () => {
 
 test("demo account fixture has one Registrar, five officials, and one student", () => {
   assert.equal(DEMO_ACCOUNTS.length, 7);
-  assert.equal(DEMO_ACCOUNTS.filter((account) => account.officialRole).length, 5);
+  assert.equal(DEMO_OFFICIAL_ACCOUNTS.length, 6);
+  assert.equal(DEMO_OFFICIAL_ACCOUNTS.filter((account) => account.officialRole).length, 5);
   assert.equal(DEMO_ACCOUNTS.filter((account) => account.role === "student").length, 1);
   assert.equal(DEMO_ACCOUNTS.find((account) => account.key === "registrar")?.officialRole, null);
   assert.equal(PRIMARY_DEMO_STUDENT.genderSex, "Female");
   assert.equal(PRIMARY_DEMO_STUDENT.studentType, "Incoming 1st Year Student");
+  assert.equal(DEMO_SHARED_PASSWORD, "Demo1234!");
+});
+
+test("each standard official demo login owns exactly one intended capability", () => {
+  assert.deepEqual(
+    new Map(DEMO_OFFICIAL_ACCOUNTS.map((account) => [account.email, account.officialRole])),
+    new Map([
+      ["pkmregistrarofficial@gmail.com", null],
+      ["pkm.demo.librarian@example.com", "LIBRARIAN"],
+      ["pkm.demo.nurse@example.com", "NURSE"],
+      ["pkm.demo.programchair@example.com", "PROGRAM_CHAIR"],
+      ["pkm.demo.accountant@example.com", "ACCOUNTANT"],
+      ["pkm.demo.dean@example.com", "DEAN"]
+    ])
+  );
+  assert.equal(new Set(DEMO_OFFICIAL_ACCOUNTS.map((account) => account.email)).size, 6);
+});
+
+test("verification requires the public Supabase key for real login checks", () => {
+  assert.equal(readDemoVerificationConfiguration(environment()).anonKey, "anon-key-placeholder");
+  assert.throws(
+    () => readDemoVerificationConfiguration(environment({ NEXT_PUBLIC_SUPABASE_ANON_KEY: "" })),
+    /NEXT_PUBLIC_SUPABASE_ANON_KEY is required/i
+  );
 });
