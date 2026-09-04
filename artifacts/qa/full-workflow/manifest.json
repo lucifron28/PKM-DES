@@ -1,0 +1,35 @@
+{
+  "baseUrl": "https://pkm-des.vercel.app",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "enrollmentId": "965df551-7716-4621-ae0f-5dde57c16e80",
+  "rolesRecorded": [
+    "Student",
+    "Registrar",
+    "Librarian",
+    "School Nurse",
+    "Program Chair",
+    "Accountant",
+    "Dean"
+  ],
+  "screenshots": [
+    "01-student-dashboard-desktop.png",
+    "02-student-enrollment-form-desktop.png",
+    "04-student-enrollment-pending-desktop.png",
+    "03-student-health-record-form-desktop.png",
+    "05-student-enrollment-signed-desktop.png",
+    "06-registrar-review-waiting-for-clearances-desktop.png",
+    "library-signed-desktop.png",
+    "health-signed-desktop.png",
+    "program-signed-desktop.png",
+    "accounting-signed-desktop.png",
+    "dean-signed-desktop.png",
+    "12-registrar-approval-ready-desktop.png",
+    "13-registrar-approved-desktop.png",
+    "14-printable-form-all-signatures-focused-desktop.png",
+    "15-printable-form-all-signatures-full-desktop.png"
+  ],
+  "video": "pkm-des-full-workflow-desktop.webm"
+}

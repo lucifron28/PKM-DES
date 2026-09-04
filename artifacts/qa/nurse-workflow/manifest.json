@@ -1,0 +1,20 @@
+{
+  "baseUrl": "https://pkm-des.vercel.app",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "enrollmentId": "44444444-4444-4444-8444-444444444444",
+  "screenshots": [
+    "01-nurse-health-queue-desktop.png",
+    "02-health-record-form-desktop.png",
+    "03-nurse-signature-drawn-desktop.png",
+    "04-nurse-signed-state-desktop.png",
+    "05-printable-form-nurse-signature-desktop.png",
+    "06-printable-form-full-desktop.png",
+    "07-printable-form-nurse-signature-focused-desktop.png",
+    "08-printable-form-full-page-desktop.png"
+  ],
+  "signed": true,
+  "printableSignatureVisible": true
+}
