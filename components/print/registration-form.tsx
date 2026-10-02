@@ -1,5 +1,7 @@
+import React from "react";
 import { MaubanMark, PkmMark } from "@/components/layout/pkm-mark";
 import { PrintButton } from "@/components/print/print-button";
+import { RegistrationPolicy } from "@/components/print/registration-policy";
 import { Badge, enrollmentBadgeTone } from "@/components/ui/badge";
 import {
   getRegistrationClassificationMarks,
@@ -25,6 +27,12 @@ export type PrintableEnrollment = Omit<Enrollment, "enrollment_clearances" | "en
   enrollment_clearances?: EnrollmentClearance[] | null;
   enrollment_signatures?: PresentedEnrollmentSignature[] | null;
   health_requirement_applicability?: "APPLICABLE" | "NOT_APPLICABLE" | null;
+};
+
+export type RegistrationFormProps = {
+  enrollment: PrintableEnrollment;
+  studentPledgeCovered?: boolean;
+  registrationPledgeVersion?: string | null;
 };
 
 function getRegistrationLoadItem(row: EnrollmentSubjectRow): RegistrationLoadItem | null {
@@ -144,7 +152,11 @@ function SignatureBlock({
   );
 }
 
-export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollment }) {
+export function RegistrationForm({
+  enrollment,
+  studentPledgeCovered = false,
+  registrationPledgeVersion = null
+}: RegistrationFormProps) {
   const student = enrollment.students;
   const profile = student?.profiles;
   const subjects = sortRegistrationSubjects(
@@ -322,10 +334,6 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
                 </tbody>
               </table>
 
-              <div className="registration-print-accounting-signatures" aria-label="Accounting and dean signatures">
-                <SignatureBlock label="Accountant" signature={signatures.get("ACCOUNTING_CLEARANCE")} />
-                <SignatureBlock label="Dean" signature={signatures.get("DEAN_CLEARANCE")} />
-              </div>
             </div>
 
             <div className="registration-print-approvals">
@@ -333,15 +341,35 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
                 <h3>SCHOLARSHIP:</h3>
                 <div className="registration-print-scholarship-line"><span>Not configured</span></div>
               </div>
-              <div className="registration-print-approval-signatures" aria-label="Clearance signatures">
-                <SignatureBlock label="Librarian" signature={signatures.get("LIBRARY_CLEARANCE")} />
-                <SignatureBlock
-                  label="School Nurse"
-                  signature={signatures.get("HEALTH_CLEARANCE")}
-                  unsignedLabel={healthApplicability === "NOT_APPLICABLE" ? "Not Applicable" : "Pending Nurse Verification"}
-                />
-                <SignatureBlock label="Program Chair" signature={signatures.get("PROGRAM_CLEARANCE")} />
-              </div>
+            </div>
+
+            <div className="registration-print-signatures" aria-label="Enrollment signatures">
+              <SignatureBlock
+                label="Accountant"
+                signature={signatures.get("ACCOUNTING_CLEARANCE")}
+                className="registration-print-signature-accountant"
+              />
+              <SignatureBlock
+                label="Librarian"
+                signature={signatures.get("LIBRARY_CLEARANCE")}
+                className="registration-print-signature-librarian"
+              />
+              <SignatureBlock
+                label="School Nurse"
+                signature={signatures.get("HEALTH_CLEARANCE")}
+                unsignedLabel={healthApplicability === "NOT_APPLICABLE" ? "Not Applicable" : "Pending Nurse Verification"}
+                className="registration-print-signature-nurse"
+              />
+              <SignatureBlock
+                label="Dean"
+                signature={signatures.get("DEAN_CLEARANCE")}
+                className="registration-print-signature-dean"
+              />
+              <SignatureBlock
+                label="Program Chair"
+                signature={signatures.get("PROGRAM_CLEARANCE")}
+                className="registration-print-signature-program-chair"
+              />
             </div>
           </div>
         </section>
@@ -358,6 +386,12 @@ export function RegistrationForm({ enrollment }: { enrollment: PrintableEnrollme
           </section>
         </div>
       </section>
+
+      <RegistrationPolicy
+        studentPledgeCovered={studentPledgeCovered}
+        registrationPledgeVersion={registrationPledgeVersion}
+        studentSignature={signatures.get("STUDENT_ENROLLMENT_SIGNATURE")}
+      />
     </div>
   );
 }
