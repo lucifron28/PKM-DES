@@ -39,7 +39,9 @@ export function ESignatureInput({
   signedSignature,
   savedSignature,
   applyLabel = "Apply E-Signature",
-  verificationFields
+  verificationFields,
+  policyConsent,
+  readOnlyNotice
 }: {
   action: SignatureAction;
   enrollmentId: string;
@@ -53,6 +55,8 @@ export function ESignatureInput({
   savedSignature?: { id: string; signedUrl?: string | null; createdAt?: string } | null;
   applyLabel?: string;
   verificationFields?: ReactNode;
+  policyConsent?: { text: string; label: string };
+  readOnlyNotice?: string;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, {} as SignatureActionState);
@@ -66,7 +70,9 @@ export function ESignatureInput({
   const keyboardPositionRef = useRef({ x: 24, y: 72 });
   const [hasInk, setHasInk] = useState(false);
   const [useSavedSignature, setUseSavedSignature] = useState(false);
+  const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const canCaptureSignature = !policyConsent || policyAcknowledged;
 
   const resetCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -124,6 +130,7 @@ export function ESignatureInput({
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (!canCaptureSignature) return;
     const context = event.currentTarget.getContext("2d");
     if (!context) return;
     const point = pointFromEvent(event);
@@ -136,7 +143,7 @@ export function ESignatureInput({
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!drawingRef.current) return;
+    if (!canCaptureSignature || !drawingRef.current) return;
     const context = event.currentTarget.getContext("2d");
     if (!context) return;
     const point = pointFromEvent(event);
@@ -162,6 +169,7 @@ export function ESignatureInput({
   }
 
   function handleKeyboardDraw(event: ReactKeyboardEvent<HTMLCanvasElement>) {
+    if (!canCaptureSignature) return;
     const canvas = event.currentTarget;
     const context = canvas.getContext("2d");
     if (!context) return;
@@ -204,6 +212,11 @@ export function ESignatureInput({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (policyConsent && !policyAcknowledged) {
+      event.preventDefault();
+      setLocalError("Read and accept the registration policy before signing.");
+      return;
+    }
     if (useSavedSignature) {
       if (!savedSignature?.id) {
         event.preventDefault();
@@ -226,9 +239,28 @@ export function ESignatureInput({
   }
 
   function handleUseSavedSignature() {
+    if (!canCaptureSignature) return;
     resetCanvas();
     setUseSavedSignature(true);
     setLocalError(null);
+  }
+
+  if (readOnlyNotice) {
+    return (
+      <section className="rounded-lg border border-slateui-border bg-slateui-surface p-4" aria-label={`${signerLabel} signature history`}>
+        <h3 className="font-bold text-slateui-text">{title ?? `${signerLabel} E-Signature`}</h3>
+        <p className="mt-2 text-sm leading-6 text-slateui-secondary" role="note">{readOnlyNotice}</p>
+        {signedSignature ? (
+          <div className="mt-3">
+            {signedSignature.signedUrl ? <img src={signedSignature.signedUrl} alt={`Historical ${signerLabel} electronic signature`} className="h-20 w-full object-contain object-left" /> : null}
+            <dl className="grid gap-2 text-sm sm:grid-cols-2">
+              <div><dt className="font-semibold text-slateui-muted">Historical signer</dt><dd className="text-slateui-text">{signedSignature.signerName}</dd></div>
+              <div><dt className="font-semibold text-slateui-muted">Signed</dt><dd className="text-slateui-text">{new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(signedSignature.signedAt))}</dd></div>
+            </dl>
+          </div>
+        ) : <p className="mt-2 text-sm text-slateui-muted">No Student signature is recorded for this enrollment.</p>}
+      </section>
+    );
   }
 
   if (signedSignature?.isCurrent) {
@@ -271,6 +303,17 @@ export function ESignatureInput({
         </p>
       </div>
 
+      {policyConsent ? (
+        <section className="rounded-md border border-primary-200 bg-primary-50 p-3" aria-labelledby={`${enrollmentId}-${clearanceType}-policy-heading`}>
+          <h4 id={`${enrollmentId}-${clearanceType}-policy-heading`} className="text-sm font-bold text-primary-950">
+            Registration policy and Student&apos;s Pledge
+          </h4>
+          <div className="mt-2 max-h-64 overflow-y-auto whitespace-pre-line rounded border border-primary-200 bg-white p-3 text-sm leading-6 text-slateui-text" aria-label="Full registration policy text">
+            {policyConsent.text}
+          </div>
+        </section>
+      ) : null}
+
       {savedSignature ? (
         <div className="rounded-md border border-primary-200 bg-primary-50 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -278,7 +321,7 @@ export function ESignatureInput({
               <p className="text-sm font-bold text-primary-950">Saved signature specimen</p>
               <p className="mt-1 text-xs leading-5 text-primary-900">Use the private specimen saved on your account. You must confirm it again for this specific signing action.</p>
             </div>
-            <Button type="button" variant="outline" onClick={useSavedSignature ? () => { setUseSavedSignature(false); setLocalError(null); } : handleUseSavedSignature}>
+            <Button type="button" variant="outline" disabled={pending || !canCaptureSignature} onClick={useSavedSignature ? () => { setUseSavedSignature(false); setLocalError(null); } : handleUseSavedSignature}>
               {useSavedSignature ? "Use Drawn Signature" : "Use Saved Signature"}
             </Button>
           </div>
@@ -298,6 +341,26 @@ export function ESignatureInput({
       ) : null}
 
       <form action={formAction} onSubmit={handleSubmit} className="mt-4 space-y-3">
+        {policyConsent ? (
+          <label className="flex items-start gap-2 text-sm leading-6 text-slateui-secondary">
+            <input
+              type="checkbox"
+              name="registration_policy_consent"
+              required
+              checked={policyAcknowledged}
+              onChange={(event) => {
+                const acknowledged = event.currentTarget.checked;
+                setPolicyAcknowledged(acknowledged);
+                if (!acknowledged) {
+                  resetCanvas();
+                  setUseSavedSignature(false);
+                }
+              }}
+              className="mt-1 h-4 w-4 rounded border-slateui-border text-primary-800 focus:ring-primary-700"
+            />
+            <span>{policyConsent.label}</span>
+          </label>
+        ) : null}
         <input type="hidden" name="enrollment_id" value={enrollmentId} />
         <input type="hidden" name="clearance_type" value={clearanceType} />
         <input type="hidden" name="signature_source" value={useSavedSignature ? "SAVED" : "DRAWN"} />
@@ -309,11 +372,12 @@ export function ESignatureInput({
             ref={canvasRef}
             width={640}
             height={180}
-            tabIndex={0}
+            tabIndex={canCaptureSignature ? 0 : -1}
             role="img"
             aria-label={`Draw ${signerLabel} signature`}
+            aria-disabled={!canCaptureSignature}
             aria-describedby={`${enrollmentId}-${clearanceType}-instructions`}
-            className="block h-44 w-full touch-none outline-none focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-inset"
+            className={`block h-44 w-full touch-none outline-none focus-visible:ring-2 focus-visible:ring-primary-700 focus-visible:ring-inset ${canCaptureSignature ? "" : "pointer-events-none opacity-50"}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -329,7 +393,7 @@ export function ESignatureInput({
           </label>
           <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={resetCanvas} disabled={pending || !hasInk || useSavedSignature}>Clear</Button>
-          <Button type="submit" disabled={pending || (!hasInk && !useSavedSignature)}>{pending ? "Saving..." : useSavedSignature ? "Apply Saved Signature" : applyLabel}</Button>
+          <Button type="submit" disabled={pending || !canCaptureSignature || (!hasInk && !useSavedSignature)}>{pending ? "Saving..." : useSavedSignature ? "Apply Saved Signature" : applyLabel}</Button>
           </div>
       </form>
     </section>

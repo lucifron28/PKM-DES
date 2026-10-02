@@ -10,6 +10,7 @@ import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
 import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
+import { REGISTRATION_POLICY_TEXT, REGISTRATION_POLICY_VERSION } from "@/lib/registration-form/policy";
 import { formatName } from "@/lib/utils/format";
 
 export default async function StudentExplicitRegistrationFormPage({
@@ -104,6 +105,12 @@ export default async function StudentExplicitRegistrationFormPage({
     signatureEvidenceByClearance(signatureResult.signatures)
   );
   const studentSignature = signatureResult.signatures.filter((item) => item.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE").at(-1) ?? null;
+  const studentPledgeCovered =
+    enrollment.registration_pledge_version === REGISTRATION_POLICY_VERSION &&
+    Boolean(studentSignature?.is_current);
+  const unsupportedPolicyNotice = enrollment.registration_pledge_version !== REGISTRATION_POLICY_VERSION
+    ? "This enrollment uses a historical or unsupported registration policy version. New Student signing is unavailable; existing signature evidence is retained for historical reference."
+    : undefined;
 
   return (
     <div className="space-y-4">
@@ -119,6 +126,11 @@ export default async function StudentExplicitRegistrationFormPage({
             signerName={formatName(profile.first_name, profile.last_name)}
             title="Student E-Signature"
             description="Draw your own signature for the student enrollment section. The server binds it to this approved enrollment and current subject load."
+            policyConsent={unsupportedPolicyNotice ? undefined : {
+              text: REGISTRATION_POLICY_TEXT,
+              label: "I have read and understand this registration policy and the Student's Pledge. I agree to abide by the stated rules and regulations."
+            }}
+            readOnlyNotice={unsupportedPolicyNotice}
             signedSignature={studentSignature ? {
               signerName: studentSignature.signer_name_snapshot,
               signedAt: studentSignature.signed_at,
@@ -130,7 +142,11 @@ export default async function StudentExplicitRegistrationFormPage({
           />
         )}
       </div>
-      <RegistrationForm enrollment={presentationEnrollment} />
+      <RegistrationForm
+        enrollment={presentationEnrollment}
+        studentPledgeCovered={studentPledgeCovered}
+        registrationPledgeVersion={enrollment.registration_pledge_version ?? null}
+      />
     </div>
   );
 }
