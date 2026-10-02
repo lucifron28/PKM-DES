@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getClearanceDefinition } from "@/lib/signatures/clearances";
+import { REGISTRATION_POLICY_VERSION } from "@/lib/registration-form/policy";
 import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash, type EnrollmentFingerprintInput } from "@/lib/signatures/fingerprint";
 import type { RequirementApplicability, RequirementStatus } from "@/lib/requirements/types";
 import type { EnrollmentClearanceStatus, EnrollmentSignature, SignatureClearanceType } from "@/types/database";
@@ -76,12 +77,21 @@ export async function loadEnrollmentSignaturePresentation(
         );
       }
     } else if (definition) {
-      expectedHash = computeEnrollmentDocumentHash(
-        enrollment,
-        row.signer_role,
-        row.clearance_type as SignatureClearanceType,
-        definition.documentType
-      );
+      const isStudentPledge = row.signer_role === "STUDENT"
+        && row.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE"
+        && row.document_type === "ENROLLMENT_REGISTRATION";
+      const hasUnknownPledgeVersion = isStudentPledge
+        && enrollment.registration_pledge_version != null
+        && enrollment.registration_pledge_version !== REGISTRATION_POLICY_VERSION;
+
+      if (!hasUnknownPledgeVersion) {
+        expectedHash = computeEnrollmentDocumentHash(
+          enrollment,
+          row.signer_role,
+          row.clearance_type as SignatureClearanceType,
+          definition.documentType
+        );
+      }
     }
 
     const isCurrent = Boolean(
