@@ -38,15 +38,24 @@ const enrollment = {
   enrollment_signatures: []
 } as unknown as PrintableEnrollment;
 
-test("registration renderer includes a front page and policy back without an enrollment stamp", () => {
+test("registration renderer includes a front-only seal watermark without an enrollment stamp", () => {
   const markup = renderToStaticMarkup(React.createElement(RegistrationForm, {
     enrollment,
     registrationPledgeVersion: REGISTRATION_POLICY_VERSION
   }));
+  const frontStart = markup.indexOf('class="registration-print print-page');
+  const policyStart = markup.indexOf('class="registration-policy-print print-page');
+  const frontMarkup = markup.slice(frontStart, policyStart);
+  const policyMarkup = markup.slice(policyStart);
 
+  assert.ok(frontStart >= 0);
+  assert.ok(policyStart > frontStart);
   assert.equal((markup.match(/class="registration-print print-page/g) ?? []).length, 1);
   assert.equal((markup.match(/class="registration-policy-print print-page/g) ?? []).length, 1);
+  assert.match(frontMarkup, /data-testid="registration-print-watermark"/);
+  assert.match(frontMarkup, /src="\/brand\/pkm-registration-watermark\.png"/);
+  assert.doesNotMatch(policyMarkup, /registration-print-watermark|pkm-registration-watermark\.png/);
   assert.doesNotMatch(markup, /registration-print-enrolled-stamp|ENROLLED WATERMARK|ENROLLED OVERLAY/i);
   assert.match(markup, /Pledge not yet signed\./);
-  assert.doesNotMatch(markup.slice(markup.indexOf("registration-policy-print")), /<img\b/);
+  assert.doesNotMatch(policyMarkup, /<img\b/);
 });

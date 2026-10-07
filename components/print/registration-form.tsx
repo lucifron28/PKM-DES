@@ -193,6 +193,10 @@ export function RegistrationForm({
       </section>
 
       <section className="registration-print print-page mx-auto max-w-[960px] rounded-lg border border-black bg-white p-4 sm:p-6" aria-labelledby="registration-form-title">
+        <div className="registration-print-watermark" aria-hidden="true" data-testid="registration-print-watermark">
+          {/* eslint-disable-next-line @next/next/no-img-element -- Direct image printing does not depend on browser background-graphics settings. */}
+          <img src="/brand/pkm-registration-watermark.png" alt="" draggable={false} />
+        </div>
         <header className="registration-print-header">
           <div className="registration-print-brand-row">
             <PkmMark />

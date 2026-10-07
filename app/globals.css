@@ -96,6 +96,28 @@ textarea {
 .registration-print {
   color: #000000;
   font-family: Arial, "Segoe UI", sans-serif;
+  isolation: isolate;
+  position: relative;
+}
+
+.registration-print-watermark {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  z-index: -1;
+}
+
+.registration-print-watermark img {
+  filter: brightness(1.4) contrast(0.6);
+  height: auto;
+  left: 50%;
+  max-width: none;
+  opacity: 0.05;
+  position: absolute;
+  top: 1.35in;
+  transform: translateX(-50%);
+  width: min(92.8%, 7.4799in);
 }
 
 .health-record-paper {
