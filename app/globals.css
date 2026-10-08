@@ -109,7 +109,7 @@ textarea {
 }
 
 .registration-print-watermark img {
-  filter: brightness(1.4) contrast(0.6);
+  filter: brightness(0.85) contrast(1.2);
   height: auto;
   left: 50%;
   max-width: none;
