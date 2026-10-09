@@ -20,33 +20,48 @@ const currentSignature = {
   signed_url: "https://example.invalid/signature.png",
   is_current: true
 } as PresentedEnrollmentSignature;
+function getPolicyPrintMarkup(markup: string) {
+  const printStart = markup.indexOf('<section class="registration-policy-print');
+  assert.notEqual(printStart, -1, "institutional policy document should render");
+  const screenNoteStart = markup.indexOf('<p class="registration-policy-screen-note print-hidden"', printStart);
+  return markup.slice(printStart, screenNoteStart === -1 ? undefined : screenNoteStart);
+}
 
-test("historical signature is not printed as pledge acceptance without server coverage", () => {
+
+test("historical pledge explanation stays on screen and outside the printed policy", () => {
   const markup = renderToStaticMarkup(
     React.createElement(RegistrationPolicy, {
       studentSignature: currentSignature,
       registrationPledgeVersion: null
     })
   );
+  const printMarkup = getPolicyPrintMarkup(markup);
 
-  assert.match(markup, /UNSIGNED HISTORICAL PLEDGE/);
-  assert.match(markup, /Existing signatures do not confirm acceptance of this policy version\./);
-  assert.doesNotMatch(markup, /<img\b/);
+  assert.doesNotMatch(printMarkup, /UNSIGNED HISTORICAL PLEDGE|Pledge not yet signed|Existing signatures do not confirm acceptance/);
+  assert.match(printMarkup, /class="registration-policy-signature-image"><\/div>/);
+  assert.match(printMarkup, /class="registration-policy-signature-line"><\/div>/);
+  assert.doesNotMatch(printMarkup, /Test Student|<img\b/);
+  assert.match(
+    markup,
+    /class="registration-policy-screen-note print-hidden"[^>]*role="status">[^<]+<\/p>/
+  );
 });
 
-test("current pledge version without a covered signature is labeled unsigned", () => {
+test("unsigned current pledge status stays on screen and outside the printed policy", () => {
   const markup = renderToStaticMarkup(
     React.createElement(RegistrationPolicy, {
       studentSignature: currentSignature,
       registrationPledgeVersion: "pledge-v1"
     })
   );
+  const printMarkup = getPolicyPrintMarkup(markup);
 
-  assert.match(markup, /Pledge not yet signed\./);
-  assert.doesNotMatch(markup, /<img\b/);
+  assert.doesNotMatch(printMarkup, /Pledge not yet signed|UNSIGNED HISTORICAL PLEDGE/);
+  assert.match(printMarkup, /class="registration-policy-signature-image"><\/div>/);
+  assert.match(markup, /class="registration-policy-screen-note print-hidden"[^>]*role="status">[^<]+<\/p>/);
 });
 
-test("back-page signature appears only for an explicitly covered current signature", () => {
+test("only an explicitly covered current signature appears on the printed pledge", () => {
   const coveredMarkup = renderToStaticMarkup(
     React.createElement(RegistrationPolicy, {
       studentPledgeCovered: true,
@@ -59,9 +74,13 @@ test("back-page signature appears only for an explicitly covered current signatu
       studentSignature: { ...currentSignature, is_current: false }
     })
   );
+  const coveredPrintMarkup = getPolicyPrintMarkup(coveredMarkup);
+  const stalePrintMarkup = getPolicyPrintMarkup(staleMarkup);
 
-  assert.match(coveredMarkup, /<img[^>]+src="https:\/\/example\.invalid\/signature\.png"/);
-  assert.match(coveredMarkup, /Test Student/);
-  assert.doesNotMatch(staleMarkup, /<img\b/);
-  assert.match(staleMarkup, /UNSIGNED HISTORICAL PLEDGE/);
+  assert.match(coveredPrintMarkup, /<img[^>]+src="https:\/\/example\.invalid\/signature\.png"/);
+  assert.match(coveredPrintMarkup, /Test Student/);
+  assert.doesNotMatch(coveredPrintMarkup, /UNSIGNED HISTORICAL PLEDGE|Pledge not yet signed/);
+  assert.doesNotMatch(stalePrintMarkup, /Test Student|UNSIGNED HISTORICAL PLEDGE|Pledge not yet signed|<img\b/);
+  assert.match(stalePrintMarkup, /class="registration-policy-signature-image"><\/div>/);
+  assert.match(staleMarkup, /class="registration-policy-screen-note print-hidden"[^>]*role="status">[^<]+<\/p>/);
 });

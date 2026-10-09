@@ -3,7 +3,14 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 
-const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB_URL = process.env.PKM_LOCAL_SUPABASE_TEST_DB_URL;
+if (!DB_URL) {
+  throw new Error("Set PKM_LOCAL_SUPABASE_TEST_DB_URL to an isolated local PostgreSQL database.");
+}
+const dbUrl = new URL(DB_URL);
+if (dbUrl.protocol !== "postgresql:" || dbUrl.hostname !== "127.0.0.1") {
+  throw new Error("Integration tests require a local PostgreSQL URL on 127.0.0.1.");
+}
 
 function query(sql) {
   const output = execFileSync("psql", [DB_URL, "-t", "-A", "-F\t", "-c", sql], {
@@ -673,49 +680,37 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   const [studentHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'STUDENT', 'STUDENT_ENROLLMENT_SIGNATURE', 'ENROLLMENT_REGISTRATION');`);
   const currentSnapshot = { ...enrollmentSnapshot, registration_pledge_version: "pledge-v1" };
   assert.equal(studentHash[0], expectedEnrollmentHash(currentSnapshot, subjectFields, "STUDENT", "STUDENT_ENROLLMENT_SIGNATURE", "ENROLLMENT_REGISTRATION"));
+  assert.notEqual(query(`SELECT document_hash FROM public.enrollment_signatures WHERE id = '${legacySigStudent}';`)[0][0], studentHash[0]);
 
   const [officialHashBeforeUnknownPolicy] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'LIBRARIAN', 'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
+  const [signedLibrarianBeforePledgeChange] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${libUserId}', true) as set_jwt) s,
+    LATERAL public.record_official_clearance_signature('${enrollmentId}', 'LIBRARY_CLEARANCE', '${sigLib}', '${enrollmentId}/LIBRARIAN/${sigLib}.png', '${dummyHash}', '${officialHashBeforeUnknownPolicy[0]}');
+  `);
+  assert.equal(signedLibrarianBeforePledgeChange[0], "signed");
   execute(`UPDATE public.enrollments SET registration_pledge_version = 'pledge-v2' WHERE id = '${enrollmentId}';`);
   assert.equal(query(`SELECT coalesce(private.enrollment_document_hash('${enrollmentId}', 'STUDENT', 'STUDENT_ENROLLMENT_SIGNATURE', 'ENROLLMENT_REGISTRATION'), 'null');`)[0][0], "null");
+  const [unsupportedPolicySignature] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
+    LATERAL public.record_student_enrollment_signature(
+      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${dummyHash}', true
+    );
+  `);
+  assert.equal(unsupportedPolicySignature[0], "unsupported_policy_version");
   const [officialHashAfterUnknownPolicy] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'LIBRARIAN', 'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
   assert.equal(officialHashAfterUnknownPolicy[0], officialHashBeforeUnknownPolicy[0]);
+  assert.equal(
+    query(`SELECT document_hash FROM public.enrollment_signatures WHERE id = '${sigLib}';`)[0][0],
+    officialHashAfterUnknownPolicy[0]
+  );
   execute(`UPDATE public.enrollments SET registration_pledge_version = 'pledge-v1' WHERE id = '${enrollmentId}';`);
 
-  // A missing explicit consent is rejected by the database RPC too.
-  const [noConsent] = query(`
-    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
-    LATERAL public.record_student_enrollment_signature(
-      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${studentHash[0]}', false
-    );
-  `);
-  assert.equal(noConsent[0], "policy_acknowledgment_required");
-
-  const [signedStudent] = query(`
-    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
-    LATERAL public.record_student_enrollment_signature(
-      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${studentHash[0]}', true
-    );
-  `);
-  assert.equal(signedStudent[0], "signed");
-  assert.equal(query(`SELECT document_hash FROM public.enrollment_signatures WHERE id = '${legacySigStudent}';`)[0][0], legacyHash[0]);
-  assert.equal(query(`SELECT count(*) FROM public.enrollment_signatures WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE';`)[0][0], "2");
-  assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE';`)[0][0], "SIGNED");
-
-  // Student signatures above also verify SQL/TypeScript fingerprint parity.
-
-  // Test 2: Approval fails with only student signature -> incomplete_clearances
+  // Approval remains blocked before the remaining official clearances are signed.
   const [res1] = query(`
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
     LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
   `);
   assert.equal(res1[0], "incomplete_clearances");
-
-  // Apply Librarian Signature
-  const [libHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'LIBRARIAN', 'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
-  query(`
-    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${libUserId}', true) as set_jwt) s,
-    LATERAL public.record_official_clearance_signature('${enrollmentId}', 'LIBRARY_CLEARANCE', '${sigLib}', '${enrollmentId}/LIBRARIAN/${sigLib}.png', '${dummyHash}', '${libHash[0]}');
-  `);
 
   // Apply Nurse Standard Signature
   const [nurseHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'NURSE', 'HEALTH_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
@@ -751,6 +746,36 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${deanUserId}', true) as set_jwt) s,
     LATERAL public.record_official_clearance_signature('${enrollmentId}', 'DEAN_CLEARANCE', '${sigDean}', '${enrollmentId}/DEAN/${sigDean}.png', '${dummyHash}', '${deanHash[0]}');
   `);
+  assert.equal(
+    query(`SELECT count(*) FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type <> 'STUDENT_ENROLLMENT_SIGNATURE' AND status = 'SIGNED';`)[0][0],
+    "5"
+  );
+  const [staleStudentApproval] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
+    LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
+  `);
+  assert.equal(staleStudentApproval[0], "incomplete_clearances");
+  // Only the new policy acknowledgment and current Student fingerprint can complete the form.
+  const [noConsent] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
+    LATERAL public.record_student_enrollment_signature(
+      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${studentHash[0]}', false
+    );
+  `);
+  assert.equal(noConsent[0], "policy_acknowledgment_required");
+
+  const [signedStudent] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
+    LATERAL public.record_student_enrollment_signature(
+      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${studentHash[0]}', true
+    );
+  `);
+  assert.equal(signedStudent[0], "signed");
+  assert.equal(query(`SELECT document_hash FROM public.enrollment_signatures WHERE id = '${legacySigStudent}';`)[0][0], legacyHash[0]);
+  assert.equal(query(`SELECT count(*) FROM public.enrollment_signatures WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE';`)[0][0], "2");
+  assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE';`)[0][0], "SIGNED");
+
+  // Student signatures above also verify SQL/TypeScript fingerprint parity.
 
   // Now all 6 required clearances are SIGNED and current -> Approval succeeds!
   const [apprSuccess] = query(`

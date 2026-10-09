@@ -56,6 +56,5 @@ test("registration renderer includes a front-only seal watermark without an enro
   assert.match(frontMarkup, /src="\/brand\/pkm-registration-watermark\.png"/);
   assert.doesNotMatch(policyMarkup, /registration-print-watermark|pkm-registration-watermark\.png/);
   assert.doesNotMatch(markup, /registration-print-enrolled-stamp|ENROLLED WATERMARK|ENROLLED OVERLAY/i);
-  assert.match(markup, /Pledge not yet signed\./);
   assert.doesNotMatch(policyMarkup, /<img\b/);
 });

@@ -954,9 +954,7 @@ textarea {
 }
 
 .registration-policy-header {
-  border-bottom: 1px solid #000000;
-  margin-bottom: 1.2rem;
-  padding-bottom: 0.6rem;
+  margin-bottom: 1rem;
 }
 
 .registration-policy-title {
@@ -983,6 +981,10 @@ textarea {
   text-align: justify;
 }
 
+.registration-policy-copy.registration-policy-centered {
+  text-align: center;
+}
+
 .registration-policy-subtitle {
   font-size: 0.85rem;
   font-style: italic;
@@ -996,11 +998,11 @@ textarea {
   font-style: italic;
   font-weight: 900;
   margin: 1rem 0;
-  text-align: center;
+  text-align: left;
 }
 
 .registration-policy-signature {
-  margin: 1.5rem 0 0 auto;
+  margin: 1.5rem auto 0;
   max-width: 20rem;
   text-align: center;
 }
@@ -1044,12 +1046,12 @@ textarea {
   text-transform: uppercase;
 }
 
-.registration-policy-signature-status {
-  font-size: 0.72rem;
-  font-weight: 800;
-  line-height: 1.25;
-  margin: 0.15rem 0 0;
-  text-align: center;
+.registration-policy-screen-note {
+  color: #7f1d1d;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin: 0 auto;
+  max-width: 960px;
 }
 
 @media (max-width: 639px) {
@@ -1463,8 +1465,7 @@ textarea {
   }
 
   .registration-policy-header {
-    margin-bottom: 0.34in !important;
-    padding-bottom: 0.12in !important;
+    margin-bottom: 0.22in !important;
   }
 
   .registration-policy-title {
@@ -1498,7 +1499,7 @@ textarea {
   }
 
   .registration-policy-signature {
-    margin-top: 0.3in !important;
+    margin: 0.3in auto 0 !important;
     max-width: none !important;
     width: 2.8in !important;
   }
@@ -1518,9 +1519,4 @@ textarea {
     margin-top: 0.02in !important;
   }
 
-  .registration-policy-signature-status {
-    font-size: 8pt !important;
-    line-height: 1.25 !important;
-    margin-top: 0.03in !important;
-  }
 }

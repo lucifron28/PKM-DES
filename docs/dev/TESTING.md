@@ -45,6 +45,16 @@ powershell -ExecutionPolicy Bypass -File scripts/integration/verify-local-supaba
 
 Stop the local stack after verification with `npx supabase stop`. These checks are local-only and must not target a hosted database.
 
+The authenticated registration/signature integration test mutates fixture data. Run `tests/integration/health-applicability-sync.test.mjs` only against a disposable Supabase project with a dedicated local database port. It requires an explicit `PKM_LOCAL_SUPABASE_TEST_DB_URL` and rejects non-loopback hosts:
+
+```powershell
+$env:PKM_LOCAL_SUPABASE_TEST_DB_URL = "postgresql://postgres:postgres@127.0.0.1:55322/postgres"
+node --test tests/integration/health-applicability-sync.test.mjs
+Remove-Item Env:PKM_LOCAL_SUPABASE_TEST_DB_URL
+```
+
+Replace `55322` with the dedicated database port for the disposable project. Never point the test at a hosted or shared database.
+
 ## Browser checks
 
 Use the public smoke test for unauthenticated routes:
