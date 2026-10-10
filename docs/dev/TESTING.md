@@ -45,6 +45,18 @@ powershell -ExecutionPolicy Bypass -File scripts/integration/verify-local-supaba
 
 Stop the local stack after verification with `npx supabase stop`. These checks are local-only and must not target a hosted database.
 
+### Staff and Registrar authorization regression tests
+
+The staff authorization boundary test verifies that assigned officials (Librarian, Nurse, Program Chair, Accountant, Dean) cannot perform unauthorized operations (such as approving enrollments, managing other accounts' roles, mutating sensitive profile fields, or reading records outside their authorized program scope) while ensuring Registrar and legitimate official clearance workflows continue to function.
+
+Run against an isolated local database:
+
+```powershell
+$env:PKM_LOCAL_SUPABASE_TEST_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+node --test tests/integration/staff-authorization-boundaries.test.mjs
+Remove-Item Env:PKM_LOCAL_SUPABASE_TEST_DB_URL
+```
+
 ## Browser checks
 
 Use the public smoke test for unauthenticated routes:

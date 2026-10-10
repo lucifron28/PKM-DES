@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 
-const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
-
+const DB_URL = process.env.PKM_LOCAL_SUPABASE_TEST_DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const dbUrl = new URL(DB_URL);
+if (dbUrl.protocol !== "postgresql:" || (dbUrl.hostname !== "127.0.0.1" && dbUrl.hostname !== "localhost")) {
+  throw new Error("Integration tests require a local PostgreSQL URL on 127.0.0.1.");
+}
 function query(sql) {
   const output = execFileSync("psql", [DB_URL, "-t", "-A", "-F\t", "-c", sql], {
     encoding: "utf8"

@@ -41,14 +41,15 @@ Migration files in `supabase/migrations/` are applied in filename order. Add a n
 
 The local migration directory and the hosted migration history are separate records. Before a hosted deployment, inspect the Supabase project migration history and apply any unapplied repository migrations through the Supabase project workflow. Do not infer hosted state from a local reset.
 
-## Access model
+## Access model and authorization boundaries
 
-The database stores base profiles and separate official assignments. Clearance access is determined by the authenticated profile, active assignment, enrollment, and applicable program. The assignment codes are `LIBRARIAN`, `NURSE`, `PROGRAM_CHAIR`, `ACCOUNTANT`, and `DEAN`.
+The database establishes distinct authorization tiers across application routes, RLS policies, and database RPCs:
 
-RLS policies protect student, enrollment, clearance, health-record, and signature data. The signature Storage bucket is private. Server-side code uploads signature files and records the resulting signature metadata through the protected database workflow.
+1. **Registrar/Admin:** An active administrator account with no active official role assignments. Holds authority for institutional enrollment reviews, student record management, official signer assignments, catalog administration, and notification processing.
+2. **Official Staff:** An active administrator account holding one or more active role assignments (`LIBRARIAN`, `NURSE`, `PROGRAM_CHAIR`, `ACCOUNTANT`, `DEAN`). Access is strictly scoped to their assigned clearance types and authorized programs (`program_id` match or global when `program_id` is null). Assigned officials cannot approve/reject enrollments, mutate official assignments, modify sensitive profile fields, or read student records outside their authorized scope.
+3. **Student:** Access is restricted to their own authorized profile, student record, enrollments, requirements, and signatures.
 
-The Health Record Update currently stores medical-condition details, identification dates, medications, allergy, last menstrual period, and other notes. Student-owner and assigned-Nurse policies control access to those records.
-
+Database RLS policies enforce program-level and role-level boundaries on `enrollments`, `enrollment_subjects`, `enrollment_clearances`, `enrollment_signatures`, `students`, `official_student_records`, `student_requirements`, and `signature_specimens`. Direct table updates to sensitive profile columns (`id`, `role`, `account_status`) are blocked for authenticated users. The signature Storage bucket is private.
 ## Hosted deployment checks
 
 Before deploying the hosted application:
