@@ -119,6 +119,24 @@ $$;
 
 revoke all on function private.staff_can_access_student(uuid) from public;
 grant execute on function private.staff_can_access_student(uuid) to authenticated;
+-- Accountants may see and manage balances only within their assigned programs.
+create or replace function private.accountant_can_access_student_balance(p_student_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.students s
+    where s.id = p_student_id
+      and private.has_official_role_for_program('ACCOUNTANT', s.program_id)
+  );
+$$;
+
+revoke all on function private.accountant_can_access_student_balance(uuid) from public;
+grant execute on function private.accountant_can_access_student_balance(uuid) to authenticated;
 
 -- Returns true if the authenticated student owns the official student record
 create or replace function private.student_owns_official_record(p_record_id uuid, p_student_id_number text)
@@ -147,33 +165,6 @@ $$;
 revoke all on function private.student_owns_official_record(uuid, text) from public;
 grant execute on function private.student_owns_official_record(uuid, text) to authenticated;
 
--- Returns true if the authenticated staff member can access the official student record
-create or replace function private.staff_can_access_official_student_record(p_record_id uuid, p_student_id_number text)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select exists (
-    select 1
-    from public.students s
-    join public.enrollments e on e.student_id = s.id
-    where (
-      s.official_record_id = p_record_id
-      or (
-        s.official_record_id is null
-        and s.student_id_number is not null
-        and s.student_id_number <> ''
-        and s.student_id_number = p_student_id_number
-      )
-    )
-    and private.has_any_official_role_for_program(e.program_id)
-  );
-$$;
-
-revoke all on function private.staff_can_access_official_student_record(uuid, text) from public;
-grant execute on function private.staff_can_access_official_student_record(uuid, text) to authenticated;
 
 -- Returns true if the authenticated staff member can access the student's profile
 create or replace function private.staff_can_access_profile(p_profile_id uuid)
@@ -227,7 +218,13 @@ as $$
     from public.enrollment_signatures es
     join public.enrollments e on e.id = es.enrollment_id
     where es.signature_storage_path = p_storage_path
-      and private.has_any_official_role_for_program(e.program_id)
+      and (
+        private.has_official_role_for_program(es.signer_role, e.program_id)
+        or (
+          es.clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE'
+          and private.has_official_role_for_program('NURSE', e.program_id)
+        )
+      )
   );
 $$;
 
@@ -1018,13 +1015,11 @@ create policy "profiles_insert_own"
 on public.profiles for insert
 to authenticated
 with check (
-  id = auth.uid()
-  and (
-    private.is_registrar()
-    or (
-      role = 'student'
-      and account_status in ('PENDING', 'SETUP')
-    )
+  private.is_registrar()
+  or (
+    id = auth.uid()
+    and role = 'student'
+    and account_status in ('PENDING', 'SETUP')
   )
 );
 
@@ -1063,7 +1058,6 @@ to authenticated
 using (
   private.is_registrar()
   or private.student_owns_official_record(id, student_id_number)
-  or private.staff_can_access_official_student_record(id, student_id_number)
 );
 
 drop policy if exists "official_student_records_insert_admin" on public.official_student_records;
@@ -1192,7 +1186,13 @@ using (
     select 1
     from public.enrollments e
     where e.id = enrollment_signatures.enrollment_id
-      and private.has_any_official_role_for_program(e.program_id)
+      and (
+        private.has_official_role_for_program(enrollment_signatures.signer_role, e.program_id)
+        or (
+          enrollment_signatures.clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE'
+          and private.has_official_role_for_program('NURSE', e.program_id)
+        )
+      )
   )
 );
 
@@ -1278,7 +1278,6 @@ to authenticated
 using (
   private.is_registrar()
   or private.is_student_owner(student_id)
-  or private.staff_can_access_student(student_id)
 );
 
 drop policy if exists "Admins manage standard loads" on public.standard_load_sets;
@@ -1303,7 +1302,7 @@ on public.balances for select
 to authenticated
 using (
   private.is_registrar()
-  or private.has_official_role('ACCOUNTANT')
+  or private.accountant_can_access_student_balance(student_id)
   or private.is_student_owner(student_id)
 );
 
@@ -1312,11 +1311,11 @@ on public.balances for all
 to authenticated
 using (
   private.is_registrar()
-  or private.has_official_role('ACCOUNTANT')
+  or private.accountant_can_access_student_balance(student_id)
 )
 with check (
   private.is_registrar()
-  or private.has_official_role('ACCOUNTANT')
+  or private.accountant_can_access_student_balance(student_id)
 );
 
 -- ============================================================================
@@ -1372,3 +1371,4 @@ grant select, insert, update on table public.enrollments to authenticated;
 grant select, insert, update on table public.enrollment_subjects to authenticated;
 grant select, insert, update on table public.balances to authenticated;
 grant select on table public.audit_logs to authenticated;
+grant select on table public.grades to authenticated;

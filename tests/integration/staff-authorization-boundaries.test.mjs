@@ -24,13 +24,13 @@ if (
   throw new Error("Integration tests require a local PostgreSQL URL on 127.0.0.1 or localhost.");
 }
 
-const isConfirmedDisposable =
-  process.env.PKM_DISPOSABLE_TEST_CONFIRMED === "true" ||
-  /test|disposable|temp/i.test(dbUrl.pathname);
+const databaseName = decodeURIComponent(dbUrl.pathname.replace(/^\/+/, ""));
+const hasDisposableName = /(?:^|[-_])(test|disposable|temp)(?:[-_]|$)/i.test(databaseName);
+const disposableConfirmation = process.env.PKM_DISPOSABLE_TEST_CONFIRMED === "true";
 
-if (!isConfirmedDisposable) {
+if (!hasDisposableName || !disposableConfirmation) {
   throw new Error(
-    "Target database must contain 'test', 'disposable', or 'temp' in its name, or PKM_DISPOSABLE_TEST_CONFIRMED=true must be set."
+    "Refusing database access: database name must contain a test/disposable/temp marker and PKM_DISPOSABLE_TEST_CONFIRMED=true must be set."
   );
 }
 
@@ -93,6 +93,7 @@ const deanId          = "00000000-0000-4000-a000-000000000004";
 const chairAId        = "00000000-0000-4000-a000-000000000005";
 const chairBId        = "00000000-0000-4000-a000-000000000006";
 const accountantId    = "00000000-0000-4000-a000-000000000007";
+const accountantGlobalId = "00000000-0000-4000-a000-000000000009";
 const unprovisionedId = "00000000-0000-4000-a000-000000000008";
 
 const student1ProfileId = "00000000-0000-4000-b000-000000000001";
@@ -118,9 +119,18 @@ const specimenLibId = "00000000-0000-4000-f000-000000000002";
 
 const balance1Id = "00000000-0000-4000-d000-000000000001";
 const balance2Id = "00000000-0000-4000-d000-000000000002";
+const grade1Id = "00000000-0000-4000-d100-000000000001";
+const grade2Id = "00000000-0000-4000-d100-000000000002";
+const student1SignatureId = "00000000-0000-4000-d200-000000000001";
+const librarianSignatureId = "00000000-0000-4000-d200-000000000002";
+const nurseSignatureId = "00000000-0000-4000-d200-000000000003";
+const chairASignatureId = "00000000-0000-4000-d200-000000000004";
+const accountantSignatureId = "00000000-0000-4000-d200-000000000005";
+const deanSignatureId = "00000000-0000-4000-d200-000000000006";
+const chairBSignatureId = "00000000-0000-4000-d200-000000000007";
 
 const allFixtureUsers = [
-  registrarId, librarianId, nurseId, deanId, chairAId, chairBId, accountantId, unprovisionedId,
+  registrarId, librarianId, nurseId, deanId, chairAId, chairBId, accountantId, accountantGlobalId, unprovisionedId,
   student1ProfileId, student2ProfileId, setupStudentProfileId
 ];
 
@@ -130,14 +140,14 @@ test("Setup: provision isolated fixture data for authorization boundaries test",
     SET pkm.demo_reset = 'true';
     DELETE FROM public.audit_logs WHERE actor_profile_id IN (${allFixtureUsers.map(id => `'${id}'`).join(",")});
     DELETE FROM public.signature_specimens WHERE profile_id IN (${allFixtureUsers.map(id => `'${id}'`).join(",")});
-    DELETE FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name LIKE '%${enrollment1Id}%';
+    DELETE FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND (name LIKE '%${enrollment1Id}%' OR name LIKE '%${enrollment2Id}%');
     DELETE FROM public.enrollment_signatures WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.enrollment_clearances WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.enrollment_subjects WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.student_requirements WHERE student_id IN ('${student1Id}', '${student2Id}');
     DELETE FROM public.balances WHERE id IN ('${balance1Id}', '${balance2Id}');
+    DELETE FROM public.grades WHERE id IN ('${grade1Id}', '${grade2Id}');
     DELETE FROM public.enrollment_decision_notifications WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
-    DELETE FROM public.enrollments WHERE id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.students WHERE id IN ('${student1Id}', '${student2Id}');
     DELETE FROM public.official_student_records WHERE id IN ('${osr1Id}', '${osr2Id}') OR program_id IN ('${programAId}', '${programBId}');
     DELETE FROM public.official_role_assignments WHERE profile_id IN (${allFixtureUsers.map(id => `'${id}'`).join(",")});
@@ -172,6 +182,7 @@ test("Setup: provision isolated fixture data for authorization boundaries test",
       ('${chairAId}', 'chairA.auth@example.test'),
       ('${chairBId}', 'chairB.auth@example.test'),
       ('${accountantId}', 'accountant.auth@example.test'),
+      ('${accountantGlobalId}', 'accountant.global.auth@example.test'),
       ('${unprovisionedId}', 'unprovisioned.auth@example.test'),
       ('${student1ProfileId}', 'student1.auth@example.test'),
       ('${student2ProfileId}', 'student2.auth@example.test'),
@@ -184,7 +195,8 @@ test("Setup: provision isolated fixture data for authorization boundaries test",
       ('${deanId}', 'dean.auth@example.test', 'admin', 'Dean', 'Staff', 'ACTIVE'),
       ('${chairAId}', 'chairA.auth@example.test', 'admin', 'ChairA', 'Staff', 'ACTIVE'),
       ('${chairBId}', 'chairB.auth@example.test', 'admin', 'ChairB', 'Staff', 'ACTIVE'),
-      ('${accountantId}', 'accountant.auth@example.test', 'admin', 'Accountant', 'Staff', 'ACTIVE'),
+      ('${accountantId}', 'accountant.auth@example.test', 'admin', 'Accountant', 'Program A', 'ACTIVE'),
+      ('${accountantGlobalId}', 'accountant.global.auth@example.test', 'admin', 'Accountant', 'Global', 'ACTIVE'),
       ('${student1ProfileId}', 'student1.auth@example.test', 'student', 'Student', 'One', 'ACTIVE'),
       ('${student2ProfileId}', 'student2.auth@example.test', 'student', 'Student', 'Two', 'ACTIVE'),
       ('${setupStudentProfileId}', 'setup.student.auth@example.test', 'student', 'Setup', 'Student', 'SETUP');
@@ -195,7 +207,8 @@ test("Setup: provision isolated fixture data for authorization boundaries test",
       ('${deanId}', 'DEAN', null, true),
       ('${chairAId}', 'PROGRAM_CHAIR', '${programAId}', true),
       ('${chairBId}', 'PROGRAM_CHAIR', '${programBId}', true),
-      ('${accountantId}', 'ACCOUNTANT', null, true);
+      ('${accountantId}', 'ACCOUNTANT', '${programAId}', true),
+      ('${accountantGlobalId}', 'ACCOUNTANT', null, true);
   `);
 
   // Create Student 1 (Program A) and Student 2 (Program B)
@@ -223,6 +236,9 @@ test("Setup: provision isolated fixture data for authorization boundaries test",
     ) VALUES
       (gen_random_uuid(), '${enrollment1Id}', '${subjectAId}', 'IT101', 'Intro to IT', 3),
       (gen_random_uuid(), '${enrollment2Id}', '${subjectBId}', 'AIS101', 'Intro to AIS', 3);
+    INSERT INTO public.grades (id, student_id, subject_id, grade, remarks) VALUES
+      ('${grade1Id}', '${student1Id}', '${subjectAId}', '1.25', 'Test grade A'),
+      ('${grade2Id}', '${student2Id}', '${subjectBId}', '1.50', 'Test grade B');
 
     INSERT INTO public.student_requirements (
       id, student_id, requirement_code, academic_year, semester, status, applicability
@@ -248,7 +264,7 @@ test("Boundary 1: private.is_registrar() accurately identifies Registrar vs Assi
   const [isRegistrar] = asUser(registrarId, `SELECT private.is_registrar();`);
   assert.equal(isRegistrar[0], "t", "Registrar with no active assignments must be recognized as registrar");
 
-  for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, accountantId]) {
+  for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, accountantId, accountantGlobalId]) {
     const [isStaffRegistrar] = asUser(staffId, `SELECT private.is_registrar();`);
     assert.equal(isStaffRegistrar[0], "f", `Staff ${staffId} with active role must NOT be recognized as registrar`);
   }
@@ -312,7 +328,7 @@ test("Boundary 2: Assigned officials cannot manage another account's roles (set_
 });
 
 test("Boundary 3: Assigned officials cannot approve/reject enrollments through Registrar RPC (review_pending_enrollment)", () => {
-  for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, accountantId]) {
+  for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, accountantId, accountantGlobalId, unprovisionedId]) {
     const [res] = asUser(
       staffId,
       `SELECT outcome FROM public.review_pending_enrollment('${enrollment1Id}', 'APPROVED', 'Staff bypass attempt');`
@@ -363,13 +379,24 @@ test("Boundary 4: Profile privilege escalation and sensitive field protection", 
   );
   assert.equal(unprovStudent.ok, true, "Legitimate student self-registration must succeed");
   execute(`DELETE FROM public.profiles WHERE id = '${unprovisionedId}';`);
+  // Registrar retains authorized provisioning for another account.
+  const registrarProvision = tryExecuteAsUser(
+    registrarId,
+    `INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status)
+     VALUES ('${unprovisionedId}', 'unprov@example.test', 'admin', 'Provisioned', 'Admin', 'ACTIVE');`
+  );
+  assert.equal(registrarProvision.ok, true, "Registrar can provision an authorized administrator profile");
+  const [provisionedProfile] = query(`SELECT role, account_status FROM public.profiles WHERE id = '${unprovisionedId}';`);
+  assert.deepEqual(provisionedProfile, ["admin", "ACTIVE"]);
+
+  execute(`DELETE FROM public.profiles WHERE id = '${unprovisionedId}';`);
+
 
   // 4. Librarian tries to update profile role directly
-  const libUpdateOther = tryExecuteAsUser(
+  tryExecuteAsUser(
     librarianId,
     `UPDATE public.profiles SET role = 'admin' WHERE id = '${student1ProfileId}';`
   );
-  assert.ok(libUpdateOther !== undefined);
   const [checkStudentRole] = query(`SELECT role FROM public.profiles WHERE id = '${student1ProfileId}';`);
   assert.equal(checkStudentRole[0], "student", "Student role must remain student");
 
@@ -393,22 +420,27 @@ test("Boundary 4: Profile privilege escalation and sensitive field protection", 
 
 test("Boundary 5: Direct table UPDATE on enrollments is blocked for non-Registrars (enrollments_update_admin elimination)", () => {
   // Librarian tries direct table UPDATE on enrollments
-  const libEnrollUpdate = tryExecuteAsUser(
+  tryExecuteAsUser(
     librarianId,
     `UPDATE public.enrollments SET status = 'APPROVED' WHERE id = '${enrollment1Id}';`
   );
-  assert.ok(libEnrollUpdate !== undefined);
   const [checkLibEnrollStatus] = query(`SELECT status FROM public.enrollments WHERE id = '${enrollment1Id}';`);
   assert.equal(checkLibEnrollStatus[0], "PENDING", "Librarian direct UPDATE must not alter enrollment status");
 
   // Student tries direct table UPDATE on enrollments
-  const studentEnrollUpdate = tryExecuteAsUser(
+  tryExecuteAsUser(
     student1ProfileId,
     `UPDATE public.enrollments SET status = 'APPROVED' WHERE id = '${enrollment1Id}';`
   );
-  assert.ok(studentEnrollUpdate !== undefined);
   const [checkStudentEnrollStatus] = query(`SELECT status FROM public.enrollments WHERE id = '${enrollment1Id}';`);
   assert.equal(checkStudentEnrollStatus[0], "PENDING", "Student direct UPDATE must not alter enrollment status");
+
+  tryExecuteAsUser(
+    unprovisionedId,
+    `UPDATE public.enrollments SET status = 'APPROVED' WHERE id = '${enrollment1Id}';`
+  );
+  const [checkUnprovisionedEnrollStatus] = query(`SELECT status FROM public.enrollments WHERE id = '${enrollment1Id}';`);
+  assert.equal(checkUnprovisionedEnrollStatus[0], "PENDING", "Unprovisioned user cannot alter enrollment status");
 
   // Registrar CAN execute management UPDATE on enrollments
   const regEnrollUpdate = tryExecuteAsUser(
@@ -420,15 +452,15 @@ test("Boundary 5: Direct table UPDATE on enrollments is blocked for non-Registra
   assert.equal(checkRegEnrollRemarks[0], "Verified by Registrar");
 });
 
-test("Boundary 6: Official Student Records Scoping & Management", () => {
-  // Denied: Librarian cannot call update_official_student_record_and_sync
+test("Boundary 6: Student records and grades are least-privilege", () => {
+  // Denied: Librarian cannot call update_official_student_record_and_sync.
   const [libSync] = asUser(
     librarianId,
     `SELECT outcome FROM public.update_official_student_record_and_sync('${osr1Id}', '26-IT-001', 'Hacked', 'Name', 'student1.auth@example.test', '${programAId}', '1st Year', 'Incoming 1st Year Student');`
   );
   assert.equal(libSync[0], "unauthorized", "Librarian cannot call update_official_student_record_and_sync");
 
-  // Denied: Nurse cannot direct INSERT into official_student_records
+  // Denied: Nurse cannot directly insert or read a full official student record.
   const nurseInsert = tryExecuteAsUser(
     nurseId,
     `INSERT INTO public.official_student_records (id, first_name, last_name, email, program_id, year_level, student_type, enrollment_status)
@@ -436,42 +468,46 @@ test("Boundary 6: Official Student Records Scoping & Management", () => {
   );
   assert.equal(nurseInsert.ok, false, "Nurse cannot direct INSERT into official_student_records");
 
-  // Denied: Program Chair for Program A cannot read official student record for Program B
-  const [chairAOsrB] = asUser(
-    chairAId,
-    `SELECT count(*) FROM public.official_student_records WHERE id = '${osr2Id}';`
-  );
-  assert.equal(chairAOsrB[0], "0", "Chair A cannot select official record for Program B student");
+  for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, accountantId, accountantGlobalId, unprovisionedId]) {
+    const [staffRecord] = asUser(
+      staffId,
+      `SELECT count(*) FROM public.official_student_records WHERE id = '${osr1Id}';`
+    );
+    assert.equal(staffRecord[0], "0", `Official Staff ${staffId} cannot directly read full official student records`);
+  }
 
-  // Allowed: Program Chair for Program A CAN read official student record for Program A
-  const [chairAOsrA] = asUser(
-    chairAId,
-    `SELECT count(*) FROM public.official_student_records WHERE id = '${osr1Id}';`
+  // Nurse still receives the minimum gender/applicability data through the
+  // existing role- and program-scoped health requirement RPC.
+  const [nurseHealthContext] = asUser(
+    nurseId,
+    `SELECT gender_sex, requirement_applicability
+       FROM public.get_nurse_health_requirement('${enrollment1Id}');`
   );
-  assert.equal(chairAOsrA[0], "1", "Chair A can select official record for Program A student");
+  assert.deepEqual(nurseHealthContext, ["Female", "APPLICABLE"]);
+  const [librarianHealthContext] = asUser(
+    librarianId,
+    `SELECT count(*) FROM public.get_nurse_health_requirement('${enrollment1Id}');`
+  );
+  assert.equal(librarianHealthContext[0], "0", "Librarian cannot use Nurse's scoped student-context RPC");
 
-  // Allowed: Student 1 CAN read own official student record
+  // Student owners can see their own official records, not another student's.
   const [student1OwnRecord] = asUser(
     student1ProfileId,
     `SELECT count(*) FROM public.official_student_records WHERE id = '${osr1Id}';`
   );
-  assert.equal(student1OwnRecord[0], "1", "Student 1 can select own official record");
-
-  // Denied: Student 1 cannot read Student 2's official record
+  assert.equal(student1OwnRecord[0], "1");
   const [student1OtherRecord] = asUser(
     student1ProfileId,
     `SELECT count(*) FROM public.official_student_records WHERE id = '${osr2Id}';`
   );
-  assert.equal(student1OtherRecord[0], "0", "Student 1 cannot select Student 2's official record");
+  assert.equal(student1OtherRecord[0], "0");
 
-  // Allowed: Registrar can read all official student records
+  // Registrar retains full student-record read and management permissions.
   const [regCount] = asUser(
     registrarId,
     `SELECT count(*) FROM public.official_student_records WHERE id IN ('${osr1Id}', '${osr2Id}');`
   );
   assert.equal(regCount[0], "2", "Registrar can read all official student records");
-
-  // Allowed: Registrar can call update_official_student_record_and_sync
   const [regSync] = asUser(
     registrarId,
     `SELECT outcome FROM public.update_official_student_record_and_sync(
@@ -480,7 +516,20 @@ test("Boundary 6: Official Student Records Scoping & Management", () => {
       null, null, null, null, null, null, null, null, null, null, 'PENDING'
     );`
   );
-  assert.equal(regSync[0], "updated", "Registrar can successfully execute update_official_student_record_and_sync");
+  assert.equal(regSync[0], "updated", "Registrar can update official student records");
+
+  // Staff roles do not require grade access in the application; only the
+  // student owner and Registrar can read grades.
+  for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, accountantId, accountantGlobalId, unprovisionedId]) {
+    const [staffGrades] = asUser(staffId, `SELECT count(*) FROM public.grades WHERE id IN ('${grade1Id}', '${grade2Id}');`);
+    assert.equal(staffGrades[0], "0", `Official Staff ${staffId} cannot read grades`);
+  }
+  const [studentOwnGrade] = asUser(student1ProfileId, `SELECT count(*) FROM public.grades WHERE id = '${grade1Id}';`);
+  assert.equal(studentOwnGrade[0], "1", "Student can read own grade");
+  const [studentOtherGrade] = asUser(student1ProfileId, `SELECT count(*) FROM public.grades WHERE id = '${grade2Id}';`);
+  assert.equal(studentOtherGrade[0], "0", "Student cannot read another student's grade");
+  const [registrarGrades] = asUser(registrarId, `SELECT count(*) FROM public.grades WHERE id IN ('${grade1Id}', '${grade2Id}');`);
+  assert.equal(registrarGrades[0], "2", "Registrar can read grades for management");
 });
 
 test("Boundary 7: Program-scoped officials cannot access unauthorized programs", () => {
@@ -520,7 +569,7 @@ test("Boundary 7: Program-scoped officials cannot access unauthorized programs",
 
 test("Boundary 8: Notification Outbox RPCs and RLS authorization", () => {
   // 1. Non-Registrars cannot select from enrollment_decision_notifications
-  for (const staffId of [librarianId, nurseId, chairAId, accountantId, student1ProfileId]) {
+  for (const staffId of [librarianId, nurseId, chairAId, accountantId, accountantGlobalId, student1ProfileId, unprovisionedId]) {
     const [notifCount] = asUser(staffId, `SELECT count(*) FROM public.enrollment_decision_notifications;`);
     assert.equal(notifCount[0], "0", `User ${staffId} must not read enrollment decision notifications`);
   }
@@ -575,6 +624,30 @@ test("Boundary 8: Notification Outbox RPCs and RLS authorization", () => {
     `SELECT outcome FROM public.mark_enrollment_decision_notification_sent('${notificationId}', '${reservationToken}');`
   );
   assert.equal(regSentRes[0], "sent", "Registrar can mark notification sent");
+
+  execute(`
+    INSERT INTO public.enrollment_decision_notifications (
+      enrollment_id, decision, recipient_email, academic_year, semester, status
+    ) VALUES (
+      '${enrollment1Id}', 'REJECTED', 'student1.auth@example.test', '2026-2027', '1st Semester', 'PENDING'
+    ) ON CONFLICT (enrollment_id, decision) DO UPDATE SET status = 'PENDING', reservation_token = null, reserved_at = null;
+  `);
+
+  const [failedReservation] = asUser(
+    registrarId,
+    `SELECT outcome, notification_id, reservation_token FROM public.reserve_enrollment_decision_notification('${enrollment1Id}', 'REJECTED');`
+  );
+  assert.equal(failedReservation[0], "reserved");
+  const [failedOutcome] = asUser(
+    registrarId,
+    `SELECT outcome FROM public.mark_enrollment_decision_notification_failed('${failedReservation[1]}', '${failedReservation[2]}', 'provider');`
+  );
+  assert.equal(failedOutcome[0], "failed", "Registrar can mark notification failed");
+  const [failedState] = query(`
+    SELECT status = 'FAILED', last_error_code = 'provider', reserved_at IS NULL, reservation_token IS NULL
+    FROM public.enrollment_decision_notifications WHERE id = '${failedReservation[1]}';
+  `);
+  assert.deepEqual(failedState, ["t", "t", "t", "t"]);
 });
 
 test("Boundary 9: Cross-role workspace and clearance separation", () => {
@@ -617,50 +690,76 @@ test("Boundary 9: Cross-role workspace and clearance separation", () => {
   );
   assert.equal(nurseSignLib[0], "unauthorized", "Nurse cannot sign LIBRARY_CLEARANCE");
 
+  const [nurseSignDean] = asUser(
+    nurseId,
+    `SELECT outcome FROM public.record_official_clearance_signature(
+      '${enrollment1Id}', 'DEAN_CLEARANCE', '${dummySigId}',
+      '${enrollment1Id}/DEAN/${dummySigId}.png', '${dummyHash}', '${dummyHash}'
+    );`
+  );
+  assert.equal(nurseSignDean[0], "unauthorized", "Nurse cannot sign DEAN_CLEARANCE");
+
   // 5. Nurse CAN read health requirements for their assigned program
   const [nurseReq] = asUser(nurseId, `SELECT count(*) FROM public.student_requirements WHERE student_id = '${student1Id}';`);
   assert.equal(nurseReq[0], "1", "Nurse can read health requirements for enrollment in assigned program");
 });
 
-test("Boundary 10: Financial Records (balances) RLS scoping", () => {
-  // 1. Accountant can select all balances
-  const [acctBalanceCount] = asUser(accountantId, `SELECT count(*) FROM public.balances;`);
-  assert.equal(acctBalanceCount[0], "2", "Accountant can read all balances");
+test("Boundary 10: Accountant balances are program-scoped with global assignment support", () => {
+  // Program A-scoped Accountant reads Program A only.
+  const [accountantProgramACount] = asUser(
+    accountantId,
+    `SELECT count(*) FROM public.balances WHERE id IN ('${balance1Id}', '${balance2Id}');`
+  );
+  assert.equal(accountantProgramACount[0], "1", "Program-scoped Accountant sees only balances in the assigned program");
 
-  // 2. Accountant can manage balances
-  const acctUpdate = tryExecuteAsUser(
+  const scopedAccountantWriteA = tryExecuteAsUser(
     accountantId,
     `UPDATE public.balances SET amount = 4500.00 WHERE id = '${balance1Id}';`
   );
-  assert.equal(acctUpdate.ok, true, "Accountant can update balance");
+  assert.equal(scopedAccountantWriteA.ok, true, "Program-scoped Accountant can update assigned-program balances");
 
-  // 3. Student 1 can select own balance
+  const [scopedAccountantWriteB] = asUser(
+    accountantId,
+    `WITH changed AS (
+       UPDATE public.balances SET amount = 1.00 WHERE id = '${balance2Id}' RETURNING id
+     )
+     SELECT count(*) FROM changed;`
+  );
+  assert.equal(scopedAccountantWriteB[0], "0", "Program-scoped Accountant cannot update balances outside assigned program");
+  const [balanceBAfterScopedWrite] = query(`SELECT amount FROM public.balances WHERE id = '${balance2Id}';`);
+  assert.equal(balanceBAfterScopedWrite[0], "1500.00");
+
+  // A global assignment (program_id IS NULL) retains system-wide scope.
+  const [globalAccountantCount] = asUser(
+    accountantGlobalId,
+    `SELECT count(*) FROM public.balances WHERE id IN ('${balance1Id}', '${balance2Id}');`
+  );
+  assert.equal(globalAccountantCount[0], "2", "Global Accountant can read balances in all programs");
+  const globalAccountantWriteB = tryExecuteAsUser(
+    accountantGlobalId,
+    `UPDATE public.balances SET amount = 1400.00 WHERE id = '${balance2Id}';`
+  );
+  assert.equal(globalAccountantWriteB.ok, true, "Global Accountant can update balances in any program");
+
+  // Student access remains limited to their own balance.
   const [student1OwnBalance] = asUser(student1ProfileId, `SELECT count(*) FROM public.balances WHERE id = '${balance1Id}';`);
   assert.equal(student1OwnBalance[0], "1", "Student 1 can read own balance");
-
-  // 4. Student 1 cannot select Student 2's balance
   const [student1OtherBalance] = asUser(student1ProfileId, `SELECT count(*) FROM public.balances WHERE id = '${balance2Id}';`);
   assert.equal(student1OtherBalance[0], "0", "Student 1 cannot read Student 2's balance");
-
-  // 5. Student 1 cannot update own balance
-  const studentUpdate = tryExecuteAsUser(
+  tryExecuteAsUser(
     student1ProfileId,
     `UPDATE public.balances SET amount = 0.00 WHERE id = '${balance1Id}';`
   );
-  assert.ok(studentUpdate !== undefined);
   const [checkStudent1Balance] = query(`SELECT amount FROM public.balances WHERE id = '${balance1Id}';`);
   assert.equal(checkStudent1Balance[0], "4500.00", "Student update attempt must not alter balance");
 
-  // 6. Non-financial staff (Librarian, Nurse) cannot read balances
-  const [libBalanceCount] = asUser(librarianId, `SELECT count(*) FROM public.balances;`);
-  assert.equal(libBalanceCount[0], "0", "Librarian cannot read student balances");
+  for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, unprovisionedId]) {
+    const [staffBalanceCount] = asUser(staffId, `SELECT count(*) FROM public.balances;`);
+    assert.equal(staffBalanceCount[0], "0", `Non-Accountant staff ${staffId} cannot read student balances`);
+  }
 
-  const [nurseBalanceCount] = asUser(nurseId, `SELECT count(*) FROM public.balances;`);
-  assert.equal(nurseBalanceCount[0], "0", "Nurse cannot read student balances");
-
-  // 7. Registrar can select all balances
-  const [regBalanceCount] = asUser(registrarId, `SELECT count(*) FROM public.balances;`);
-  assert.equal(regBalanceCount[0], "2", "Registrar can read all student balances");
+  const [registrarBalanceCount] = asUser(registrarId, `SELECT count(*) FROM public.balances;`);
+  assert.equal(registrarBalanceCount[0], "2", "Registrar can read all student balances");
 });
 
 test("Boundary 11: Institutional Audit Logs Protection", () => {
@@ -672,6 +771,9 @@ test("Boundary 11: Institutional Audit Logs Protection", () => {
   const [nurseAuditCount] = asUser(nurseId, `SELECT count(*) FROM public.audit_logs;`);
   assert.equal(nurseAuditCount[0], "0", "Nurse cannot read audit logs");
 
+  const [unprovisionedAuditCount] = asUser(unprovisionedId, `SELECT count(*) FROM public.audit_logs;`);
+  assert.equal(unprovisionedAuditCount[0], "0", "Unprovisioned user cannot read audit logs");
+
   // 3. Non-Registrar direct INSERT into audit_logs is blocked
   const libAuditInsert = tryExecuteAsUser(
     librarianId,
@@ -680,9 +782,16 @@ test("Boundary 11: Institutional Audit Logs Protection", () => {
   );
   assert.equal(libAuditInsert.ok, false, "Direct INSERT into audit_logs must be blocked for non-Registrars");
 
+  const unprovisionedAuditInsert = tryExecuteAsUser(
+    unprovisionedId,
+    `INSERT INTO public.audit_logs (actor_profile_id, action, target_table, target_id)
+     VALUES ('${unprovisionedId}', 'FORGED_AUDIT', 'profiles', '${student1ProfileId}');`
+  );
+  assert.equal(unprovisionedAuditInsert.ok, false, "Unprovisioned user cannot insert audit logs");
+
   // 4. Registrar CAN read audit logs
   const [regAuditCount] = asUser(registrarId, `SELECT count(*) FROM public.audit_logs;`);
-  assert.ok(parseInt(regAuditCount[0], 10) >= 0, "Registrar can select audit logs");
+  assert.ok(parseInt(regAuditCount[0], 10) > 0, "Registrar can read audit logs");
 });
 
 test("Boundary 12: Signature Specimen Isolation", () => {
@@ -703,61 +812,174 @@ test("Boundary 12: Signature Specimen Isolation", () => {
   assert.equal(regViewLib[0], "1", "Registrar can view signature specimens");
 });
 
-test("Boundary 13: Signature Storage Objects Access (storage.objects)", () => {
-  const sig1Id = "00000000-0000-4000-d000-000000000020";
-  const sigStoragePath = `${enrollment1Id}/LIBRARIAN/${sig1Id}.png`;
+test("Boundary 13: Official signature visibility is role-scoped; complete forms remain available to students and Registrar", () => {
+  const signatureFixtures = [
+    {
+      id: student1SignatureId,
+      enrollmentId: enrollment1Id,
+      studentId: student1Id,
+      profileId: student1ProfileId,
+      signerRole: "STUDENT",
+      clearanceType: "STUDENT_ENROLLMENT_SIGNATURE",
+      documentType: "ENROLLMENT_REGISTRATION",
+      name: "Student One"
+    },
+    {
+      id: librarianSignatureId,
+      enrollmentId: enrollment1Id,
+      studentId: student1Id,
+      profileId: librarianId,
+      signerRole: "LIBRARIAN",
+      clearanceType: "LIBRARY_CLEARANCE",
+      documentType: "ENROLLMENT_CLEARANCE",
+      name: "Librarian Staff"
+    },
+    {
+      id: nurseSignatureId,
+      enrollmentId: enrollment1Id,
+      studentId: student1Id,
+      profileId: nurseId,
+      signerRole: "NURSE",
+      clearanceType: "HEALTH_CLEARANCE",
+      documentType: "HEALTH_RECORD",
+      name: "Nurse Staff"
+    },
+    {
+      id: chairASignatureId,
+      enrollmentId: enrollment1Id,
+      studentId: student1Id,
+      profileId: chairAId,
+      signerRole: "PROGRAM_CHAIR",
+      clearanceType: "PROGRAM_CLEARANCE",
+      documentType: "ENROLLMENT_CLEARANCE",
+      name: "Chair A"
+    },
+    {
+      id: accountantSignatureId,
+      enrollmentId: enrollment1Id,
+      studentId: student1Id,
+      profileId: accountantId,
+      signerRole: "ACCOUNTANT",
+      clearanceType: "ACCOUNTING_CLEARANCE",
+      documentType: "ENROLLMENT_CLEARANCE",
+      name: "Accountant A"
+    },
+    {
+      id: deanSignatureId,
+      enrollmentId: enrollment1Id,
+      studentId: student1Id,
+      profileId: deanId,
+      signerRole: "DEAN",
+      clearanceType: "DEAN_CLEARANCE",
+      documentType: "ENROLLMENT_CLEARANCE",
+      name: "Dean"
+    },
+    {
+      id: chairBSignatureId,
+      enrollmentId: enrollment2Id,
+      studentId: student2Id,
+      profileId: chairBId,
+      signerRole: "PROGRAM_CHAIR",
+      clearanceType: "PROGRAM_CLEARANCE",
+      documentType: "ENROLLMENT_CLEARANCE",
+      name: "Chair B"
+    }
+  ];
+  const objectValues = signatureFixtures
+    .map((signature) => `(gen_random_uuid(), 'enrollment-signatures', '${signature.enrollmentId}/${signature.signerRole}/${signature.id}.png')`)
+    .join(",\n");
+  const signatureValues = signatureFixtures
+    .map((signature) => `(
+      '${signature.id}', '${signature.enrollmentId}', '${signature.studentId}', '${signature.profileId}', '${signature.signerRole}',
+      '${signature.clearanceType}', '${signature.documentType}', '${signature.name}',
+      '${signature.enrollmentId}/${signature.signerRole}/${signature.id}.png',
+      '${"a".repeat(64)}', '${"b".repeat(64)}'
+    )`)
+    .join(",\n");
 
-  // Insert mock storage object and signature metadata
   execute(`
     INSERT INTO storage.objects (id, bucket_id, name)
-    VALUES (gen_random_uuid(), 'enrollment-signatures', '${sigStoragePath}')
+    VALUES ${objectValues}
     ON CONFLICT DO NOTHING;
 
     INSERT INTO public.enrollment_signatures (
       id, enrollment_id, student_id, signer_profile_id, signer_role,
       clearance_type, document_type, signer_name_snapshot,
       signature_storage_path, document_hash, signature_hash
-    ) VALUES (
-      '${sig1Id}', '${enrollment1Id}', '${student1Id}', '${librarianId}', 'LIBRARIAN',
-      'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE', 'Librarian Staff',
-      '${sigStoragePath}', '${"a".repeat(64)}', '${"b".repeat(64)}'
-    ) ON CONFLICT DO NOTHING;
+    ) VALUES ${signatureValues}
+    ON CONFLICT DO NOTHING;
   `);
 
-  // 1. Student 1 CAN read own signature storage object
-  const [student1SigObj] = asUser(
-    student1ProfileId,
-    `SELECT count(*) FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name = '${sigStoragePath}';`
-  );
-  assert.equal(student1SigObj[0], "1", "Student 1 can select own signature storage object");
+  const visibleTypes = (profileId, enrollmentId) =>
+    asUser(
+      profileId,
+      `SELECT clearance_type FROM public.enrollment_signatures WHERE enrollment_id = '${enrollmentId}' ORDER BY clearance_type;`
+    ).map(([clearanceType]) => clearanceType);
 
-  // 2. Student 2 CANNOT read Student 1's signature storage object
-  const [student2SigObj] = asUser(
-    student2ProfileId,
-    `SELECT count(*) FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name = '${sigStoragePath}';`
-  );
-  assert.equal(student2SigObj[0], "0", "Student 2 cannot select Student 1's signature storage object");
+  // A completed registration copy is available to its Student and the Registrar.
+  assert.deepEqual(visibleTypes(student1ProfileId, enrollment1Id), [
+    "ACCOUNTING_CLEARANCE",
+    "DEAN_CLEARANCE",
+    "HEALTH_CLEARANCE",
+    "LIBRARY_CLEARANCE",
+    "PROGRAM_CLEARANCE",
+    "STUDENT_ENROLLMENT_SIGNATURE"
+  ]);
+  assert.deepEqual(visibleTypes(registrarId, enrollment1Id), [
+    "ACCOUNTING_CLEARANCE",
+    "DEAN_CLEARANCE",
+    "HEALTH_CLEARANCE",
+    "LIBRARY_CLEARANCE",
+    "PROGRAM_CLEARANCE",
+    "STUDENT_ENROLLMENT_SIGNATURE"
+  ]);
 
-  // 3. Librarian CAN read signature storage object for authorized program enrollment
-  const [libSigObj] = asUser(
-    librarianId,
-    `SELECT count(*) FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name = '${sigStoragePath}';`
-  );
-  assert.equal(libSigObj[0], "1", "Librarian can select signature object for authorized enrollment");
+  // Decision: staff clearance review needs the Student pledge only for the
+  // Nurse Health Record Update form, and each official's own clearance
+  // signature. Peer signers' signatures are not required by staff workflows;
+  // full registration forms are served through Registrar and Student routes.
+  assert.deepEqual(visibleTypes(librarianId, enrollment1Id), ["LIBRARY_CLEARANCE"]);
+  assert.deepEqual(visibleTypes(nurseId, enrollment1Id), ["HEALTH_CLEARANCE", "STUDENT_ENROLLMENT_SIGNATURE"]);
+  assert.deepEqual(visibleTypes(chairAId, enrollment1Id), ["PROGRAM_CLEARANCE"]);
+  assert.deepEqual(visibleTypes(accountantId, enrollment1Id), ["ACCOUNTING_CLEARANCE"]);
+  assert.deepEqual(visibleTypes(accountantGlobalId, enrollment1Id), ["ACCOUNTING_CLEARANCE"]);
+  assert.deepEqual(visibleTypes(deanId, enrollment1Id), ["DEAN_CLEARANCE"]);
+  assert.deepEqual(visibleTypes(chairBId, enrollment1Id), []);
+  assert.deepEqual(visibleTypes(chairBId, enrollment2Id), ["PROGRAM_CLEARANCE"]);
 
-  // 4. Chair B (Program B only) CANNOT read Program A signature storage object
-  const [chairBSigObj] = asUser(
-    chairBId,
-    `SELECT count(*) FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name = '${sigStoragePath}';`
-  );
-  assert.equal(chairBSigObj[0], "0", "Chair B cannot select Program A signature storage object");
+  const storageCount = (profileId, path) =>
+    asUser(
+      profileId,
+      `SELECT count(*) FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name = '${path}';`
+    )[0][0];
+  const signerPath = (signature) =>
+    `${signature.enrollmentId}/${signature.signerRole}/${signature.id}.png`;
+  const storageCountForEnrollment = (profileId, enrollmentId) =>
+    asUser(
+      profileId,
+      `SELECT count(*) FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name LIKE '${enrollmentId}/%';`
+    )[0][0];
 
-  // 5. Registrar CAN read signature storage objects
-  const [regSigObj] = asUser(
-    registrarId,
-    `SELECT count(*) FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name = '${sigStoragePath}';`
-  );
-  assert.equal(regSigObj[0], "1", "Registrar can select signature storage objects");
+  assert.equal(storageCount(student1ProfileId, signerPath(signatureFixtures[1])), "1", "Student can view a peer's signature on own form");
+  assert.equal(storageCount(student2ProfileId, signerPath(signatureFixtures[1])), "0", "Another Student cannot view this signature");
+  assert.equal(storageCount(librarianId, signerPath(signatureFixtures[1])), "1", "Librarian can view own clearance signature");
+  assert.equal(storageCount(librarianId, signerPath(signatureFixtures[2])), "0", "Librarian cannot view Nurse signature");
+  assert.equal(storageCount(librarianId, signerPath(signatureFixtures[0])), "0", "Librarian cannot view Student pledge signature");
+  assert.equal(storageCount(nurseId, signerPath(signatureFixtures[2])), "1", "Nurse can view own Health signature");
+  assert.equal(storageCount(nurseId, signerPath(signatureFixtures[0])), "1", "Nurse can view Student signature needed for health workflow");
+  assert.equal(storageCount(nurseId, signerPath(signatureFixtures[1])), "0", "Nurse cannot view Librarian signature");
+  assert.equal(storageCount(chairBId, signerPath(signatureFixtures[1])), "0", "Program B Chair cannot view Program A signature");
+  assert.equal(storageCountForEnrollment(student1ProfileId, enrollment1Id), "6", "Student can view every signer for own registration form");
+  assert.equal(storageCountForEnrollment(unprovisionedId, enrollment1Id), "0", "Unprovisioned user cannot access signature objects");
+  assert.equal(storageCountForEnrollment(registrarId, enrollment1Id), "6", "Registrar can view every signer for complete registration form");
+  assert.equal(storageCountForEnrollment(librarianId, enrollment1Id), "1", "Librarian sees only own signature object");
+  assert.equal(storageCountForEnrollment(nurseId, enrollment1Id), "2", "Nurse sees own and Student pledge signature objects");
+  assert.equal(storageCountForEnrollment(chairAId, enrollment1Id), "1", "Program Chair sees only own clearance signature");
+  assert.equal(storageCountForEnrollment(accountantId, enrollment1Id), "1", "Program-scoped Accountant sees only own clearance signature");
+  assert.equal(storageCountForEnrollment(accountantGlobalId, enrollment1Id), "1", "Global Accountant still sees only own clearance signature");
+  assert.equal(storageCountForEnrollment(deanId, enrollment1Id), "1", "Dean sees only own clearance signature");
+  assert.equal(storageCountForEnrollment(chairBId, enrollment1Id), "0", "Program B Chair sees no Program A signature objects");
+  assert.equal(storageCountForEnrollment(chairBId, enrollment2Id), "1", "Program B Chair sees own Program B signature");
 });
 
 test("Boundary 14: Legitimate Student Account Setup Completion", () => {
@@ -820,12 +1042,12 @@ test("Teardown: clean up test fixtures from disposable database", () => {
     SET pkm.demo_reset = 'true';
     DELETE FROM public.audit_logs WHERE actor_profile_id IN (${allFixtureUsers.map(id => `'${id}'`).join(",")});
     DELETE FROM public.signature_specimens WHERE profile_id IN (${allFixtureUsers.map(id => `'${id}'`).join(",")});
-    DELETE FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND name LIKE '%${enrollment1Id}%';
+    DELETE FROM storage.objects WHERE bucket_id = 'enrollment-signatures' AND (name LIKE '%${enrollment1Id}%' OR name LIKE '%${enrollment2Id}%');
     DELETE FROM public.enrollment_signatures WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.enrollment_clearances WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.enrollment_subjects WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.student_requirements WHERE student_id IN ('${student1Id}', '${student2Id}');
-    DELETE FROM public.balances WHERE id IN ('${balance1Id}', '${balance2Id}');
+    DELETE FROM public.grades WHERE id IN ('${grade1Id}', '${grade2Id}');
     DELETE FROM public.enrollment_decision_notifications WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.enrollments WHERE id IN ('${enrollment1Id}', '${enrollment2Id}');
     DELETE FROM public.students WHERE id IN ('${student1Id}', '${student2Id}');

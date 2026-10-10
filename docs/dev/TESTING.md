@@ -47,14 +47,17 @@ Stop the local stack after verification with `npx supabase stop`. These checks a
 
 ### Staff and Registrar authorization regression tests
 
-The staff authorization boundary test verifies that assigned officials (Librarian, Nurse, Program Chair, Accountant, Dean) cannot perform unauthorized operations (such as approving enrollments, managing other accounts' roles, mutating sensitive profile fields, or reading records outside their authorized program scope) while ensuring Registrar and legitimate official clearance workflows continue to function.
+The staff authorization test exercises RLS and SECURITY DEFINER RPCs as authenticated Registrar, Student, and Official Staff users.
 
-Run against an isolated local database:
+Create a dedicated, empty local PostgreSQL database named `pkm_test`. Do not use the shared Supabase local database, hosted database, or any database containing client data. Both the migration runner and integration test require an explicit loopback URL, a database name containing `test`, `disposable`, or `temp`, and `PKM_DISPOSABLE_TEST_CONFIRMED=true`; they refuse all other targets before connecting.
 
 ```powershell
-$env:PKM_LOCAL_SUPABASE_TEST_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-node --test tests/integration/staff-authorization-boundaries.test.mjs
-Remove-Item Env:PKM_LOCAL_SUPABASE_TEST_DB_URL
+$env:DISPOSABLE_DB_URL = "postgresql://postgres:postgres@127.0.0.1:55433/pkm_test"
+$env:PKM_LOCAL_SUPABASE_TEST_DB_URL = $env:DISPOSABLE_DB_URL
+$env:PKM_DISPOSABLE_TEST_CONFIRMED = "true"
+node scripts/integration/apply-disposable-migrations.mjs
+npm run test:authorization
+Remove-Item Env:DISPOSABLE_DB_URL, Env:PKM_LOCAL_SUPABASE_TEST_DB_URL, Env:PKM_DISPOSABLE_TEST_CONFIRMED
 ```
 
 ## Browser checks

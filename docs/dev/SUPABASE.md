@@ -46,10 +46,15 @@ The local migration directory and the hosted migration history are separate reco
 The database establishes distinct authorization tiers across application routes, RLS policies, and database RPCs:
 
 1. **Registrar/Admin:** An active administrator account with no active official role assignments. Holds authority for institutional enrollment reviews, student record management, official signer assignments, catalog administration, and notification processing.
-2. **Official Staff:** An active administrator account holding one or more active role assignments (`LIBRARIAN`, `NURSE`, `PROGRAM_CHAIR`, `ACCOUNTANT`, `DEAN`). Access is strictly scoped to their assigned clearance types and authorized programs (`program_id` match or global when `program_id` is null). Assigned officials cannot approve/reject enrollments, mutate official assignments, modify sensitive profile fields, or read student records outside their authorized scope.
-3. **Student:** Access is restricted to their own authorized profile, student record, enrollments, requirements, and signatures.
+2. **Official Staff:** An active administrator account holding one or more active role assignments (`LIBRARIAN`, `NURSE`, `PROGRAM_CHAIR`, `ACCOUNTANT`, `DEAN`). Clearance access is strictly scoped to assigned roles and authorized programs (`program_id` match or global when `program_id` is null). Accountants can read and manage balances only for students in assigned programs; a global Accountant assignment retains global balance access. Assigned officials cannot approve/reject enrollments, mutate official assignments, modify sensitive profile fields, or directly read full official student records.
+3. **Student:** Access is restricted to their own authorized profile, student record, enrollments, requirements, grades, balances, and signatures.
 
-Database RLS policies enforce program-level and role-level boundaries on `enrollments`, `enrollment_subjects`, `enrollment_clearances`, `enrollment_signatures`, `students`, `official_student_records`, `student_requirements`, and `signature_specimens`. Direct table updates to sensitive profile columns (`id`, `role`, `account_status`) are blocked for authenticated users. The signature Storage bucket is private.
+Direct reads of `official_student_records` and `grades` are limited to the Registrar and the student owner; no official staff route requires either full-record or grade access. Nurses receive only health-applicability context through the existing program-scoped `get_nurse_health_requirement` RPC.
+
+**Signature visibility decision:** A complete registration form is available to the Registrar and the owner Student, so those roles can read all signature metadata and objects for that enrollment. Official Staff do not need peer signers' signature images in clearance workspaces: they can see signatures for their own assigned clearance roles; Nurses additionally see the Student pledge signature used in the Health Record Update form. Enrollment-signature RLS and Storage object RLS enforce the same scope.
+
+Database RLS policies enforce program-level and role-level boundaries on `enrollments`, `enrollment_subjects`, `enrollment_clearances`, `enrollment_signatures`, `students`, `official_student_records`, `student_requirements`, `grades`, `balances`, and `signature_specimens`. Direct table updates to sensitive profile columns (`id`, `role`, `account_status`) are blocked for authenticated users. The signature Storage bucket is private.
+
 ## Hosted deployment checks
 
 Before deploying the hosted application:

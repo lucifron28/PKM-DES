@@ -2,7 +2,28 @@ import { execFileSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
-const DB_URL = process.env.DISPOSABLE_DB_URL || "postgresql://postgres@127.0.0.1:55433/postgres";
+const DB_URL = process.env.DISPOSABLE_DB_URL;
+if (!DB_URL) {
+  throw new Error("Set DISPOSABLE_DB_URL explicitly; this runner has no default database target.");
+}
+
+const dbUrl = new URL(DB_URL);
+if (
+  dbUrl.protocol !== "postgresql:" ||
+  (dbUrl.hostname !== "127.0.0.1" && dbUrl.hostname !== "localhost")
+) {
+  throw new Error("Refusing migration: DISPOSABLE_DB_URL must target loopback PostgreSQL.");
+}
+
+const databaseName = decodeURIComponent(dbUrl.pathname.replace(/^\/+/, ""));
+if (
+  process.env.PKM_DISPOSABLE_TEST_CONFIRMED !== "true" ||
+  !/(?:^|[-_])(test|disposable|temp)(?:[-_]|$)/i.test(databaseName)
+) {
+  throw new Error(
+    "Refusing migration: require a test/disposable/temp database name and PKM_DISPOSABLE_TEST_CONFIRMED=true."
+  );
+}
 
 function runSql(sql) {
   execFileSync("psql", [DB_URL, "-v", "ON_ERROR_STOP=1", "-c", sql], {
