@@ -214,6 +214,26 @@ $$;
 revoke all on function private.nurse_can_access_student_requirement(uuid) from public;
 grant execute on function private.nurse_can_access_student_requirement(uuid) to authenticated;
 
+-- Returns true if the authenticated staff member can access the signature storage object
+create or replace function private.staff_can_access_signature_object(p_storage_path text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.enrollment_signatures es
+    join public.enrollments e on e.id = es.enrollment_id
+    where es.signature_storage_path = p_storage_path
+      and private.has_any_official_role_for_program(e.program_id)
+  );
+$$;
+
+revoke all on function private.staff_can_access_signature_object(text) from public;
+grant execute on function private.staff_can_access_signature_object(text) to authenticated;
+
 -- ============================================================================
 -- 2. Official Signer Management RPC (Registrar Only)
 -- ============================================================================
@@ -688,76 +708,13 @@ $$;
 -- 6. Enrollment Decision Notification Outbox RPCs (Registrar Only)
 -- ============================================================================
 
-create or replace function public.claim_next_enrollment_decision_notification()
-returns table (
-  notification_id uuid,
-  enrollment_id uuid,
-  student_id uuid,
-  recipient_email text,
-  student_first_name text,
-  decision text,
-  academic_year text,
-  semester text,
-  claim_token uuid
-)
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_notification public.enrollment_decision_notifications%rowtype;
-  v_student_id uuid;
-  v_first_name text;
-  v_token uuid;
-begin
-  if auth.uid() is null or not private.is_registrar() then
-    return query select 'unauthorized'::text, null::uuid, null::uuid, null::text, null::text, null::text, null::text, null::text, null::uuid;
-    return;
-  end if;
+-- Drop incorrect replacement functions if previously defined
+drop function if exists public.claim_next_enrollment_decision_notification();
+drop function if exists public.retry_enrollment_decision_notification(uuid, text);
+drop function if exists public.mark_enrollment_notification_delivered(uuid, uuid);
+drop function if exists public.mark_enrollment_notification_failed(uuid, uuid, text);
 
-  select n.*
-  into v_notification
-  from public.enrollment_decision_notifications n
-  where n.status in ('PENDING', 'FAILED')
-  order by n.created_at
-  limit 1
-  for update skip locked;
-
-  if not found then
-    return;
-  end if;
-
-  v_token := gen_random_uuid();
-
-  update public.enrollment_decision_notifications n
-  set
-    status = 'SENDING',
-    attempt_count = n.attempt_count + 1,
-    claim_token = v_token,
-    updated_at = now()
-  where n.id = v_notification.id;
-
-  select s.id, p.first_name
-  into v_student_id, v_first_name
-  from public.enrollments e
-  join public.students s on s.id = e.student_id
-  join public.profiles p on p.id = s.profile_id
-  where e.id = v_notification.enrollment_id;
-
-  return query select
-    v_notification.id,
-    v_notification.enrollment_id,
-    v_student_id,
-    v_notification.recipient_email,
-    coalesce(v_first_name, 'Student'),
-    v_notification.decision,
-    v_notification.academic_year,
-    v_notification.semester,
-    v_token;
-end;
-$$;
-
-create or replace function public.retry_enrollment_decision_notification(
+create or replace function public.reserve_enrollment_decision_notification(
   p_enrollment_id uuid,
   p_decision text
 )
@@ -767,10 +724,10 @@ returns table (
   enrollment_id uuid,
   decision text,
   recipient_email text,
-  student_first_name text,
+  first_name text,
   academic_year text,
   semester text,
-  claim_token uuid
+  reservation_token uuid
 )
 language plpgsql
 security definer
@@ -810,7 +767,6 @@ begin
 
     if v_existing_status = 'SENT' then
       return query select 'already_sent'::text, null::uuid, p_enrollment_id, p_decision, null::text, null::text, null::text, null::text, null::uuid;
-      return;
     end if;
 
     if v_existing_status = 'SENDING' then
@@ -828,19 +784,21 @@ begin
   set
     status = 'SENDING',
     attempt_count = n.attempt_count + 1,
-    claim_token = v_token,
+    last_error_code = null,
+    reserved_at = now(),
+    reservation_token = v_token,
     updated_at = now()
   where n.id = v_notification.id;
 
-  select p.first_name
+  select coalesce(p.first_name, 'Student')
   into v_first_name
   from public.enrollments e
   join public.students s on s.id = e.student_id
   join public.profiles p on p.id = s.profile_id
-  where e.id = v_notification.enrollment_id;
+  where e.id = p_enrollment_id;
 
   return query select
-    'claimed'::text,
+    'reserved'::text,
     v_notification.id,
     v_notification.enrollment_id,
     v_notification.decision,
@@ -852,9 +810,13 @@ begin
 end;
 $$;
 
-create or replace function public.mark_enrollment_notification_delivered(
+revoke all on function public.reserve_enrollment_decision_notification(uuid, text) from public;
+revoke execute on function public.reserve_enrollment_decision_notification(uuid, text) from anon;
+grant execute on function public.reserve_enrollment_decision_notification(uuid, text) to authenticated;
+
+create or replace function public.mark_enrollment_decision_notification_sent(
   p_notification_id uuid,
-  p_claim_token uuid
+  p_reservation_token uuid
 )
 returns table (outcome text)
 language plpgsql
@@ -862,14 +824,14 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_updated integer;
+  v_status text;
 begin
   if auth.uid() is null or not private.is_registrar() then
     return query select 'unauthorized'::text;
     return;
   end if;
 
-  if p_notification_id is null or p_claim_token is null then
+  if p_notification_id is null or p_reservation_token is null then
     return query select 'invalid_request'::text;
     return;
   end if;
@@ -878,28 +840,35 @@ begin
   set
     status = 'SENT',
     sent_at = now(),
-    claim_token = null,
-    error_message = null,
+    reserved_at = null,
+    reservation_token = null,
+    last_error_code = null,
     updated_at = now()
   where id = p_notification_id
-    and claim_token = p_claim_token
-    and status = 'SENDING';
+    and status = 'SENDING'
+    and reservation_token = p_reservation_token;
 
-  get diagnostics v_updated = row_count;
-
-  if v_updated = 0 then
-    return query select 'token_mismatch'::text;
+  if found then
+    return query select 'sent'::text;
     return;
   end if;
 
-  return query select 'delivered'::text;
+  select status into v_status
+  from public.enrollment_decision_notifications
+  where id = p_notification_id;
+
+  return query select case when v_status = 'SENT' then 'already_sent' else 'stale_reservation' end;
 end;
 $$;
 
-create or replace function public.mark_enrollment_notification_failed(
+revoke all on function public.mark_enrollment_decision_notification_sent(uuid, uuid) from public;
+revoke execute on function public.mark_enrollment_decision_notification_sent(uuid, uuid) from anon;
+grant execute on function public.mark_enrollment_decision_notification_sent(uuid, uuid) to authenticated;
+
+create or replace function public.mark_enrollment_decision_notification_failed(
   p_notification_id uuid,
-  p_claim_token uuid,
-  p_error_message text
+  p_reservation_token uuid,
+  p_error_code text
 )
 returns table (outcome text)
 language plpgsql
@@ -907,38 +876,51 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_updated integer;
+  v_status text;
+  v_safe_code text;
 begin
   if auth.uid() is null or not private.is_registrar() then
     return query select 'unauthorized'::text;
     return;
   end if;
 
-  if p_notification_id is null or p_claim_token is null then
+  if p_notification_id is null or p_reservation_token is null then
     return query select 'invalid_request'::text;
     return;
   end if;
 
+  v_safe_code := case
+    when p_error_code in ('not_configured', 'invalid_base_url', 'invalid_recipient', 'provider', 'reservation', 'delivery_commit') then p_error_code
+    else 'unknown'
+  end;
+
   update public.enrollment_decision_notifications
   set
     status = 'FAILED',
-    claim_token = null,
-    error_message = left(coalesce(p_error_message, 'Unknown error'), 500),
+    last_error_code = v_safe_code,
+    reserved_at = null,
+    reservation_token = null,
     updated_at = now()
   where id = p_notification_id
-    and claim_token = p_claim_token
-    and status = 'SENDING';
+    and status = 'SENDING'
+    and reservation_token = p_reservation_token;
 
-  get diagnostics v_updated = row_count;
-
-  if v_updated = 0 then
-    return query select 'token_mismatch'::text;
+  if found then
+    return query select 'failed'::text;
     return;
   end if;
 
-  return query select 'failed'::text;
+  select status into v_status
+  from public.enrollment_decision_notifications
+  where id = p_notification_id;
+
+  return query select case when v_status = 'FAILED' then 'already_failed' else 'stale_reservation' end;
 end;
 $$;
+
+revoke all on function public.mark_enrollment_decision_notification_failed(uuid, uuid, text) from public;
+revoke execute on function public.mark_enrollment_decision_notification_failed(uuid, uuid, text) from anon;
+grant execute on function public.mark_enrollment_decision_notification_failed(uuid, uuid, text) to authenticated;
 
 -- ============================================================================
 -- 7. Sensitive Profile Protection & Profiles RLS
@@ -951,7 +933,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
+  if current_setting('request.jwt.claim.role', true) in ('authenticated', 'anon') then
     if new.id is distinct from old.id then
       raise exception 'Profile id cannot be modified.';
     end if;
@@ -1002,6 +984,50 @@ using (
   or private.staff_can_access_profile(id)
 );
 
+create or replace function private.protect_profile_creation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if current_setting('request.jwt.claim.role', true) in ('authenticated', 'anon') then
+    if new.id is distinct from auth.uid() and not private.is_registrar() then
+      raise exception 'Profile creation forbidden for another user.';
+    end if;
+    if not private.is_registrar() then
+      if new.role <> 'student' then
+        raise exception 'Self-provisioning as administrator is forbidden.';
+      end if;
+      if new.account_status = 'ACTIVE' then
+        raise exception 'Self-activation of profile is forbidden.';
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_profile_creation_trigger on public.profiles;
+create trigger protect_profile_creation_trigger
+before insert on public.profiles
+for each row execute function private.protect_profile_creation();
+
+drop policy if exists "profiles_insert_own" on public.profiles;
+create policy "profiles_insert_own"
+on public.profiles for insert
+to authenticated
+with check (
+  id = auth.uid()
+  and (
+    private.is_registrar()
+    or (
+      role = 'student'
+      and account_status in ('PENDING', 'SETUP')
+    )
+  )
+);
+
 -- ============================================================================
 -- 8. Official Role Assignments RLS
 -- ============================================================================
@@ -1017,6 +1043,7 @@ using (profile_id = auth.uid() or private.is_registrar());
 -- 9. Signature Specimens RLS
 -- ============================================================================
 
+drop policy if exists "signature_specimens_select_own" on public.signature_specimens;
 drop policy if exists "signature_specimens_select_own_or_admin" on public.signature_specimens;
 drop policy if exists "signature_specimens_select_scoped" on public.signature_specimens;
 create policy "signature_specimens_select_scoped"
@@ -1081,6 +1108,7 @@ using (
 -- 12. Enrollments RLS
 -- ============================================================================
 
+drop policy if exists "enrollments_update_admin" on public.enrollments;
 drop policy if exists "enrollments_manage_admin" on public.enrollments;
 drop policy if exists "enrollments_manage_registrar" on public.enrollments;
 create policy "enrollments_manage_registrar"
@@ -1198,6 +1226,7 @@ using (
 -- 17. Enrollment Decision Notifications Outbox RLS
 -- ============================================================================
 
+drop policy if exists "admins_select_enrollment_decision_notifications" on public.enrollment_decision_notifications;
 drop policy if exists "enrollment_decision_notifications_select_admin" on public.enrollment_decision_notifications;
 drop policy if exists "enrollment_decision_notifications_select_registrar" on public.enrollment_decision_notifications;
 create policy "enrollment_decision_notifications_select_registrar"
@@ -1248,22 +1277,92 @@ on public.grades for select
 to authenticated
 using (
   private.is_registrar()
-  or exists (
-    select 1
-    from public.students s
-    where s.id = grades.student_id
-      and s.profile_id = auth.uid()
-  )
-  or exists (
-    select 1
-    from public.enrollments e
-    where e.student_id = grades.student_id
-      and private.has_any_official_role_for_program(e.program_id)
+  or private.is_student_owner(student_id)
+  or private.staff_can_access_student(student_id)
+);
+
+drop policy if exists "Admins manage standard loads" on public.standard_load_sets;
+drop policy if exists "standard_load_sets_manage_registrar" on public.standard_load_sets;
+create policy "standard_load_sets_manage_registrar"
+on public.standard_load_sets for all
+to authenticated
+using (private.is_registrar())
+with check (private.is_registrar());
+
+-- ============================================================================
+-- 19. Balances Administration RLS
+-- ============================================================================
+
+drop policy if exists "balances_select_own_or_admin" on public.balances;
+drop policy if exists "balances_manage_admin" on public.balances;
+drop policy if exists "balances_select_scoped" on public.balances;
+drop policy if exists "balances_manage_authorized" on public.balances;
+
+create policy "balances_select_scoped"
+on public.balances for select
+to authenticated
+using (
+  private.is_registrar()
+  or private.has_official_role('ACCOUNTANT')
+  or private.is_student_owner(student_id)
+);
+
+create policy "balances_manage_authorized"
+on public.balances for all
+to authenticated
+using (
+  private.is_registrar()
+  or private.has_official_role('ACCOUNTANT')
+)
+with check (
+  private.is_registrar()
+  or private.has_official_role('ACCOUNTANT')
+);
+
+-- ============================================================================
+-- 20. Institutional Audit Logs RLS
+-- ============================================================================
+
+drop policy if exists "audit_logs_select_admin" on public.audit_logs;
+drop policy if exists "audit_logs_insert_admin" on public.audit_logs;
+drop policy if exists "audit_logs_select_registrar" on public.audit_logs;
+drop policy if exists "audit_logs_insert_registrar" on public.audit_logs;
+
+create policy "audit_logs_select_registrar"
+on public.audit_logs for select
+to authenticated
+using (private.is_registrar());
+
+create policy "audit_logs_insert_registrar"
+on public.audit_logs for insert
+to authenticated
+with check (private.is_registrar());
+
+-- ============================================================================
+-- 21. Signature Storage Objects RLS
+-- ============================================================================
+
+drop policy if exists "enrollment_signature_objects_select_authorized" on storage.objects;
+create policy "enrollment_signature_objects_select_authorized"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'enrollment-signatures'
+  and (
+    private.is_registrar()
+    or exists (
+      select 1
+      from public.enrollment_signatures es
+      join public.students s on s.id = es.student_id
+      where es.signature_storage_path = storage.objects.name
+        and s.profile_id = auth.uid()
+    )
+    or private.staff_can_access_signature_object(storage.objects.name)
   )
 );
 
 -- ============================================================================
--- 19. Ensure DML Grants on Managed Tables for Authenticated Role
+-- 22. Ensure DML Grants on Managed Tables for Authenticated Role
 -- ============================================================================
 
 grant usage on schema private to authenticated;
@@ -1271,4 +1370,5 @@ grant select, insert, update on table public.official_student_records to authent
 grant select, update on table public.students to authenticated;
 grant select, insert, update on table public.enrollments to authenticated;
 grant select, insert, update on table public.enrollment_subjects to authenticated;
+grant select, insert, update on table public.balances to authenticated;
 grant select on table public.audit_logs to authenticated;
