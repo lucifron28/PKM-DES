@@ -23,7 +23,7 @@ export const getCurrentProfile = cache(async function getCurrentProfile() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, account_status, first_name, last_name, email")
+    .select("id, role, account_status, first_name, last_name, email, is_registrar")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -61,7 +61,7 @@ export async function requireRegistrarAdmin() {
   const context = await requireRole("admin");
   const { assignments, error } = await loadActiveOfficialRoleAssignments(context.supabase, context.profile.id);
 
-  if (error || !hasRegistrarManagementAccess(assignments)) {
+  if (error || !hasRegistrarManagementAccess(context.profile)) {
     redirect("/admin/dashboard?error=registrar_only");
   }
 

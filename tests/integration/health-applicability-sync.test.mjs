@@ -677,8 +677,9 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
 
     -- Create Admin
     INSERT INTO auth.users (id, email) VALUES ('${adminUserId}', 'admin.gate2@example.com') ON CONFLICT (id) DO NOTHING;
-    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status)
-    VALUES ('${adminUserId}', 'admin.gate2@example.com', 'admin', 'Admin', 'Gate2', 'ACTIVE') ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status, is_registrar)
+    VALUES ('${adminUserId}', 'admin.gate2@example.com', 'admin', 'Admin', 'Gate2', 'ACTIVE', true)
+    ON CONFLICT (id) DO UPDATE SET is_registrar = true, account_status = 'ACTIVE';
 
     -- Create Officials
     INSERT INTO auth.users (id, email) VALUES ('${libUserId}', 'lib.gate@example.com') ON CONFLICT (id) DO NOTHING;

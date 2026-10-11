@@ -188,19 +188,18 @@ test("Setup: provision isolated fixture data for authorization boundaries test",
       ('${student2ProfileId}', 'student2.auth@example.test'),
       ('${setupStudentProfileId}', 'setup.student.auth@example.test');
 
-    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status) VALUES
-      ('${registrarId}', 'registrar.auth@example.test', 'admin', 'Registrar', 'Admin', 'ACTIVE'),
-      ('${librarianId}', 'librarian.auth@example.test', 'admin', 'Librarian', 'Staff', 'ACTIVE'),
-      ('${nurseId}', 'nurse.auth@example.test', 'admin', 'Nurse', 'Staff', 'ACTIVE'),
-      ('${deanId}', 'dean.auth@example.test', 'admin', 'Dean', 'Staff', 'ACTIVE'),
-      ('${chairAId}', 'chairA.auth@example.test', 'admin', 'ChairA', 'Staff', 'ACTIVE'),
-      ('${chairBId}', 'chairB.auth@example.test', 'admin', 'ChairB', 'Staff', 'ACTIVE'),
-      ('${accountantId}', 'accountant.auth@example.test', 'admin', 'Accountant', 'Program A', 'ACTIVE'),
-      ('${accountantGlobalId}', 'accountant.global.auth@example.test', 'admin', 'Accountant', 'Global', 'ACTIVE'),
-      ('${student1ProfileId}', 'student1.auth@example.test', 'student', 'Student', 'One', 'ACTIVE'),
-      ('${student2ProfileId}', 'student2.auth@example.test', 'student', 'Student', 'Two', 'ACTIVE'),
-      ('${setupStudentProfileId}', 'setup.student.auth@example.test', 'student', 'Setup', 'Student', 'SETUP');
-
+    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status, is_registrar) VALUES
+      ('${registrarId}', 'registrar.auth@example.test', 'admin', 'Registrar', 'Admin', 'ACTIVE', true),
+      ('${librarianId}', 'librarian.auth@example.test', 'admin', 'Librarian', 'Staff', 'ACTIVE', false),
+      ('${nurseId}', 'nurse.auth@example.test', 'admin', 'Nurse', 'Staff', 'ACTIVE', false),
+      ('${deanId}', 'dean.auth@example.test', 'admin', 'Dean', 'Staff', 'ACTIVE', false),
+      ('${chairAId}', 'chairA.auth@example.test', 'admin', 'ChairA', 'Staff', 'ACTIVE', false),
+      ('${chairBId}', 'chairB.auth@example.test', 'admin', 'ChairB', 'Staff', 'ACTIVE', false),
+      ('${accountantId}', 'accountant.auth@example.test', 'admin', 'Accountant', 'Program A', 'ACTIVE', false),
+      ('${accountantGlobalId}', 'accountant.global.auth@example.test', 'admin', 'Accountant', 'Global', 'ACTIVE', false),
+      ('${student1ProfileId}', 'student1.auth@example.test', 'student', 'Student', 'One', 'ACTIVE', false),
+      ('${student2ProfileId}', 'student2.auth@example.test', 'student', 'Student', 'Two', 'ACTIVE', false),
+      ('${setupStudentProfileId}', 'setup.student.auth@example.test', 'student', 'Setup', 'Student', 'SETUP', false);
     INSERT INTO public.official_role_assignments (profile_id, official_role, program_id, active) VALUES
       ('${librarianId}', 'LIBRARIAN', null, true),
       ('${nurseId}', 'NURSE', null, true),
@@ -260,13 +259,13 @@ test("Setup: provision isolated fixture data for authorization boundaries test",
   `);
 });
 
-test("Boundary 1: private.is_registrar() accurately identifies Registrar vs Assigned Staff", () => {
+test("Boundary 1: private.is_registrar() accurately identifies explicit Registrar vs Assigned Staff", () => {
   const [isRegistrar] = asUser(registrarId, `SELECT private.is_registrar();`);
-  assert.equal(isRegistrar[0], "t", "Registrar with no active assignments must be recognized as registrar");
+  assert.equal(isRegistrar[0], "t", "Explicitly designated Registrar must be recognized as registrar");
 
   for (const staffId of [librarianId, nurseId, deanId, chairAId, chairBId, accountantId, accountantGlobalId]) {
     const [isStaffRegistrar] = asUser(staffId, `SELECT private.is_registrar();`);
-    assert.equal(isStaffRegistrar[0], "f", `Staff ${staffId} with active role must NOT be recognized as registrar`);
+    assert.equal(isStaffRegistrar[0], "f", `Staff ${staffId} without is_registrar must NOT be recognized as registrar`);
   }
 
   const [isStudentRegistrar] = asUser(student1ProfileId, `SELECT private.is_registrar();`);
@@ -1035,6 +1034,173 @@ test("Boundary 15: Clearance Signing Workflow and Historical Signature Immutabil
   );
   assert.equal(deleteResult.ok, false, "Signature deletion must be blocked");
   assert.match(deleteResult.error, /Enrollment signatures are immutable|permission denied/i);
+});
+
+test("Boundary 16: Role revocation removes staff access without granting Registrar privileges", () => {
+  const revokedStaffId = "00000000-0000-4000-e000-000000000001";
+  execute(`
+    DELETE FROM public.official_role_assignments WHERE profile_id = '${revokedStaffId}';
+    DELETE FROM public.profiles WHERE id = '${revokedStaffId}';
+    INSERT INTO auth.users (id, email) VALUES ('${revokedStaffId}', 'revoked.staff@example.test') ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status, is_registrar)
+    VALUES ('${revokedStaffId}', 'revoked.staff@example.test', 'admin', 'Revoked', 'Staff', 'ACTIVE', false);
+    INSERT INTO public.official_role_assignments (profile_id, official_role, program_id, active)
+    VALUES ('${revokedStaffId}', 'LIBRARIAN', null, true);
+  `);
+
+  // 1. Initially, user has active Librarian role
+  const [initIsRegistrar] = asUser(revokedStaffId, `SELECT private.is_registrar();`);
+  assert.equal(initIsRegistrar[0], "f", "Active staff member must not be a registrar");
+
+  // 2. Registrar revokes their last and only official role
+  const [revokeOutcome] = asUser(
+    registrarId,
+    `SELECT outcome FROM public.set_official_role_assignment('${revokedStaffId}', 'LIBRARIAN', false);`
+  );
+  assert.equal(revokeOutcome[0], "revoked", "Registrar successfully revokes official role");
+
+  // 3. Acceptance Criterion: The active official whose last assignment was revoked MUST NOT gain Registrar privileges
+  const [postRevokeIsRegistrar] = asUser(revokedStaffId, `SELECT private.is_registrar();`);
+  assert.equal(postRevokeIsRegistrar[0], "f", "Revoking last assignment must NEVER grant Registrar privileges");
+
+  // 4. Revoked official cannot execute any Registrar RPCs
+  const [enrollmentReview] = asUser(
+    revokedStaffId,
+    `SELECT outcome FROM public.review_pending_enrollment('${enrollment1Id}', 'APPROVED', 'Unauthorized review');`
+  );
+  assert.equal(enrollmentReview[0], "unauthorized", "Revoked official must be unauthorized to review enrollments");
+
+  const [roleManage] = asUser(
+    revokedStaffId,
+    `SELECT outcome FROM public.set_official_role_assignment('${nurseId}', 'DEAN', true);`
+  );
+  assert.equal(roleManage[0], "unauthorized", "Revoked official must be unauthorized to manage roles");
+
+  const [recordUpdate] = asUser(
+    revokedStaffId,
+    `SELECT outcome FROM public.update_official_student_record_and_sync(
+      '${osr1Id}', '26-IT-001', 'TestName', 'Synced', 'student1.auth@example.test',
+      '${programAId}', '1st Year', 'Incoming 1st Year Student',
+      null, null, null, null, null, null, null, null, null, null, 'PENDING'
+    );`
+  );
+  assert.equal(recordUpdate[0], "unauthorized", "Revoked official must be unauthorized to update student records");
+
+  const records = asUser(revokedStaffId, `SELECT count(*) FROM public.official_student_records WHERE id = '${osr1Id}';`);
+  assert.equal(records[0][0], "0", "Revoked official must not see official student records");
+
+  // 5. Revoked official loses staff signing and clearance access
+  const [hashRes] = query(`SELECT private.enrollment_document_hash('${enrollment1Id}', 'LIBRARIAN', 'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
+  const tempSigId = "00000000-0000-4000-e000-000000000099";
+  const [sigAttempt] = asUser(
+    revokedStaffId,
+    `SELECT outcome FROM public.record_official_clearance_signature('${enrollment1Id}', 'LIBRARY_CLEARANCE', '${tempSigId}', '${enrollment1Id}/LIBRARIAN/${tempSigId}.png', '${"c".repeat(64)}', '${hashRes[0]}');`
+  );
+  assert.equal(sigAttempt[0], "unauthorized", "Revoked official has lost staff signing authority");
+
+  // 6. Revoked official cannot read balances or audit logs
+  const balances = asUser(revokedStaffId, `SELECT count(*) FROM public.balances;`);
+  assert.equal(balances[0][0], "0", "Revoked official must not see institutional balances");
+
+  const auditLogs = asUser(revokedStaffId, `SELECT count(*) FROM public.audit_logs;`);
+  assert.equal(auditLogs[0][0], "0", "Revoked official must not see institutional audit logs");
+
+  // Cleanup
+  execute(`
+    DELETE FROM public.official_role_assignments WHERE profile_id = '${revokedStaffId}';
+    DELETE FROM public.profiles WHERE id = '${revokedStaffId}';
+    DELETE FROM auth.users WHERE id = '${revokedStaffId}';
+  `);
+});
+
+test("Boundary 17: Deactivated accounts lose all Registrar and staff privileges", () => {
+  const deactivatedRegId = "00000000-0000-4000-e000-000000000002";
+  execute(`
+    INSERT INTO auth.users (id, email) VALUES ('${deactivatedRegId}', 'deactivated.reg@example.test') ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status, is_registrar)
+    VALUES ('${deactivatedRegId}', 'deactivated.reg@example.test', 'admin', 'Deactivated', 'Reg', 'ACTIVE', true)
+    ON CONFLICT (id) DO UPDATE SET is_registrar = true, account_status = 'ACTIVE';
+  `);
+
+  // Active registrar has is_registrar = true
+  const [activeCheck] = asUser(deactivatedRegId, `SELECT private.is_registrar();`);
+  assert.equal(activeCheck[0], "t", "Active registrar must have is_registrar = true");
+
+  // Deactivate the account (account_status = 'PENDING')
+  execute(`
+    UPDATE public.profiles SET account_status = 'PENDING' WHERE id = '${deactivatedRegId}';
+  `);
+
+  // Deactivated registrar loses is_registrar status
+  const [deactivatedCheck] = asUser(deactivatedRegId, `SELECT private.is_registrar();`);
+  assert.equal(deactivatedCheck[0], "f", "Deactivated registrar must have is_registrar = false");
+
+  // Deactivated registrar cannot execute Registrar RPCs
+  const [reviewAttempt] = asUser(
+    deactivatedRegId,
+    `SELECT outcome FROM public.review_pending_enrollment('${enrollment1Id}', 'APPROVED', 'Deactivated review');`
+  );
+  assert.equal(reviewAttempt[0], "unauthorized", "Deactivated registrar must be unauthorized");
+
+  // Cannot self-activate: blocked by RLS or trigger
+  tryExecuteAsUser(
+    deactivatedRegId,
+    `UPDATE public.profiles SET account_status = 'ACTIVE' WHERE id = '${deactivatedRegId}';`
+  );
+  const [deactivatedStatus] = query(`SELECT account_status FROM public.profiles WHERE id = '${deactivatedRegId}';`);
+  assert.equal(deactivatedStatus[0], "PENDING", "Account status must remain PENDING");
+
+  // Cleanup
+  execute(`
+    DELETE FROM public.profiles WHERE id = '${deactivatedRegId}';
+    DELETE FROM auth.users WHERE id = '${deactivatedRegId}';
+  `);
+});
+
+test("Boundary 18: Non-registrars cannot self-designate or elevate is_registrar", () => {
+  // 1. Staff member attempts direct UPDATE is_registrar = true
+  tryExecuteAsUser(
+    librarianId,
+    `UPDATE public.profiles SET is_registrar = true WHERE id = '${librarianId}';`
+  );
+  const [libIsReg] = query(`SELECT is_registrar FROM public.profiles WHERE id = '${librarianId}';`);
+  assert.equal(libIsReg[0], "f", "Staff member is_registrar must remain false");
+
+  // 2. Student attempts direct UPDATE is_registrar = true
+  tryExecuteAsUser(
+    student1ProfileId,
+    `UPDATE public.profiles SET is_registrar = true WHERE id = '${student1ProfileId}';`
+  );
+  const [stuIsReg] = query(`SELECT is_registrar FROM public.profiles WHERE id = '${student1ProfileId}';`);
+  assert.equal(stuIsReg[0], "f", "Student is_registrar must remain false");
+
+  // 3. Registrar cannot self-modify is_registrar
+  const regSelfUpdate = tryExecuteAsUser(
+    registrarId,
+    `UPDATE public.profiles SET is_registrar = false WHERE id = '${registrarId}';`
+  );
+  assert.equal(regSelfUpdate.ok, false, "Registrar cannot self-modify is_registrar");
+  assert.match(regSelfUpdate.error, /Profile is_registrar cannot be modified directly or by self/);
+
+  // 4. Non-registrar cannot insert a profile with is_registrar = true
+  const attackerId = "00000000-0000-4000-e000-000000000003";
+  execute(`
+    INSERT INTO auth.users (id, email) VALUES ('${attackerId}', 'attacker@example.test') ON CONFLICT (id) DO NOTHING;
+  `);
+
+  const insertAttempt = tryExecuteAsUser(
+    attackerId,
+    `INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status, is_registrar)
+     VALUES ('${attackerId}', 'attacker@example.test', 'student', 'Bad', 'Actor', 'PENDING', true);`
+  );
+  assert.equal(insertAttempt.ok, false, "Attacker cannot insert profile with is_registrar = true");
+  assert.match(insertAttempt.error, /Self-provisioning as registrar is forbidden|new row violates row-level security policy/);
+
+  // Cleanup
+  execute(`
+    DELETE FROM public.profiles WHERE id = '${attackerId}';
+    DELETE FROM auth.users WHERE id = '${attackerId}';
+  `);
 });
 
 test("Teardown: clean up test fixtures from disposable database", () => {
