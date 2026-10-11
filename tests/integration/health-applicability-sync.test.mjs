@@ -2,10 +2,38 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 
-const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const RAW_DB_URL =
+  process.env.PKM_LOCAL_SUPABASE_TEST_DB_URL ??
+  process.env.DISPOSABLE_DB_URL;
+
+if (!RAW_DB_URL) {
+  throw new Error(
+    "Integration tests require an explicit PKM_LOCAL_SUPABASE_TEST_DB_URL or DISPOSABLE_DB_URL environment variable."
+  );
+}
+
+const dbUrl = new URL(RAW_DB_URL);
+if (
+  dbUrl.protocol !== "postgresql:" ||
+  (dbUrl.hostname !== "127.0.0.1" && dbUrl.hostname !== "localhost")
+) {
+  throw new Error("Integration tests require a local PostgreSQL URL on 127.0.0.1 or localhost.");
+}
+
+const databaseName = decodeURIComponent(dbUrl.pathname.replace(/^\/+/, ""));
+const hasDisposableName = /(?:^|[-_])(test|disposable|temp)(?:[-_]|$)/i.test(databaseName);
+const disposableConfirmation = process.env.PKM_DISPOSABLE_TEST_CONFIRMED === "true";
+
+if (!hasDisposableName || !disposableConfirmation) {
+  throw new Error(
+    "Refusing database access: database name must contain a test/disposable/temp marker and PKM_DISPOSABLE_TEST_CONFIRMED=true must be set."
+  );
+}
+
+const DB_URL = RAW_DB_URL;
 
 function query(sql) {
-  const output = execFileSync("psql", [DB_URL, "-t", "-A", "-F\t", "-c", sql], {
+  const output = execFileSync("psql", [DB_URL, "-v", "ON_ERROR_STOP=1", "-t", "-A", "-F\t", "-c", sql], {
     encoding: "utf8"
   });
   return output
@@ -17,7 +45,7 @@ function query(sql) {
 }
 
 function execute(sql) {
-  execFileSync("psql", [DB_URL, "-c", sql], {
+  execFileSync("psql", [DB_URL, "-v", "ON_ERROR_STOP=1", "-c", sql], {
     encoding: "utf8"
   });
 }
@@ -107,8 +135,9 @@ test("Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard 
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id = '${signatureId}';
+      DELETE FROM public.health_record_updates WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-SPEC-01');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-SPEC-01'));
       DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-SPEC-01'));
       DELETE FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-SPEC-01');
@@ -167,10 +196,39 @@ test("Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard 
   `);
   assert.equal(stdDenied[0], "special_form_required");
 
-  // ATTEMPT 2: Special Nurse verification path is ALLOWED
+  // ATTEMPT 2: Special Nurse verification path is DENIED before student submits health record form
   const [specHashRes] = query(`SELECT private.health_record_document_hash('${enrollmentId}', '${studentId}', '2025-2026', '2nd Semester', 'APPLICABLE', 'VERIFIED');`);
   const specHash = specHashRes[0];
 
+  const [specNotSubmitted] = query(`
+    SELECT outcome
+    FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
+    LATERAL public.verify_health_requirement_with_signature(
+      '${enrollmentId}', '${signatureId}', '${sigPath}', '${sigHash}', '${specHash}', true, 'Medical form reviewed'
+    );
+  `);
+  assert.equal(specNotSubmitted[0], "health_record_not_submitted");
+
+  // Student submits the digital Health Record Update form
+  const [saveRes] = query(`
+    SELECT outcome
+    FROM (SELECT set_config('request.jwt.claim.sub', '${authUserId}', true) as set_jwt) s,
+    LATERAL public.save_health_record_update(
+      '${enrollmentId}',
+      'Asthma',
+      '2024-01-15'::date,
+      'Inhaler',
+      null,
+      null,
+      null,
+      'Peanuts',
+      '2025-10-01'::date,
+      'None'
+    );
+  `);
+  assert.equal(saveRes[0], "saved");
+
+  // ATTEMPT 3: Special Nurse verification path is ALLOWED after form submission
   const [specSuccess] = query(`
     SELECT outcome
     FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
@@ -179,7 +237,6 @@ test("Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard 
     );
   `);
   assert.equal(specSuccess[0], "signed");
-
   // Confirm requirement is VERIFIED and clearance is SIGNED
   assert.equal(query(`SELECT status FROM public.student_requirements WHERE student_id = '${studentId}';`)[0][0], "VERIFIED");
   assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';`)[0][0], "SIGNED");
@@ -190,8 +247,9 @@ test("Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard 
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id = '${signatureId}';
+      DELETE FROM public.health_record_updates WHERE student_id = '${studentId}';
       DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollments WHERE id = '${enrollmentId}';
@@ -313,15 +371,68 @@ test("Step 20 & 21: Standard Nurse path allowed for Old Student / Incoming Male 
 });
 
 test("Step 15: Nurse queue includes all students in authorized scope with workflow mode flags", () => {
+  const [prog] = query("SELECT id FROM public.programs WHERE code = 'BSAIS' LIMIT 1;");
+  const programId = prog[0];
   const nurseUserId = "55555555-8888-1111-2222-333333333333";
+  const student1AuthId = "55555555-8888-2222-3333-444444444444";
+  const student2AuthId = "55555555-8888-3333-4444-555555555555";
 
   execute(`
+    DO $$
+    BEGIN
+      PERFORM set_config('pkm.demo_reset', 'true', true);
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${nurseUserId}', '${student1AuthId}', '${student2AuthId}');
+      DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number IN ('25-QUEUE-01', '25-QUEUE-02')));
+      DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number IN ('25-QUEUE-01', '25-QUEUE-02')));
+      DELETE FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number IN ('25-QUEUE-01', '25-QUEUE-02'));
+      DELETE FROM public.student_requirements WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number IN ('25-QUEUE-01', '25-QUEUE-02'));
+      DELETE FROM public.students WHERE student_id_number IN ('25-QUEUE-01', '25-QUEUE-02');
+      DELETE FROM public.official_role_assignments WHERE profile_id = '${nurseUserId}';
+      DELETE FROM public.profiles WHERE id IN ('${nurseUserId}', '${student1AuthId}', '${student2AuthId}');
+      DELETE FROM auth.users WHERE id IN ('${nurseUserId}', '${student1AuthId}', '${student2AuthId}');
+      DELETE FROM public.official_student_records WHERE student_id_number IN ('25-QUEUE-01', '25-QUEUE-02');
+    END $$;
+
     INSERT INTO auth.users (id, email) VALUES ('${nurseUserId}', 'nurse.queue@example.com') ON CONFLICT (id) DO NOTHING;
     INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status)
     VALUES ('${nurseUserId}', 'nurse.queue@example.com', 'admin', 'Nurse', 'Queue', 'ACTIVE') ON CONFLICT (id) DO NOTHING;
     INSERT INTO public.official_role_assignments (profile_id, official_role, program_id, active)
     VALUES ('${nurseUserId}', 'NURSE', null, true) ON CONFLICT DO NOTHING;
   `);
+
+  // Student 1: Incoming 1st Year Female (Special Form Required)
+  const [created1] = query(`
+    WITH auth_u AS (INSERT INTO auth.users (id, email) VALUES ('${student1AuthId}', 'q1@example.com') ON CONFLICT (id) DO NOTHING RETURNING id),
+    prof AS (INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status) VALUES ('${student1AuthId}', 'q1@example.com', 'student', 'Queue', 'Female', 'ACTIVE') ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name RETURNING id),
+    osr AS (INSERT INTO public.official_student_records (student_id_number, first_name, last_name, email, program_id, year_level, student_type, gender_sex, enrollment_status) VALUES ('25-QUEUE-01', 'Queue', 'Female', 'q1@example.com', '${programId}', '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED') RETURNING id)
+    INSERT INTO public.students (profile_id, official_record_id, student_id_number, program_id, year_level, student_type, enrollment_status)
+    SELECT '${student1AuthId}', osr.id, '25-QUEUE-01', '${programId}', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED' FROM osr RETURNING id, official_record_id;
+  `);
+  const [student1Id, osr1Id] = created1;
+
+  const [sub1] = query(`
+    SELECT outcome, enrollment_id
+    FROM (SELECT set_config('request.jwt.claim.sub', '${student1AuthId}', true) as set_jwt) s,
+    LATERAL public.submit_standard_student_enrollment('2025-2026', '2nd Semester');
+  `);
+  const enrollment1Id = sub1[1];
+
+  // Student 2: Incoming 1st Year Male (Standard Form Required, Special Not Required)
+  const [created2] = query(`
+    WITH auth_u AS (INSERT INTO auth.users (id, email) VALUES ('${student2AuthId}', 'q2@example.com') ON CONFLICT (id) DO NOTHING RETURNING id),
+    prof AS (INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status) VALUES ('${student2AuthId}', 'q2@example.com', 'student', 'Queue', 'Male', 'ACTIVE') ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name RETURNING id),
+    osr AS (INSERT INTO public.official_student_records (student_id_number, first_name, last_name, email, program_id, year_level, student_type, gender_sex, enrollment_status) VALUES ('25-QUEUE-02', 'Queue', 'Male', 'q2@example.com', '${programId}', '1st Year', 'Incoming 1st Year Student', 'Male', 'NOT ENROLLED') RETURNING id)
+    INSERT INTO public.students (profile_id, official_record_id, student_id_number, program_id, year_level, student_type, enrollment_status)
+    SELECT '${student2AuthId}', osr.id, '25-QUEUE-02', '${programId}', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED' FROM osr RETURNING id, official_record_id;
+  `);
+  const [student2Id, osr2Id] = created2;
+
+  const [sub2] = query(`
+    SELECT outcome, enrollment_id
+    FROM (SELECT set_config('request.jwt.claim.sub', '${student2AuthId}', true) as set_jwt) s,
+    LATERAL public.submit_standard_student_enrollment('2025-2026', '2nd Semester');
+  `);
+  const enrollment2Id = sub2[1];
 
   const queueRows = query(`
     SELECT enrollment_id, student_name, student_type, special_form_required
@@ -330,20 +441,29 @@ test("Step 15: Nurse queue includes all students in authorized scope with workfl
   `);
 
   // Confirm queue returns rows and distinguishes special_form_required
-  assert.ok(queueRows.length >= 1);
-  for (const row of queueRows) {
-    const [, , studentType, specialForm] = row;
-    if (studentType === "Incoming 1st Year Student" || studentType === "Transferee") {
-      // If female incoming or transferee, specialForm is true
-      // Otherwise false
-      assert.ok(specialForm === "t" || specialForm === "f");
-    }
-  }
+  assert.ok(queueRows.length >= 2);
+  const q1Row = queueRows.find((r) => r[0] === enrollment1Id);
+  const q2Row = queueRows.find((r) => r[0] === enrollment2Id);
+  assert.ok(q1Row);
+  assert.ok(q2Row);
+  assert.equal(q1Row[3], "t");
+  assert.equal(q2Row[3], "f");
 
   execute(`
-    DELETE FROM public.official_role_assignments WHERE profile_id = '${nurseUserId}';
-    DELETE FROM public.profiles WHERE id = '${nurseUserId}';
-    DELETE FROM auth.users WHERE id = '${nurseUserId}';
+    DO $$
+    BEGIN
+      PERFORM set_config('pkm.demo_reset', 'true', true);
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${nurseUserId}', '${student1AuthId}', '${student2AuthId}');
+      DELETE FROM public.enrollment_clearances WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
+      DELETE FROM public.enrollment_subjects WHERE enrollment_id IN ('${enrollment1Id}', '${enrollment2Id}');
+      DELETE FROM public.enrollments WHERE id IN ('${enrollment1Id}', '${enrollment2Id}');
+      DELETE FROM public.student_requirements WHERE student_id IN ('${student1Id}', '${student2Id}');
+      DELETE FROM public.students WHERE id IN ('${student1Id}', '${student2Id}');
+      DELETE FROM public.official_role_assignments WHERE profile_id = '${nurseUserId}';
+      DELETE FROM public.profiles WHERE id IN ('${nurseUserId}', '${student1AuthId}', '${student2AuthId}');
+      DELETE FROM auth.users WHERE id IN ('${nurseUserId}', '${student1AuthId}', '${student2AuthId}');
+      DELETE FROM public.official_student_records WHERE id IN ('${osr1Id}', '${osr2Id}');
+    END $$;
   `);
 });
 
@@ -360,8 +480,9 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id IN ('${sig1}', '${sig2}', '${sig3}');
+      DELETE FROM public.health_record_updates WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-MODE-01');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-MODE-01'));
       DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-MODE-01'));
       DELETE FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-MODE-01');
@@ -402,13 +523,14 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
   const sig1Path = `${enrollmentId}/NURSE/${sig1}.png`;
   const dummyHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-  query(`
+  const [s1Outcome] = query(`
     SELECT outcome
     FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
     LATERAL public.record_standard_nurse_health_clearance_signature(
       '${enrollmentId}', '${sig1}', '${sig1Path}', '${dummyHash}', '${stdHashRes[0]}'
     );
   `);
+  assert.equal(s1Outcome[0], "signed");
   assert.equal(query(`SELECT private.health_clearance_is_current('${enrollmentId}');`)[0][0], "t");
   assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';`)[0][0], "SIGNED");
 
@@ -423,16 +545,36 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
   assert.equal(query(`SELECT applicability, status FROM public.student_requirements WHERE student_id = '${studentId}';`)[0][0], "APPLICABLE");
 
   // Step 4: Special Nurse signs S2
+  // Student submits the digital Health Record Update form
+  const [saveRes] = query(`
+    SELECT outcome
+    FROM (SELECT set_config('request.jwt.claim.sub', '${authUserId}', true) as set_jwt) s,
+    LATERAL public.save_health_record_update(
+      '${enrollmentId}',
+      'Asthma',
+      '2024-01-15'::date,
+      'Inhaler',
+      null,
+      null,
+      null,
+      'Peanuts',
+      '2025-10-01'::date,
+      'None'
+    );
+  `);
+  assert.equal(saveRes[0], "saved");
+
   const [specHashRes] = query(`SELECT private.health_record_document_hash('${enrollmentId}', '${studentId}', '2025-2026', '2nd Semester', 'APPLICABLE', 'VERIFIED');`);
   const sig2Path = `${enrollmentId}/NURSE/${sig2}.png`;
 
-  query(`
+  const [s2Outcome] = query(`
     SELECT outcome
     FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
     LATERAL public.verify_health_requirement_with_signature(
       '${enrollmentId}', '${sig2}', '${sig2Path}', '${dummyHash}', '${specHashRes[0]}', true, 'Special verified'
     );
   `);
+  assert.equal(s2Outcome[0], "signed");
   assert.equal(query(`SELECT private.health_clearance_is_current('${enrollmentId}');`)[0][0], "t");
   assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';`)[0][0], "SIGNED");
 
@@ -456,14 +598,14 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
 
   // Step 6: Standard Nurse signs new S3
   const sig3Path = `${enrollmentId}/NURSE/${sig3}.png`;
-  query(`
+  const [s3Outcome] = query(`
     SELECT outcome
     FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
     LATERAL public.record_standard_nurse_health_clearance_signature(
       '${enrollmentId}', '${sig3}', '${sig3Path}', '${dummyHash}', '${stdHashRes[0]}'
     );
   `);
-
+  assert.equal(s3Outcome[0], "signed");
   // S3 becomes current
   assert.equal(query(`SELECT private.health_clearance_is_current('${enrollmentId}');`)[0][0], "t");
   assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';`)[0][0], "SIGNED");
@@ -481,8 +623,9 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id IN ('${sig1}', '${sig2}', '${sig3}');
+      DELETE FROM public.health_record_updates WHERE student_id = '${studentId}';
       DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollments WHERE id = '${enrollmentId}';
@@ -534,8 +677,9 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
 
     -- Create Admin
     INSERT INTO auth.users (id, email) VALUES ('${adminUserId}', 'admin.gate2@example.com') ON CONFLICT (id) DO NOTHING;
-    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status)
-    VALUES ('${adminUserId}', 'admin.gate2@example.com', 'admin', 'Admin', 'Gate2', 'ACTIVE') ON CONFLICT (id) DO NOTHING;
+    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status, is_registrar)
+    VALUES ('${adminUserId}', 'admin.gate2@example.com', 'admin', 'Admin', 'Gate2', 'ACTIVE', true)
+    ON CONFLICT (id) DO UPDATE SET is_registrar = true, account_status = 'ACTIVE';
 
     -- Create Officials
     INSERT INTO auth.users (id, email) VALUES ('${libUserId}', 'lib.gate@example.com') ON CONFLICT (id) DO NOTHING;

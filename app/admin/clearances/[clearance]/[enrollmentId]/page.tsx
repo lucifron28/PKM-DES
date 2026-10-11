@@ -11,10 +11,9 @@ import { getHealthVerificationViewState, healthVerificationStateLabel, healthVer
 import { loadHealthRecordUpdate } from "@/lib/health-records/repository";
 import { hasActiveOfficialRoleForProgram } from "@/lib/official-roles/repository";
 import { getOfficialWorkspaceBySlug } from "@/lib/official-roles/roles";
-import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { loadEnrollmentSignaturePresentation } from "@/lib/signatures/presentation";
 import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
-import type { StudentRequirementRecord } from "@/lib/requirements/types";
+import type { RequirementApplicability, StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatName } from "@/lib/utils/format";
 import type { EnrollmentClearanceStatus } from "@/types/database";
 import type { PrintableEnrollment } from "@/components/print/registration-form";
@@ -45,7 +44,7 @@ export default async function OfficialClearanceReviewPage({
   const { supabase, profile, assignments } = await requireOfficialSignerRole(workspace.role);
   const { data, error } = await supabase
     .from("enrollments")
-    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, subjects(*), course_offerings(*))")
+    .select("*, students(*, profiles(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, subjects(*), course_offerings(*))")
     .eq("id", enrollmentId)
     .maybeSingle();
 
@@ -57,10 +56,17 @@ export default async function OfficialClearanceReviewPage({
   const enrollment = data as PrintableEnrollment | null;
   if (!enrollment || !hasActiveOfficialRoleForProgram(assignments, workspace.role, enrollment.program_id)) notFound();
 
-  const healthApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
-    student_type: enrollment.students?.student_type ?? "",
-    official_gender_sex: enrollment.students?.official_student_records?.gender_sex ?? null
-  });
+  const nurseContextResult = workspace.role === "NURSE"
+    ? await supabase.rpc("get_nurse_health_requirement", { p_enrollment_id: enrollment.id })
+    : null;
+  const nurseContext = (nurseContextResult?.data as Array<{
+    requirement_applicability: RequirementApplicability;
+  }> | null)?.[0] ?? null;
+  if (workspace.role === "NURSE" && (nurseContextResult?.error || !nurseContext)) {
+    console.error("official_clearance_review:nurse_context_load");
+    return <EmptyState title="Health review is unavailable" description="The Nurse-scoped student context could not be loaded safely. Refresh the record and try again." />;
+  }
+  const healthApplicability = nurseContext?.requirement_applicability ?? "NOT_APPLICABLE";
   const requirementResult = workspace.role === "NURSE"
     ? await supabase
         .from("student_requirements")

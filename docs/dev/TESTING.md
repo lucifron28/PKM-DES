@@ -45,6 +45,21 @@ powershell -ExecutionPolicy Bypass -File scripts/integration/verify-local-supaba
 
 Stop the local stack after verification with `npx supabase stop`. These checks are local-only and must not target a hosted database.
 
+### Staff and Registrar authorization regression tests
+
+The staff authorization test exercises RLS and SECURITY DEFINER RPCs as authenticated Registrar, Student, and Official Staff users.
+
+Create a dedicated, empty local PostgreSQL database named `pkm_test`. Do not use the shared Supabase local database, hosted database, or any database containing client data. Both the migration runner and integration test require an explicit loopback URL, a database name containing `test`, `disposable`, or `temp`, and `PKM_DISPOSABLE_TEST_CONFIRMED=true`; they refuse all other targets before connecting.
+
+```powershell
+$env:DISPOSABLE_DB_URL = "postgresql://postgres:postgres@127.0.0.1:55433/pkm_test"
+$env:PKM_LOCAL_SUPABASE_TEST_DB_URL = $env:DISPOSABLE_DB_URL
+$env:PKM_DISPOSABLE_TEST_CONFIRMED = "true"
+node scripts/integration/apply-disposable-migrations.mjs
+npm run test:authorization
+Remove-Item Env:DISPOSABLE_DB_URL, Env:PKM_LOCAL_SUPABASE_TEST_DB_URL, Env:PKM_DISPOSABLE_TEST_CONFIRMED
+```
+
 ## Browser checks
 
 Use the public smoke test for unauthenticated routes:

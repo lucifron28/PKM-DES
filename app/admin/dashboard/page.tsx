@@ -80,7 +80,7 @@ export default async function AdminDashboardPage() {
   if (assignmentsError) {
     return <EmptyState title="Staff access could not be verified" description="The authenticated account assignments could not be loaded safely. Refresh and try again." />;
   }
-  if (assignments.length > 0) return <OfficialStaffDashboard supabase={supabase} assignments={assignments} />;
+  if (!profile.is_registrar) return <OfficialStaffDashboard supabase={supabase} assignments={assignments} />;
 
   const activeTermResult = await getActiveEnrollmentTermResult(supabase);
 

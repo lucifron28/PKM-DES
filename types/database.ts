@@ -34,6 +34,7 @@ export type Profile = {
   last_name: string;
   email: string;
   account_status: AccountStatus;
+  is_registrar?: boolean;
   created_at: string;
   updated_at: string;
 };
