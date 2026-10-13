@@ -35,6 +35,13 @@ export type RegistrationFormProps = {
   registrationPledgeVersion?: string | null;
 };
 
+const REGISTRATION_FORM_COPIES = [
+  { recipient: "student", label: "STUDENT'S COPY" },
+  { recipient: "dean", label: "DEAN'S COPY" },
+  { recipient: "registrar", label: "REGISTRAR'S COPY" },
+  { recipient: "accountant", label: "ACCOUNTANT'S COPY" }
+] as const;
+
 function getRegistrationLoadItem(row: EnrollmentSubjectRow): RegistrationLoadItem | null {
   if (row.course_code.trim() && row.course_description.trim()) {
     return {
@@ -192,119 +199,125 @@ export function RegistrationForm({
         </div>
       </section>
 
-      <section className="registration-print print-page mx-auto max-w-[960px] rounded-lg border border-black bg-white p-4 sm:p-6" aria-labelledby="registration-form-title">
-        <div className="registration-print-watermark" aria-hidden="true" data-testid="registration-print-watermark">
-          {/* eslint-disable-next-line @next/next/no-img-element -- Direct image printing does not depend on browser background-graphics settings. */}
-          <img src="/brand/pkm-registration-watermark.png" alt="" draggable={false} />
-        </div>
-        <header className="registration-print-header">
-          <div className="registration-print-brand-row">
-            <PkmMark />
-            <div className="registration-print-institution">
-              <p>PAMBAYANG KOLEHIYO NG MAUBAN</p>
-              <p>Mauban-Atimonan Bypass Road Sitio Looban, Mauban, Quezon 4330</p>
+      {REGISTRATION_FORM_COPIES.map((copy) => (
+        <section
+          key={copy.recipient}
+          className="registration-print print-page mx-auto max-w-[960px] rounded-lg border border-black bg-white p-4 sm:p-6"
+          aria-labelledby={`registration-form-title-${copy.recipient}`}
+          data-copy-recipient={copy.recipient}
+        >
+          <div className="registration-print-watermark" aria-hidden="true" data-testid="registration-print-watermark">
+            {/* eslint-disable-next-line @next/next/no-img-element -- Direct image printing does not depend on browser background-graphics settings. */}
+            <img src="/brand/pkm-registration-watermark.png" alt="" draggable={false} />
+          </div>
+          <header className="registration-print-header">
+            <div className="registration-print-brand-row">
+              <PkmMark />
+              <div className="registration-print-institution">
+                <p>PAMBAYANG KOLEHIYO NG MAUBAN</p>
+                <p>Mauban-Atimonan Bypass Road Sitio Looban, Mauban, Quezon 4330</p>
+              </div>
+              <MaubanMark />
             </div>
-            <MaubanMark />
-          </div>
-        </header>
+          </header>
 
-        <section className="registration-print-details" aria-labelledby="registration-student-details">
-          <h2 id="registration-student-details" className="sr-only">Student and enrollment details</h2>
-          <div className="registration-print-details-column registration-print-details-primary">
-            <FormField label="STUDENT NO:" value={printableValue(student?.student_id_number)} />
-            <FormField label="NAME:" value={studentName} />
-            <FormField label="COURSE:" value={printableValue(enrollment.programs?.name)} />
-            <FormField label="ADDRESS:" value={printableValue(student?.official_student_records?.address)} />
-            <div className="registration-print-classification" aria-label="Student classification">
-              <span className="registration-print-classification-label">CLASSIFICATION:</span>
-              <MarkBox label="NEW" checked={marks.newStudent} />
-              <MarkBox label="OLD" checked={marks.oldStudent} />
-              <MarkBox label="TRANSFEREE" checked={marks.transferee} />
+          <section className="registration-print-details" aria-labelledby={`registration-student-details-${copy.recipient}`}>
+            <h2 id={`registration-student-details-${copy.recipient}`} className="sr-only">Student and enrollment details</h2>
+            <div className="registration-print-details-column registration-print-details-primary">
+              <FormField label="STUDENT NO:" value={printableValue(student?.student_id_number)} />
+              <FormField label="NAME:" value={studentName} />
+              <FormField label="COURSE:" value={printableValue(enrollment.programs?.name)} />
+              <FormField label="ADDRESS:" value={printableValue(student?.official_student_records?.address)} />
+              <div className="registration-print-classification" aria-label="Student classification">
+                <span className="registration-print-classification-label">CLASSIFICATION:</span>
+                <MarkBox label="NEW" checked={marks.newStudent} />
+                <MarkBox label="OLD" checked={marks.oldStudent} />
+                <MarkBox label="TRANSFEREE" checked={marks.transferee} />
+              </div>
             </div>
-          </div>
 
-          <div className="registration-print-details-column registration-print-details-secondary">
-            <FormField label="DATE:" value={printableDate(enrollment.submitted_at)} />
-            <FormField label="YEAR/SECTION:" value={yearSection} />
-            <FormField label="SEMESTER/AY:" value={`${semesterCode(enrollment.semester)}/${enrollment.academic_year}`} />
-            <div className="registration-print-status" aria-label="Academic status">
-              <span className="registration-print-field-label">STATUS:</span>
-              <span className="registration-print-status-marks">
-                <MarkBox label="REGULAR" checked={marks.regular} />
-                <MarkBox label="IRREGULAR" checked={marks.irregular} />
-              </span>
+            <div className="registration-print-details-column registration-print-details-secondary">
+              <FormField label="DATE:" value={printableDate(enrollment.submitted_at)} />
+              <FormField label="YEAR/SECTION:" value={yearSection} />
+              <FormField label="SEMESTER/AY:" value={`${semesterCode(enrollment.semester)}/${enrollment.academic_year}`} />
+              <div className="registration-print-status" aria-label="Academic status">
+                <span className="registration-print-field-label">STATUS:</span>
+                <span className="registration-print-status-marks">
+                  <MarkBox label="REGULAR" checked={marks.regular} />
+                  <MarkBox label="IRREGULAR" checked={marks.irregular} />
+                </span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <h1 id="registration-form-title" className="registration-print-title">REGISTRATION FORM</h1>
+          <h1 id={`registration-form-title-${copy.recipient}`} className="registration-print-title">REGISTRATION FORM</h1>
 
-        <section className="registration-print-subjects" aria-labelledby="registration-subject-load">
-          <h2 id="registration-subject-load" className="sr-only">Subject load</h2>
-          <div className="registration-print-table-wrap">
-            <table className="registration-print-table">
-              <colgroup>
-                <col className="registration-print-col-code" />
-                <col className="registration-print-col-description" />
-                <col className="registration-print-col-time" />
-                <col className="registration-print-col-day" />
-                <col className="registration-print-col-room" />
-                <col className="registration-print-col-units" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th scope="col">SUBJECT CODE</th>
-                  <th scope="col">SUBJECT DESCRIPTION</th>
-                  <th scope="col">TIME</th>
-                  <th scope="col">DAY</th>
-                  <th scope="col">ROOM</th>
-                  <th scope="col">UNIT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: subjectRowCount }, (_, index) => {
-                  const subject = subjects[index] ?? null;
-                  const isEndMarker = !subject && subjects.length > 0 && index === subjects.length;
-                  const isEmptyEnrollment = !subject && subjects.length === 0 && index === 0;
-
-                  return (
-                    <tr key={subject?.id ?? `blank-subject-${index}`}>
-                      <td>{subject?.course_code ?? ""}</td>
-                      <td className={isEndMarker ? "registration-print-nothing-follows" : ""}>
-                        {subject?.course_description ?? (isEndMarker ? "******nothing follows******" : isEmptyEnrollment ? "No subjects attached to this enrollment." : "")}
-                      </td>
-                      <td>{subject ? "TBA" : ""}</td>
-                      <td>{subject ? "TBA" : ""}</td>
-                      <td>{subject ? "TBA" : ""}</td>
-                      <td>{subject ? subject.units : ""}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row" colSpan={5}>TOTAL</th>
-                  <th>{totalUnits}</th>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <p className="registration-print-warning">Warning: Subject Taken without pre-requisites will not be credited.</p>
-        </section>
-
-        <section className="registration-print-assessment" aria-labelledby="registration-assessment">
-          <h2 id="registration-assessment">ASSESSMENT OF TUITION AND OTHER SCHOOL FEES (TOSF)</h2>
-          <div className="registration-print-assessment-grid">
-            <div className="registration-print-misc-fees">
-              <h3>MISCELLANEOUS FEE:</h3>
-              <table className="registration-print-fee-table">
+          <section className="registration-print-subjects" aria-labelledby={`registration-subject-load-${copy.recipient}`}>
+            <h2 id={`registration-subject-load-${copy.recipient}`} className="sr-only">Subject load</h2>
+            <div className="registration-print-table-wrap">
+              <table className="registration-print-table">
+                <colgroup>
+                  <col className="registration-print-col-code" />
+                  <col className="registration-print-col-description" />
+                  <col className="registration-print-col-time" />
+                  <col className="registration-print-col-day" />
+                  <col className="registration-print-col-room" />
+                  <col className="registration-print-col-units" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">SUBJECT CODE</th>
+                    <th scope="col">SUBJECT DESCRIPTION</th>
+                    <th scope="col">TIME</th>
+                    <th scope="col">DAY</th>
+                    <th scope="col">ROOM</th>
+                    <th scope="col">UNIT</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {REGISTRATION_FORM_MISCELLANEOUS_FEE_LABELS.map((label) => (
-                    <tr key={label}>
-                      <th scope="row">{label}</th>
-                      <td>Not configured</td>
-                    </tr>
-                  ))}
+                  {Array.from({ length: subjectRowCount }, (_, index) => {
+                    const subject = subjects[index] ?? null;
+                    const isEndMarker = !subject && subjects.length > 0 && index === subjects.length;
+                    const isEmptyEnrollment = !subject && subjects.length === 0 && index === 0;
+
+                    return (
+                      <tr key={subject?.id ?? `blank-subject-${index}`}>
+                        <td>{subject?.course_code ?? ""}</td>
+                        <td className={isEndMarker ? "registration-print-nothing-follows" : ""}>
+                          {subject?.course_description ?? (isEndMarker ? "******nothing follows******" : isEmptyEnrollment ? "No subjects attached to this enrollment." : "")}
+                        </td>
+                        <td>{subject ? "TBA" : ""}</td>
+                        <td>{subject ? "TBA" : ""}</td>
+                        <td>{subject ? "TBA" : ""}</td>
+                        <td>{subject ? subject.units : ""}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row" colSpan={5}>TOTAL</th>
+                    <th>{totalUnits}</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <p className="registration-print-warning">Warning: Subject Taken without pre-requisites will not be credited.</p>
+          </section>
+
+          <section className="registration-print-assessment" aria-labelledby={`registration-assessment-${copy.recipient}`}>
+            <h2 id={`registration-assessment-${copy.recipient}`}>ASSESSMENT OF TUITION AND OTHER SCHOOL FEES (TOSF)</h2>
+            <div className="registration-print-assessment-grid">
+              <div className="registration-print-misc-fees">
+                <h3>MISCELLANEOUS FEE:</h3>
+                <table className="registration-print-fee-table">
+                  <tbody>
+                    {REGISTRATION_FORM_MISCELLANEOUS_FEE_LABELS.map((label) => (
+                      <tr key={label}>
+                        <th scope="row">{label}</th>
+                        <td>Not configured</td>
+                      </tr>
+                    ))}
                 </tbody>
                 <tfoot>
                   <tr>
@@ -379,7 +392,7 @@ export function RegistrationForm({
         </section>
 
         <div className="registration-print-bottom">
-          <div className="registration-print-copy-label">STUDENT&apos;S COPY</div>
+          <div className="registration-print-copy-label">{copy.label}</div>
           <section className="registration-print-privacy" aria-label="Privacy authorization">
             <p className="registration-print-privacy-copy">
               I hereby authorize the Pambayang Kolehiyo ng Mauban to collect, process, store and utilize my personal data for the management of my academic records and related administrative purposes. This includes, but is not limited to, the use of my data for instructional purposes, research, data and system improvements.
@@ -390,6 +403,7 @@ export function RegistrationForm({
           </section>
         </div>
       </section>
+      ))}
 
       <RegistrationPolicy
         studentPledgeCovered={studentPledgeCovered}
