@@ -132,6 +132,7 @@ export type Enrollment = {
   year_level: YearLevel;
   academic_year: string;
   semester: Semester;
+  registration_pledge_version?: string | null;
   status: EnrollmentReviewStatus;
   submitted_at: string;
   reviewed_at: string | null;

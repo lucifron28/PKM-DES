@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getEnrollmentClearanceOverallStatus, getEnrollmentClearanceOverview, isValidOfficialRoleClearance } from "./clearances";
 import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash } from "./fingerprint";
+import { REGISTRATION_POLICY_VERSION } from "../registration-form/policy";
 
 const enrollment = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -93,5 +94,58 @@ test("enrollment and health fingerprints are deterministic and context-bound", (
       applicability: "APPLICABLE",
       status: "PENDING"
     })
+  );
+});
+
+test("pledge versions change only the Student registration fingerprint", () => {
+  const legacyHash = computeEnrollmentDocumentHash(
+    enrollment,
+    "STUDENT",
+    "STUDENT_ENROLLMENT_SIGNATURE",
+    "ENROLLMENT_REGISTRATION"
+  );
+  assert.equal(legacyHash, "32a05c7c422028bb91aea7fa8917212b0b616f4c38101c3f8b631427bfedb4ce");
+  assert.equal(
+    computeEnrollmentDocumentHash(
+      { ...enrollment, registration_pledge_version: null },
+      "STUDENT",
+      "STUDENT_ENROLLMENT_SIGNATURE",
+      "ENROLLMENT_REGISTRATION"
+    ),
+    legacyHash
+  );
+
+  const versionedEnrollment = { ...enrollment, registration_pledge_version: REGISTRATION_POLICY_VERSION };
+  const versionedStudentHash = computeEnrollmentDocumentHash(
+    versionedEnrollment,
+    "STUDENT",
+    "STUDENT_ENROLLMENT_SIGNATURE",
+    "ENROLLMENT_REGISTRATION"
+  );
+  assert.notEqual(versionedStudentHash, legacyHash);
+  assert.notEqual(
+    computeEnrollmentDocumentHash(
+      { ...versionedEnrollment, registration_pledge_version: "pledge-v2" },
+      "STUDENT",
+      "STUDENT_ENROLLMENT_SIGNATURE",
+      "ENROLLMENT_REGISTRATION"
+    ),
+    versionedStudentHash
+  );
+
+  const officialHash = computeEnrollmentDocumentHash(
+    enrollment,
+    "LIBRARIAN",
+    "LIBRARY_CLEARANCE",
+    "ENROLLMENT_CLEARANCE"
+  );
+  assert.equal(
+    computeEnrollmentDocumentHash(
+      versionedEnrollment,
+      "LIBRARIAN",
+      "LIBRARY_CLEARANCE",
+      "ENROLLMENT_CLEARANCE"
+    ),
+    officialHash
   );
 });

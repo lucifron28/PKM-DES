@@ -15,6 +15,7 @@ export type EnrollmentFingerprintInput = {
   semester: string;
   program_id: string;
   year_level: string;
+  registration_pledge_version?: string | null;
   enrollment_subjects?: EnrollmentFingerprintSubject[] | null;
 };
 
@@ -44,8 +45,14 @@ function canonicalEnrollmentMaterial(
     .map((subject) => `${subject.course_code}|${subject.course_description}|${subject.units}`)
     .join("\n");
   const totalUnits = (enrollment.enrollment_subjects ?? []).reduce((total, subject) => total + subject.units, 0);
+  const pledgeVersion =
+    signerRole === "STUDENT" &&
+    clearanceType === "STUDENT_ENROLLMENT_SIGNATURE" &&
+    documentType === "ENROLLMENT_REGISTRATION"
+      ? enrollment.registration_pledge_version
+      : null;
 
-  return [
+  const material = [
     "ENROLLMENT",
     `enrollment_id=${enrollment.id}`,
     `academic_year=${enrollment.academic_year}`,
@@ -57,7 +64,13 @@ function canonicalEnrollmentMaterial(
     `signer_role=${signerRole}`,
     `clearance_type=${clearanceType}`,
     `document_type=${documentType}`
-  ].join("\n");
+  ];
+
+  if (pledgeVersion !== null && pledgeVersion !== undefined) {
+    material.push(`pledge_policy_version=${pledgeVersion}`);
+  }
+
+  return material.join("\n");
 }
 
 export function computeEnrollmentDocumentHash(

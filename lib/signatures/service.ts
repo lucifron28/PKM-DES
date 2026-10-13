@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getClearanceDefinition } from "@/lib/signatures/clearances";
+import { REGISTRATION_POLICY_VERSION } from "@/lib/registration-form/policy";
 import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash, type EnrollmentFingerprintInput } from "@/lib/signatures/fingerprint";
 import { isRequirementUuid, normalizeRequirementNote } from "@/lib/requirements/rules";
 import { loadSavedSignaturePayload } from "@/lib/signatures/specimens";
@@ -101,7 +102,7 @@ async function cleanupSignature(admin: ReturnType<typeof createSupabaseAdminClie
 async function loadEnrollment(supabase: SupabaseClient, enrollmentId: string) {
   const { data, error } = await supabase
     .from("enrollments")
-    .select("id, student_id, program_id, year_level, academic_year, semester, status, enrollment_subjects(id, course_code, course_description, units), students(id, profile_id)")
+    .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, enrollment_subjects(id, course_code, course_description, units), students(id, profile_id)")
     .eq("id", enrollmentId)
     .maybeSingle();
 
@@ -116,6 +117,10 @@ function resultMessage(outcome: string | undefined, signerLabel: string) {
       return { success: false, message: "This clearance already has an accepted current signature." } satisfies ServiceResult;
     case "fingerprint_mismatch":
       return { success: false, message: "The signed enrollment changed while this form was open. Refresh and draw a new signature." } satisfies ServiceResult;
+    case "policy_acknowledgment_required":
+      return { success: false, message: "Read and accept the registration policy before signing." } satisfies ServiceResult;
+    case "unsupported_policy_version":
+      return { success: false, message: "This registration policy version is not available for signing. Refresh or contact the Registrar." } satisfies ServiceResult;
     case "not_signable":
       return { success: false, message: "This enrollment is no longer in a signable state." } satisfies ServiceResult;
     case "not_applicable":
@@ -149,10 +154,10 @@ export async function recordStudentEnrollmentSignature(
   formData: FormData
 ): Promise<ServiceResult> {
   const enrollmentId = String(formData.get("enrollment_id") ?? "").trim();
-  const parsed = await signatureFormPayload(supabase, profileId, formData);
   if (!enrollmentId) return { success: false, message: "Enrollment record is required." };
-  if (!parsed.ok) return { success: false, message: parsed.error };
-  const { payload } = parsed;
+  if (formData.get("registration_policy_consent") !== "on") {
+    return resultMessage("policy_acknowledgment_required", "Student");
+  }
 
   const { enrollment, error } = await loadEnrollment(supabase, enrollmentId);
   if (error || !enrollment || enrollment.students?.profile_id !== profileId || enrollment.student_id !== enrollment.students.id) {
@@ -161,6 +166,13 @@ export async function recordStudentEnrollmentSignature(
   if (enrollment.status !== "PENDING" && enrollment.status !== "APPROVED") {
     return { success: false, message: "This enrollment is no longer in a signable state." };
   }
+  if (enrollment.registration_pledge_version !== REGISTRATION_POLICY_VERSION) {
+    return resultMessage("unsupported_policy_version", "Student");
+  }
+
+  const parsed = await signatureFormPayload(supabase, profileId, formData);
+  if (!parsed.ok) return { success: false, message: parsed.error };
+  const { payload } = parsed;
 
   const signatureId = randomUUID();
   const path = buildSignatureStoragePath(enrollmentId, "STUDENT", signatureId);
@@ -185,7 +197,8 @@ export async function recordStudentEnrollmentSignature(
     p_signature_id: signatureId,
     p_signature_storage_path: path,
     p_signature_hash: payload.signatureHash,
-    p_document_hash: documentHash
+    p_document_hash: documentHash,
+    p_policy_acknowledged: true
   });
 
   if (rpcError) {

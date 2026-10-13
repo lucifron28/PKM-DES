@@ -3,6 +3,7 @@ import test from "node:test";
 import { JSDOM } from "jsdom";
 import React, { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { REGISTRATION_POLICY_TEXT } from "../../lib/registration-form/policy";
 
 function installCanvasMocks(window: { HTMLCanvasElement: { prototype: unknown } }) {
   const context = {
@@ -65,7 +66,9 @@ async function setup() {
 async function renderSignatureInput(
   container: HTMLElement,
   signedSignature?: { isCurrent: boolean },
-  savedSignature?: { id: string; signedUrl?: string | null }
+  savedSignature?: { id: string; signedUrl?: string | null },
+  policyConsent?: { text: string; label: string },
+  readOnlyNotice?: string
 ) {
   const { ESignatureInput } = await import("./e-signature-input");
   const root = createRoot(container);
@@ -89,7 +92,9 @@ async function renderSignatureInput(
               inputType: "DRAWN"
             }
           : null,
-        savedSignature
+        savedSignature,
+        policyConsent,
+        readOnlyNotice
       })
     );
   });
@@ -257,6 +262,54 @@ test("saved signature use requires a separate explicit confirmation", async () =
   }
 });
 
+test("registration policy text and consent gate drawn and saved signature capture", async () => {
+  const dom = await setup();
+  const container = dom.window.document.createElement("div");
+  dom.window.document.body.appendChild(container);
+  let root: Root | undefined;
+
+  try {
+    root = await renderSignatureInput(container, undefined, { id: "specimen-1" }, {
+      text: REGISTRATION_POLICY_TEXT,
+      label: "I have read and understand this registration policy and the Student's Pledge. I agree to abide by the stated rules and regulations."
+    });
+    const policyText = container.querySelector<HTMLElement>('[aria-label="Full registration policy text"]');
+    const consent = container.querySelector<HTMLInputElement>('input[name="registration_policy_consent"]');
+    const canvas = container.querySelector<HTMLCanvasElement>("canvas");
+    const submit = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const useSaved = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Use Saved Signature");
+    assert.equal(policyText?.textContent, REGISTRATION_POLICY_TEXT);
+    assert.match(policyText?.textContent ?? "", /STUDENT'S PLEDGE/);
+    assert.ok(consent?.required);
+    assert.ok(canvas);
+    assert.ok(submit);
+    assert.ok(useSaved);
+    assert.equal(canvas.tabIndex, -1);
+    assert.equal(canvas.getAttribute("aria-disabled"), "true");
+    assert.equal(submit.disabled, true);
+    assert.equal(useSaved.disabled, true);
+
+    await act(async () => {
+      canvas.dispatchEvent(pointerEvent(dom, "pointerdown", 10, 10, 1));
+      canvas.dispatchEvent(pointerEvent(dom, "pointermove", 30, 20, 1));
+      canvas.dispatchEvent(pointerEvent(dom, "pointerup", 30, 20, 1));
+      canvas.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+    });
+    assert.equal(submit.disabled, true);
+
+    await act(async () => consent.click());
+    assert.equal(canvas.tabIndex, 0);
+    assert.equal(canvas.getAttribute("aria-disabled"), "false");
+    assert.equal(useSaved.disabled, false);
+    await act(async () => useSaved.click());
+    assert.equal(submit.disabled, false);
+    assert.equal(container.querySelector<HTMLInputElement>('input[name="signature_source"]')?.value, "SAVED");
+  } finally {
+    await act(async () => root?.unmount());
+    dom.window.close();
+  }
+});
+
 test("current signature evidence replaces the pad with signed status", async () => {
   const dom = await setup();
   const container = dom.window.document.createElement("div");
@@ -272,6 +325,27 @@ test("current signature evidence replaces the pad with signed status", async () 
     await act(async () => {
       root?.unmount();
     });
+    dom.window.close();
+  }
+});
+
+test("historical policy version shows retained evidence without a signing form", async () => {
+  const dom = await setup();
+  const container = dom.window.document.createElement("div");
+  dom.window.document.body.appendChild(container);
+  let root: Root | undefined;
+
+  try {
+    root = await renderSignatureInput(container, { isCurrent: false }, undefined, undefined,
+      "This enrollment uses a historical or unsupported registration policy version. New Student signing is unavailable; existing signature evidence is retained for historical reference.");
+    assert.match(container.textContent ?? "", /historical or unsupported registration policy version/);
+    assert.match(container.textContent ?? "", /Ana Dela Cruz/);
+    assert.match(container.textContent ?? "", /Historical signer/);
+    assert.equal(container.querySelector("form"), null);
+    assert.equal(container.querySelector("canvas"), null);
+    assert.equal(container.querySelector('input[name="registration_policy_consent"]'), null);
+  } finally {
+    await act(async () => root?.unmount());
     dom.window.close();
   }
 });

@@ -16,6 +16,7 @@ import type { SignaturePresentationLoad } from "@/lib/signatures/presentation";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
 import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
 import { studentRegistrationFormHref } from "@/lib/enrollment/student-print-access";
+import { REGISTRATION_POLICY_TEXT, REGISTRATION_POLICY_VERSION } from "@/lib/registration-form/policy";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { Enrollment, EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
@@ -124,7 +125,7 @@ export default async function EnrollmentStatusPage() {
   if (currentTermEnrollment) {
     const { data: detailedEnrollmentData, error: detailedEnrollmentError } = await supabase
       .from("enrollments")
-      .select("id, student_id, program_id, year_level, academic_year, semester, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units)")
+      .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units)")
       .eq("id", currentTermEnrollment.id)
       .maybeSingle();
     if (detailedEnrollmentError) {
@@ -147,6 +148,7 @@ export default async function EnrollmentStatusPage() {
       )
     : null;
   const studentSignature = signatureResult.signatures.filter((item) => item.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE").at(-1) ?? null;
+  const unsupportedRegistrationPolicy = currentDetailedEnrollment?.registration_pledge_version !== REGISTRATION_POLICY_VERSION;
   const nurseSignature = signatureResult.signatures.filter((item) => item.clearance_type === "HEALTH_CLEARANCE").at(-1) ?? null;
   const healthVerificationState = healthRequirementApplicability && !signatureResult.error
     ? getHealthVerificationViewState({
@@ -285,6 +287,13 @@ export default async function EnrollmentStatusPage() {
                 signerName={formatName(profile.first_name, profile.last_name)}
                 title="Student E-Signature"
                 description="Draw your own signature for the student enrollment section. The signature is bound to this enrollment's current subject load."
+                policyConsent={unsupportedRegistrationPolicy ? undefined : {
+                  text: REGISTRATION_POLICY_TEXT,
+                  label: "I have read and understand this registration policy and the Student's Pledge. I agree to abide by the stated rules and regulations."
+                }}
+                readOnlyNotice={unsupportedRegistrationPolicy
+                  ? "This enrollment uses a historical or unsupported registration policy version. New Student signing is unavailable; existing signature evidence is retained for historical reference."
+                  : undefined}
                 signedSignature={studentSignature ? {
                   signerName: studentSignature.signer_name_snapshot,
                   signedAt: studentSignature.signed_at,

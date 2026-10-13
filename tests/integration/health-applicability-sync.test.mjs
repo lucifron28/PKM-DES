@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 
-const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+const DB_URL = process.env.PKM_LOCAL_SUPABASE_TEST_DB_URL;
+if (!DB_URL) {
+  throw new Error("Set PKM_LOCAL_SUPABASE_TEST_DB_URL to an isolated local PostgreSQL database.");
+}
+const dbUrl = new URL(DB_URL);
+if (dbUrl.protocol !== "postgresql:" || dbUrl.hostname !== "127.0.0.1") {
+  throw new Error("Integration tests require a local PostgreSQL URL on 127.0.0.1.");
+}
 
 function query(sql) {
   const output = execFileSync("psql", [DB_URL, "-t", "-A", "-F\t", "-c", sql], {
@@ -20,6 +28,46 @@ function execute(sql) {
   execFileSync("psql", [DB_URL, "-c", sql], {
     encoding: "utf8"
   });
+}
+
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
+function expectedEnrollmentHash(enrollment, subjects, signerRole, clearanceType, documentType) {
+  const orderedSubjects = [...subjects].sort((left, right) =>
+    compareText(left.course_code, right.course_code)
+    || compareText(left.course_description, right.course_description)
+    || Number(left.units) - Number(right.units)
+  );
+  const subjectMaterial = orderedSubjects
+    .map((subject) => `${subject.course_code}|${subject.course_description}|${Number(subject.units)}`)
+    .join("\n");
+  const totalUnits = subjects.reduce((total, subject) => total + Number(subject.units), 0);
+  const material = [
+    "ENROLLMENT",
+    `enrollment_id=${enrollment.id}`,
+    `academic_year=${enrollment.academic_year}`,
+    `semester=${enrollment.semester}`,
+    `program_id=${enrollment.program_id}`,
+    `year_level=${enrollment.year_level}`,
+    `subjects=${subjectMaterial}`,
+    `total_units=${totalUnits}`,
+    `signer_role=${signerRole}`,
+    `clearance_type=${clearanceType}`,
+    `document_type=${documentType}`
+  ];
+
+  if (signerRole === "STUDENT"
+    && clearanceType === "STUDENT_ENROLLMENT_SIGNATURE"
+    && documentType === "ENROLLMENT_REGISTRATION"
+    && enrollment.registration_pledge_version != null) {
+    material.push(`pledge_policy_version=${enrollment.registration_pledge_version}`);
+  }
+
+  return createHash("sha256").update(material.join("\n"), "utf8").digest("hex");
 }
 
 test("Database: Canonical rule evaluation via private.get_health_requirement_applicability", () => {
@@ -508,6 +556,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   const deanUserId = "55555555-bbbb-7777-8888-999999999999";
 
   const sigStudent = "77777777-1111-1111-1111-111111111111";
+  const legacySigStudent = "77777777-aaaa-1111-1111-111111111111";
   const sigLib = "77777777-2222-2222-2222-222222222222";
   const sigNurse = "77777777-3333-3333-3333-333333333333";
   const sigChair = "77777777-4444-4444-4444-444444444444";
@@ -520,7 +569,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
       PERFORM set_config('pkm.demo_reset', 'true', true);
       DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${adminUserId}', '${libUserId}', '${nurseUserId}', '${chairUserId}', '${acctUserId}', '${deanUserId}', '${studentAuthId}');
       DELETE FROM public.enrollment_decision_notifications WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR'));
-      DELETE FROM public.enrollment_signatures WHERE id IN ('${sigStudent}', '${sigLib}', '${sigNurse}', '${sigChair}', '${sigAcct}', '${sigDean}');
+      DELETE FROM public.enrollment_signatures WHERE id IN ('${sigStudent}', '${legacySigStudent}', '${sigLib}', '${sigNurse}', '${sigChair}', '${sigAcct}', '${sigDean}');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR'));
       DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR'));
       DELETE FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR');
@@ -583,27 +632,85 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   `);
   assert.equal(res0[0], "incomplete_clearances");
 
-  // Apply Student Signature
+  // New pending rows use the shared current policy version by default.
+  const [storedPolicyVersion] = query(`SELECT registration_pledge_version FROM public.enrollments WHERE id = '${enrollmentId}';`);
+  assert.equal(storedPolicyVersion[0], "pledge-v1");
+
+  const [enrollmentFields] = query(`
+    SELECT id, academic_year, semester, program_id, year_level, registration_pledge_version
+    FROM public.enrollments WHERE id = '${enrollmentId}';
+  `);
+  const subjectFields = query(`
+    SELECT course_code, course_description, units::text
+    FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
+  `).map(([course_code, course_description, units]) => ({ course_code, course_description, units }));
+  const enrollmentSnapshot = {
+    id: enrollmentFields[0],
+    academic_year: enrollmentFields[1],
+    semester: enrollmentFields[2],
+    program_id: enrollmentFields[3],
+    year_level: enrollmentFields[4],
+    registration_pledge_version: enrollmentFields[5]
+  };
+
   const dummyHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-  const [stuHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'STUDENT', 'STUDENT_ENROLLMENT_SIGNATURE', 'ENROLLMENT_REGISTRATION');`);
-  query(`
-    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
-    LATERAL public.record_student_enrollment_signature('${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${stuHash[0]}');
+  execute(`UPDATE public.enrollments SET registration_pledge_version = null WHERE id = '${enrollmentId}';`);
+  const [legacyHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'STUDENT', 'STUDENT_ENROLLMENT_SIGNATURE', 'ENROLLMENT_REGISTRATION');`);
+  const legacySnapshot = { ...enrollmentSnapshot, registration_pledge_version: null };
+  assert.equal(legacyHash[0], expectedEnrollmentHash(legacySnapshot, subjectFields, "STUDENT", "STUDENT_ENROLLMENT_SIGNATURE", "ENROLLMENT_REGISTRATION"));
+
+  // Model a pre-policy signature on a still-pending enrollment. The migration
+  // backfills it to pledge-v1; the next accepted signature must append, not overwrite.
+  execute(`
+    INSERT INTO public.enrollment_signatures (
+      id, enrollment_id, student_id, signer_profile_id, signer_role,
+      clearance_type, document_type, signer_name_snapshot,
+      signature_storage_path, signature_hash, document_hash, signed_at
+    ) VALUES (
+      '${legacySigStudent}', '${enrollmentId}', '${studentId}', '${studentAuthId}', 'STUDENT',
+      'STUDENT_ENROLLMENT_SIGNATURE', 'ENROLLMENT_REGISTRATION', 'All Clr',
+      '${enrollmentId}/STUDENT/${legacySigStudent}.png', '${dummyHash}', '${legacyHash[0]}', now() - interval '1 minute'
+    );
+    UPDATE public.enrollment_clearances
+    SET status = 'SIGNED'
+    WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE';
+    UPDATE public.enrollments SET registration_pledge_version = 'pledge-v1' WHERE id = '${enrollmentId}';
   `);
 
-  // Test 2: Approval fails with only student signature -> incomplete_clearances
+  const [studentHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'STUDENT', 'STUDENT_ENROLLMENT_SIGNATURE', 'ENROLLMENT_REGISTRATION');`);
+  const currentSnapshot = { ...enrollmentSnapshot, registration_pledge_version: "pledge-v1" };
+  assert.equal(studentHash[0], expectedEnrollmentHash(currentSnapshot, subjectFields, "STUDENT", "STUDENT_ENROLLMENT_SIGNATURE", "ENROLLMENT_REGISTRATION"));
+  assert.notEqual(query(`SELECT document_hash FROM public.enrollment_signatures WHERE id = '${legacySigStudent}';`)[0][0], studentHash[0]);
+
+  const [officialHashBeforeUnknownPolicy] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'LIBRARIAN', 'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
+  const [signedLibrarianBeforePledgeChange] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${libUserId}', true) as set_jwt) s,
+    LATERAL public.record_official_clearance_signature('${enrollmentId}', 'LIBRARY_CLEARANCE', '${sigLib}', '${enrollmentId}/LIBRARIAN/${sigLib}.png', '${dummyHash}', '${officialHashBeforeUnknownPolicy[0]}');
+  `);
+  assert.equal(signedLibrarianBeforePledgeChange[0], "signed");
+  execute(`UPDATE public.enrollments SET registration_pledge_version = 'pledge-v2' WHERE id = '${enrollmentId}';`);
+  assert.equal(query(`SELECT coalesce(private.enrollment_document_hash('${enrollmentId}', 'STUDENT', 'STUDENT_ENROLLMENT_SIGNATURE', 'ENROLLMENT_REGISTRATION'), 'null');`)[0][0], "null");
+  const [unsupportedPolicySignature] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
+    LATERAL public.record_student_enrollment_signature(
+      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${dummyHash}', true
+    );
+  `);
+  assert.equal(unsupportedPolicySignature[0], "unsupported_policy_version");
+  const [officialHashAfterUnknownPolicy] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'LIBRARIAN', 'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
+  assert.equal(officialHashAfterUnknownPolicy[0], officialHashBeforeUnknownPolicy[0]);
+  assert.equal(
+    query(`SELECT document_hash FROM public.enrollment_signatures WHERE id = '${sigLib}';`)[0][0],
+    officialHashAfterUnknownPolicy[0]
+  );
+  execute(`UPDATE public.enrollments SET registration_pledge_version = 'pledge-v1' WHERE id = '${enrollmentId}';`);
+
+  // Approval remains blocked before the remaining official clearances are signed.
   const [res1] = query(`
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
     LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
   `);
   assert.equal(res1[0], "incomplete_clearances");
-
-  // Apply Librarian Signature
-  const [libHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'LIBRARIAN', 'LIBRARY_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
-  query(`
-    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${libUserId}', true) as set_jwt) s,
-    LATERAL public.record_official_clearance_signature('${enrollmentId}', 'LIBRARY_CLEARANCE', '${sigLib}', '${enrollmentId}/LIBRARIAN/${sigLib}.png', '${dummyHash}', '${libHash[0]}');
-  `);
 
   // Apply Nurse Standard Signature
   const [nurseHash] = query(`SELECT private.enrollment_document_hash('${enrollmentId}', 'NURSE', 'HEALTH_CLEARANCE', 'ENROLLMENT_CLEARANCE');`);
@@ -639,6 +746,36 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${deanUserId}', true) as set_jwt) s,
     LATERAL public.record_official_clearance_signature('${enrollmentId}', 'DEAN_CLEARANCE', '${sigDean}', '${enrollmentId}/DEAN/${sigDean}.png', '${dummyHash}', '${deanHash[0]}');
   `);
+  assert.equal(
+    query(`SELECT count(*) FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type <> 'STUDENT_ENROLLMENT_SIGNATURE' AND status = 'SIGNED';`)[0][0],
+    "5"
+  );
+  const [staleStudentApproval] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
+    LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
+  `);
+  assert.equal(staleStudentApproval[0], "incomplete_clearances");
+  // Only the new policy acknowledgment and current Student fingerprint can complete the form.
+  const [noConsent] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
+    LATERAL public.record_student_enrollment_signature(
+      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${studentHash[0]}', false
+    );
+  `);
+  assert.equal(noConsent[0], "policy_acknowledgment_required");
+
+  const [signedStudent] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${studentAuthId}', true) as set_jwt) s,
+    LATERAL public.record_student_enrollment_signature(
+      '${enrollmentId}', '${sigStudent}', '${enrollmentId}/STUDENT/${sigStudent}.png', '${dummyHash}', '${studentHash[0]}', true
+    );
+  `);
+  assert.equal(signedStudent[0], "signed");
+  assert.equal(query(`SELECT document_hash FROM public.enrollment_signatures WHERE id = '${legacySigStudent}';`)[0][0], legacyHash[0]);
+  assert.equal(query(`SELECT count(*) FROM public.enrollment_signatures WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE';`)[0][0], "2");
+  assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'STUDENT_ENROLLMENT_SIGNATURE';`)[0][0], "SIGNED");
+
+  // Student signatures above also verify SQL/TypeScript fingerprint parity.
 
   // Now all 6 required clearances are SIGNED and current -> Approval succeeds!
   const [apprSuccess] = query(`
@@ -657,7 +794,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
       PERFORM set_config('pkm.demo_reset', 'true', true);
       DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${adminUserId}', '${libUserId}', '${nurseUserId}', '${chairUserId}', '${acctUserId}', '${deanUserId}', '${studentAuthId}');
       DELETE FROM public.enrollment_decision_notifications WHERE enrollment_id = '${enrollmentId}';
-      DELETE FROM public.enrollment_signatures WHERE id IN ('${sigStudent}', '${sigLib}', '${sigNurse}', '${sigChair}', '${sigAcct}', '${sigDean}');
+      DELETE FROM public.enrollment_signatures WHERE id IN ('${sigStudent}', '${legacySigStudent}', '${sigLib}', '${sigNurse}', '${sigChair}', '${sigAcct}', '${sigDean}');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollments WHERE id = '${enrollmentId}';

@@ -10,6 +10,7 @@ import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { CLEARANCE_DEFINITIONS, getEnrollmentClearanceOverview } from "@/lib/signatures/clearances";
 import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } from "@/lib/signatures/presentation";
 import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
+import { REGISTRATION_POLICY_VERSION } from "@/lib/registration-form/policy";
 import { canSignClearance, loadActiveOfficialRoleAssignments } from "@/lib/official-roles/repository";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
@@ -82,6 +83,12 @@ export default async function AdminRegistrationFormPage({
     enrollment_signatures: signatureResult.signatures,
     health_requirement_applicability: healthApplicability
   };
+  const studentPledgeSignature = signatureResult.signatures
+    .filter((signature) => signature.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE")
+    .at(-1);
+  const studentPledgeCovered =
+    enrollment.registration_pledge_version === REGISTRATION_POLICY_VERSION &&
+    Boolean(studentPledgeSignature?.is_current);
   const signatureEvidence = signatureEvidenceByClearance(signatureResult.signatures);
   const clearanceOverview = getEnrollmentClearanceOverview(healthApplicability, signatureEvidence);
   const officialClearanceDefinitions = CLEARANCE_DEFINITIONS.filter((definition) => definition.signerRole !== "STUDENT");
@@ -217,7 +224,11 @@ export default async function AdminRegistrationFormPage({
           })}
         </div> : null}
       </div>
-      <RegistrationForm enrollment={presentationEnrollment} />
+      <RegistrationForm
+        enrollment={presentationEnrollment}
+        studentPledgeCovered={studentPledgeCovered}
+        registrationPledgeVersion={enrollment.registration_pledge_version ?? null}
+      />
     </div>
   );
 }
