@@ -40,7 +40,7 @@ async function getExactOfficialRecord(supabase, record) {
 async function getExactProfile(supabase, email) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, role, account_status")
+    .select("id, email, role, account_status, is_registrar")
     .eq("email", email)
     .maybeSingle();
   assertNoError(error, `Could not read profile for ${email}`);
@@ -180,6 +180,7 @@ async function verifyAccountRecord(supabase, record, programId, term, expectedOf
   check(Boolean(profile), `${record.key}: profile is missing.`, failures);
   check(profile?.role === "student", `${record.key}: profile role is not student.`, failures);
   check(profile?.account_status === "ACTIVE", `${record.key}: profile is not ACTIVE.`, failures);
+  check(!profile?.is_registrar, `${record.key}: student profile must not be registrar.`, failures);
   check(profile?.id === authUser?.id, `${record.key}: profile ID does not match its Auth user.`, failures);
 
   if (!profile || !officialRecord) {

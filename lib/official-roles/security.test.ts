@@ -60,3 +60,20 @@ test("submitted Health Record Update details stay behind RLS and authenticated R
   assert.match(migration, /grant execute on function public\.save_health_record_update[\s\S]*to authenticated/i);
   assert.match(migration, /health_record_not_submitted/i);
 });
+
+test("Registrar setup and migration enforce explicit fail-closed is_registrar designation", async () => {
+  const [setupSql, registrarMigration] = await Promise.all([
+    readFile("supabase/registrar_admin_setup.example.sql", "utf8"),
+    readFile("supabase/migrations/20261011000000_explicit_registrar_designation.sql", "utf8")
+  ]);
+
+  assert.match(setupSql, /is_registrar/i);
+  assert.match(setupSql, /is_registrar\s*=\s*excluded\.is_registrar/i);
+  assert.match(registrarMigration, /add column if not exists is_registrar boolean not null default false/i);
+  assert.match(registrarMigration, /profiles_registrar_must_be_admin_check/i);
+  assert.match(registrarMigration, /create or replace function private\.designate_registrar_profile/i);
+  assert.doesNotMatch(
+    registrarMigration,
+    /update\s+public\.profiles\s+set\s+is_registrar\s*=\s*true\s+where\s+role\s*=\s*'admin'\s+and\s+not\s+exists/i
+  );
+});

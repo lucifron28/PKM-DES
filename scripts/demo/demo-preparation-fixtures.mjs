@@ -20,6 +20,7 @@ export const DEMO_ACCOUNTS = Object.freeze([
     firstName: "PKM Demo",
     lastName: "Registrar",
     role: "admin",
+    isRegistrar: true,
     portalRole: "Registrar/Admin",
     officialRole: null,
     clearanceType: null
@@ -30,6 +31,7 @@ export const DEMO_ACCOUNTS = Object.freeze([
     firstName: "Demo",
     lastName: "Librarian",
     role: "admin",
+    isRegistrar: false,
     portalRole: "Librarian",
     officialRole: "LIBRARIAN",
     clearanceType: "LIBRARY_CLEARANCE"
@@ -40,6 +42,7 @@ export const DEMO_ACCOUNTS = Object.freeze([
     firstName: "Demo",
     lastName: "Nurse",
     role: "admin",
+    isRegistrar: false,
     portalRole: "Nurse",
     officialRole: "NURSE",
     clearanceType: "HEALTH_CLEARANCE"
@@ -50,6 +53,7 @@ export const DEMO_ACCOUNTS = Object.freeze([
     firstName: "Demo",
     lastName: "Program Chair",
     role: "admin",
+    isRegistrar: false,
     portalRole: "Program Chair",
     officialRole: "PROGRAM_CHAIR",
     clearanceType: "PROGRAM_CLEARANCE"
@@ -60,6 +64,7 @@ export const DEMO_ACCOUNTS = Object.freeze([
     firstName: "Demo",
     lastName: "Accountant",
     role: "admin",
+    isRegistrar: false,
     portalRole: "Accountant",
     officialRole: "ACCOUNTANT",
     clearanceType: "ACCOUNTING_CLEARANCE"
@@ -70,6 +75,7 @@ export const DEMO_ACCOUNTS = Object.freeze([
     firstName: "Demo",
     lastName: "Dean",
     role: "admin",
+    isRegistrar: false,
     portalRole: "Dean",
     officialRole: "DEAN",
     clearanceType: "DEAN_CLEARANCE"
@@ -80,6 +86,7 @@ export const DEMO_ACCOUNTS = Object.freeze([
     firstName: "Maria Demo",
     lastName: "Student",
     role: "student",
+    isRegistrar: false,
     portalRole: "Student",
     officialRole: null,
     clearanceType: null

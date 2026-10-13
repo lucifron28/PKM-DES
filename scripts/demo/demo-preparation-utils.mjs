@@ -127,7 +127,7 @@ export async function preflightDemoData(admin) {
 
   const { data: profiles, error: profilesError } = await admin
     .from("profiles")
-    .select("id, email, first_name, last_name, role, account_status")
+    .select("id, email, first_name, last_name, role, account_status, is_registrar")
     .in("email", DEMO_EMAILS);
   assertNoError(profilesError, "Could not read demo profiles");
   const profileByEmail = indexUniqueByEmail(profiles, "demo profile");
@@ -196,7 +196,7 @@ export async function ensureProfile(admin, authUser, account) {
   const existing = await getMaybeSingle(
     admin
       .from("profiles")
-      .select("id, email, role, account_status")
+      .select("id, email, role, account_status, is_registrar")
       .eq("id", authUser.id),
     `the profile for ${account.email}`
   );
@@ -207,7 +207,8 @@ export async function ensureProfile(admin, authUser, account) {
     last_name: account.lastName,
     email: account.email,
     role: account.role,
-    account_status: "ACTIVE"
+    account_status: "ACTIVE",
+    is_registrar: Boolean(account.isRegistrar)
   };
 
   if (!existing) {

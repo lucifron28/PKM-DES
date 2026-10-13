@@ -240,6 +240,7 @@ export async function resolveOptionalReviewerId(supabase, registrarEmail) {
     .select("id")
     .eq("email", registrarEmail)
     .eq("role", "admin")
+    .eq("is_registrar", true)
     .maybeSingle();
   assertNoError(error, "Could not look up the optional demo reviewer");
 

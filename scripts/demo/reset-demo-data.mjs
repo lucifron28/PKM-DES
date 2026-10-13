@@ -231,7 +231,8 @@ async function createAccountBackedDemoRecord(supabase, record, programId, passwo
     first_name: record.firstName,
     last_name: record.lastName,
     email: record.email,
-    account_status: "ACTIVE"
+    account_status: "ACTIVE",
+    is_registrar: false
   });
   assertNoError(profileError, `Could not create profile for ${record.key}`);
 

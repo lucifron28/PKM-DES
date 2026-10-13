@@ -70,6 +70,9 @@ test("demo account fixture has one Registrar, five officials, and one student", 
   assert.equal(DEMO_OFFICIAL_ACCOUNTS.filter((account) => account.officialRole).length, 5);
   assert.equal(DEMO_ACCOUNTS.filter((account) => account.role === "student").length, 1);
   assert.equal(DEMO_ACCOUNTS.find((account) => account.key === "registrar")?.officialRole, null);
+  assert.equal(DEMO_ACCOUNTS.find((account) => account.key === "registrar")?.isRegistrar, true);
+  assert.equal(DEMO_ACCOUNTS.filter((account) => account.isRegistrar).length, 1);
+  assert.equal(DEMO_ACCOUNTS.filter((account) => account.key !== "registrar").every((account) => account.isRegistrar === false), true);
   assert.equal(PRIMARY_DEMO_STUDENT.genderSex, "Female");
   assert.equal(PRIMARY_DEMO_STUDENT.studentType, "Incoming 1st Year Student");
   assert.equal(DEMO_SHARED_PASSWORD, "Demo1234!");

@@ -64,6 +64,7 @@ async function main() {
     if (profile) {
       check(profile.role === account.role, `${account.portalRole}: profile role is ${profile.role}`, failures);
       check(profile.account_status === "ACTIVE", `${account.portalRole}: profile is not ACTIVE`, failures);
+      check(Boolean(profile.is_registrar) === Boolean(account.isRegistrar), `${account.portalRole}: profile is_registrar mismatch`, failures);
       check(`${profile.first_name} ${profile.last_name}`.replace(/\s+/g, " ").trim() === fullName(account), `${account.portalRole}: display name mismatch`, failures);
     }
   }

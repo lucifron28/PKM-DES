@@ -1174,14 +1174,20 @@ test("Boundary 18: Non-registrars cannot self-designate or elevate is_registrar"
   const [stuIsReg] = query(`SELECT is_registrar FROM public.profiles WHERE id = '${student1ProfileId}';`);
   assert.equal(stuIsReg[0], "f", "Student is_registrar must remain false");
 
-  // 3. Registrar cannot self-modify is_registrar
+  // 3. Even an authenticated Registrar cannot directly mutate is_registrar via client UPDATE
   const regSelfUpdate = tryExecuteAsUser(
     registrarId,
     `UPDATE public.profiles SET is_registrar = false WHERE id = '${registrarId}';`
   );
   assert.equal(regSelfUpdate.ok, false, "Registrar cannot self-modify is_registrar");
-  assert.match(regSelfUpdate.error, /Profile is_registrar cannot be modified directly or by self/);
+  assert.match(regSelfUpdate.error, /Profile is_registrar cannot be modified directly/);
 
+  const regOtherUpdate = tryExecuteAsUser(
+    registrarId,
+    `UPDATE public.profiles SET is_registrar = true WHERE id = '${librarianId}';`
+  );
+  assert.equal(regOtherUpdate.ok, false, "Registrar cannot directly mutate another profile's is_registrar from client");
+  assert.match(regOtherUpdate.error, /Profile is_registrar cannot be modified directly/);
   // 4. Non-registrar cannot insert a profile with is_registrar = true
   const attackerId = "00000000-0000-4000-e000-000000000003";
   execute(`
@@ -1200,6 +1206,121 @@ test("Boundary 18: Non-registrars cannot self-designate or elevate is_registrar"
   execute(`
     DELETE FROM public.profiles WHERE id = '${attackerId}';
     DELETE FROM auth.users WHERE id = '${attackerId}';
+  `);
+});
+
+test("Boundary 19: Fail-closed Registrar provisioning, existing-account migration, and unassigned staff isolation", () => {
+  const unassignedStaffId = "00000000-0000-4000-e000-000000000004";
+  const legacyRegistrarId = "00000000-0000-4000-e000-000000000005";
+  const newRegistrarId = "00000000-0000-4000-e000-000000000006";
+
+  execute(`
+    DELETE FROM public.audit_logs WHERE target_id IN ('${unassignedStaffId}', '${legacyRegistrarId}', '${newRegistrarId}');
+    DELETE FROM public.profiles WHERE id IN ('${unassignedStaffId}', '${legacyRegistrarId}', '${newRegistrarId}');
+    DELETE FROM auth.users WHERE id IN ('${unassignedStaffId}', '${legacyRegistrarId}', '${newRegistrarId}');
+
+    INSERT INTO auth.users (id, email) VALUES
+      ('${unassignedStaffId}', 'unassigned.staff@example.test'),
+      ('${legacyRegistrarId}', 'legacy.registrar@example.test'),
+      ('${newRegistrarId}', 'new.registrar@example.test');
+
+    -- Both unassignedStaffId and legacyRegistrarId start as ACTIVE admins with no official_role_assignments
+    INSERT INTO public.profiles (id, email, role, first_name, last_name, account_status)
+    VALUES
+      ('${unassignedStaffId}', 'unassigned.staff@example.test', 'admin', 'Unassigned', 'Staff', 'ACTIVE'),
+      ('${legacyRegistrarId}', 'legacy.registrar@example.test', 'admin', 'Legacy', 'Registrar', 'ACTIVE');
+  `);
+
+  // 1. Both accounts fail closed by default (is_registrar = false)
+  const [unassignedInitial] = asUser(unassignedStaffId, `SELECT private.is_registrar();`);
+  assert.equal(unassignedInitial[0], "f", "Unassigned admin account must fail closed (is_registrar = false)");
+
+  const [legacyInitial] = asUser(legacyRegistrarId, `SELECT private.is_registrar();`);
+  assert.equal(legacyInitial[0], "f", "Pre-designation admin account must fail closed until explicitly designated");
+
+  // 2. Re-running migration 20261011000000 must NOT promote unassigned or unknown admin accounts
+  execFileSync(
+    "psql",
+    [DB_URL, "-v", "ON_ERROR_STOP=1", "-f", "supabase/migrations/20261011000000_explicit_registrar_designation.sql"],
+    { encoding: "utf8" }
+  );
+  const [unassignedAfterMigration] = asUser(unassignedStaffId, `SELECT private.is_registrar();`);
+  assert.equal(unassignedAfterMigration[0], "f", "Migration must NEVER automatically promote unassigned admin accounts");
+
+  // 3. Unassigned staff account cannot perform Registrar operations or invoke privileged designation helper
+  const [unassignedReview] = asUser(
+    unassignedStaffId,
+    `SELECT outcome FROM public.review_pending_enrollment('${enrollment1Id}', 'APPROVED', 'Unassigned bypass');`
+  );
+  assert.equal(unassignedReview[0], "unauthorized", "Unassigned staff must be rejected from review_pending_enrollment");
+
+  const [unassignedRoleManage] = asUser(
+    unassignedStaffId,
+    `SELECT outcome FROM public.set_official_role_assignment('${nurseId}', 'DEAN', true);`
+  );
+  assert.equal(unassignedRoleManage[0], "unauthorized", "Unassigned staff must be rejected from set_official_role_assignment");
+
+  const clientDesignateAttempt = tryExecuteAsUser(
+    unassignedStaffId,
+    `SELECT private.designate_registrar_profile('${unassignedStaffId}', true);`
+  );
+  assert.equal(clientDesignateAttempt.ok, false, "Authenticated user cannot call private.designate_registrar_profile");
+
+  // 4. Existing legitimate Registrar migrated via documented authorized provisioning step
+  execute(`SELECT private.designate_registrar_profile('${legacyRegistrarId}', true);`);
+
+  const [legacyAfterDesignate] = asUser(legacyRegistrarId, `SELECT private.is_registrar();`);
+  assert.equal(legacyAfterDesignate[0], "t", "Explicitly designated existing Registrar receives is_registrar = true");
+
+  const [unassignedStillFalse] = asUser(unassignedStaffId, `SELECT private.is_registrar();`);
+  assert.equal(unassignedStillFalse[0], "f", "Unassigned staff account remains false when another account is designated");
+
+  const [legacyReview] = asUser(
+    legacyRegistrarId,
+    `SELECT outcome FROM public.review_pending_enrollment('${enrollment1Id}', 'APPROVED', 'Migrated registrar review');`
+  );
+  assert.equal(legacyReview[0], "incomplete_clearances", "Migrated Registrar can execute review_pending_enrollment");
+
+  // 5. New Registrar provisioned via registrar_admin_setup.example.sql upsert pattern
+  execute(`
+    INSERT INTO public.profiles (id, role, first_name, last_name, email, account_status, is_registrar)
+    VALUES ('${newRegistrarId}', 'admin', 'New', 'Registrar', 'new.registrar@example.test', 'ACTIVE', true)
+    ON CONFLICT (id) DO UPDATE
+    SET
+      role = excluded.role,
+      first_name = excluded.first_name,
+      last_name = excluded.last_name,
+      email = excluded.email,
+      account_status = excluded.account_status,
+      is_registrar = excluded.is_registrar,
+      updated_at = now();
+  `);
+
+  const [newRegCheck] = asUser(newRegistrarId, `SELECT private.is_registrar();`);
+  assert.equal(newRegCheck[0], "t", "New Registrar provisioned with explicit is_registrar = true is recognized");
+
+  // 6. Student profiles cannot be designated as Registrar even via privileged helper or table constraint
+  assert.throws(() => {
+    execFileSync(
+      "psql",
+      [DB_URL, "-v", "ON_ERROR_STOP=1", "-c", `SELECT private.designate_registrar_profile('${student1ProfileId}', true);`],
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+  }, /Only ACTIVE admin profiles can be designated as Registrar/);
+
+  assert.throws(() => {
+    execFileSync(
+      "psql",
+      [DB_URL, "-v", "ON_ERROR_STOP=1", "-c", `UPDATE public.profiles SET is_registrar = true WHERE id = '${student1ProfileId}';`],
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+  }, /profiles_registrar_must_be_admin_check/);
+  // Cleanup
+  execute(`
+    SET pkm.demo_reset = 'true';
+    DELETE FROM public.audit_logs WHERE target_id IN ('${unassignedStaffId}', '${legacyRegistrarId}', '${newRegistrarId}');
+    DELETE FROM public.profiles WHERE id IN ('${unassignedStaffId}', '${legacyRegistrarId}', '${newRegistrarId}');
+    DELETE FROM auth.users WHERE id IN ('${unassignedStaffId}', '${legacyRegistrarId}', '${newRegistrarId}');
   `);
 });
 
