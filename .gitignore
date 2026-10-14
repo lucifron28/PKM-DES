@@ -39,3 +39,6 @@ test-results/
 playwright-report/
 .playwright/
 .env.smoke.local
+
+# Preserved disposable PostgreSQL clusters from local database verification
+tmp/client-requirements-pg-*/

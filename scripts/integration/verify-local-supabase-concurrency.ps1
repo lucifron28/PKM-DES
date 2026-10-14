@@ -36,23 +36,35 @@ function Invoke-ParallelLocalSql {
   }
 }
 
-$adminId = "00000000-0000-4000-8000-000000000010"
-$studentId = "00000000-0000-4000-8000-000000000020"
-$submitStudentAId = "00000000-0000-4000-8000-000000000021"
-$submitStudentBId = "00000000-0000-4000-8000-000000000022"
-$submitStudentCId = "00000000-0000-4000-8000-000000000023"
-$deliveryId = "00000000-0000-4000-8000-000000000030"
+$runSuffix = [Guid]::NewGuid().ToString("N")
+$adminId = [Guid]::NewGuid().ToString()
+$studentId = [Guid]::NewGuid().ToString()
+$submitStudentAId = [Guid]::NewGuid().ToString()
+$submitStudentBId = [Guid]::NewGuid().ToString()
+$submitStudentCId = [Guid]::NewGuid().ToString()
+$deliveryId = [Guid]::NewGuid().ToString()
+$candidateProgramId = [Guid]::NewGuid().ToString()
 $programId = $null
-$studentRecordId = "20000000-0000-4000-8000-000000000010"
-$enrollmentId = "40000000-0000-4000-8000-000000000010"
-$submitStudentARecordId = "20000000-0000-4000-8000-000000000021"
-$submitStudentBRecordId = "20000000-0000-4000-8000-000000000022"
-$submitStudentCRecordId = "20000000-0000-4000-8000-000000000023"
+$studentRecordId = [Guid]::NewGuid().ToString()
+$enrollmentId = [Guid]::NewGuid().ToString()
+$submitStudentARecordId = [Guid]::NewGuid().ToString()
+$submitStudentBRecordId = [Guid]::NewGuid().ToString()
+$submitStudentCRecordId = [Guid]::NewGuid().ToString()
+$adminEmail = "concurrent.$runSuffix.registrar@example.test"
+$studentEmail = "concurrent.$runSuffix.student@example.test"
+$submitStudentAEmail = "concurrent.$runSuffix.submit-a@example.test"
+$submitStudentBEmail = "concurrent.$runSuffix.submit-b@example.test"
+$submitStudentCEmail = "concurrent.$runSuffix.submit-c@example.test"
+$deliveryEmail = "concurrent.$runSuffix.delivery@example.test"
+$studentNumber = "26-$runSuffix-10"
+$submitStudentANumber = "26-$runSuffix-11"
+$submitStudentBNumber = "26-$runSuffix-12"
+$submitStudentCNumber = "26-$runSuffix-13"
 
 try {
   $programLookup = Invoke-LocalSql @"
 insert into public.programs (id, name, code)
-values ('10000000-0000-4000-8000-000000000010', 'Bachelor of Science in Accounting Information System', 'BSAIS')
+values ('$candidateProgramId', 'Bachelor of Science in Accounting Information System', 'BSAIS')
 on conflict (code) do nothing;
 select id from public.programs where code = 'BSAIS' limit 1;
 "@
@@ -64,33 +76,33 @@ select id from public.programs where code = 'BSAIS' limit 1;
   Invoke-LocalSql @"
 insert into auth.users (id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
-  ('$adminId', 'authenticated', 'authenticated', 'concurrent.registrar@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('$studentId', 'authenticated', 'authenticated', 'concurrent.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('$submitStudentAId', 'authenticated', 'authenticated', 'concurrent.submit-a@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('$submitStudentBId', 'authenticated', 'authenticated', 'concurrent.submit-b@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('$submitStudentCId', 'authenticated', 'authenticated', 'concurrent.submit-c@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('$deliveryId', 'authenticated', 'authenticated', 'concurrent.delivery@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
+  ('$adminId', 'authenticated', 'authenticated', '$adminEmail', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$studentId', 'authenticated', 'authenticated', '$studentEmail', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$submitStudentAId', 'authenticated', 'authenticated', '$submitStudentAEmail', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$submitStudentBId', 'authenticated', 'authenticated', '$submitStudentBEmail', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$submitStudentCId', 'authenticated', 'authenticated', '$submitStudentCEmail', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('$deliveryId', 'authenticated', 'authenticated', '$deliveryEmail', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
 
 insert into public.profiles (id, role, first_name, last_name, email, account_status)
 values
-  ('$adminId', 'admin', 'Concurrent', 'Registrar', 'concurrent.registrar@example.test', 'ACTIVE'),
-  ('$studentId', 'student', 'Concurrent', 'Student', 'concurrent.student@example.test', 'ACTIVE'),
-  ('$submitStudentAId', 'student', 'Concurrent', 'Submit A', 'concurrent.submit-a@example.test', 'ACTIVE'),
-  ('$submitStudentBId', 'student', 'Concurrent', 'Submit B', 'concurrent.submit-b@example.test', 'ACTIVE'),
-  ('$submitStudentCId', 'student', 'Concurrent', 'Submit C', 'concurrent.submit-c@example.test', 'ACTIVE'),
-  ('$deliveryId', 'student', 'Concurrent', 'Delivery', 'concurrent.delivery@example.test', 'SETUP');
+  ('$adminId', 'admin', 'Concurrent', 'Registrar', '$adminEmail', 'ACTIVE'),
+  ('$studentId', 'student', 'Concurrent', 'Student', '$studentEmail', 'ACTIVE'),
+  ('$submitStudentAId', 'student', 'Concurrent', 'Submit A', '$submitStudentAEmail', 'ACTIVE'),
+  ('$submitStudentBId', 'student', 'Concurrent', 'Submit B', '$submitStudentBEmail', 'ACTIVE'),
+  ('$submitStudentCId', 'student', 'Concurrent', 'Submit C', '$submitStudentCEmail', 'ACTIVE'),
+  ('$deliveryId', 'student', 'Concurrent', 'Delivery', '$deliveryEmail', 'SETUP');
 
 insert into public.students (id, profile_id, student_id_number, program_id, year_level, student_type, enrollment_status)
 values
-  ('$studentRecordId', '$studentId', '26-00010', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
-  ('$submitStudentARecordId', '$submitStudentAId', '26-00011', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
-  ('$submitStudentBRecordId', '$submitStudentBId', '26-00012', '$programId', '1st Year', 'Continuing Student', 'NOT ENROLLED'),
-  ('$submitStudentCRecordId', '$submitStudentCId', '26-00013', '$programId', '1st Year', 'Regular Student', 'NOT ENROLLED');
+  ('$studentRecordId', '$studentId', '$studentNumber', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
+  ('$submitStudentARecordId', '$submitStudentAId', '$submitStudentANumber', '$programId', '1st Year', 'Incoming 1st Year Student', 'NOT ENROLLED'),
+  ('$submitStudentBRecordId', '$submitStudentBId', '$submitStudentBNumber', '$programId', '1st Year', 'Continuing Student', 'NOT ENROLLED'),
+  ('$submitStudentCRecordId', '$submitStudentCId', '$submitStudentCNumber', '$programId', '1st Year', 'Regular Student', 'NOT ENROLLED');
 
 insert into public.official_student_records (
   student_id_number, first_name, last_name, email, program_id, year_level, student_type, gender_sex, enrollment_status
 )
-values ('26-00010', 'Concurrent', 'Student', 'concurrent.student@example.test', '$programId', '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED');
+values ('$studentNumber', 'Concurrent', 'Student', '$studentEmail', '$programId', '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED');
 
 insert into public.enrollments (id, student_id, program_id, year_level, academic_year, semester, status)
 values ('$enrollmentId', '$studentRecordId', '$programId', '1st Year', '2025-2026', '2nd Semester', 'PENDING');
@@ -213,7 +225,7 @@ commit;
 begin;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '$adminId', true) as jwt \gset
-select outcome from public.review_pending_enrollment('$enrollmentId', 'APPROVED', null);
+select outcome from public.registrar_review_pending_enrollment('$enrollmentId', 'APPROVED', null);
 commit;
 "@
   $reviewOutcomes = @(Invoke-ParallelLocalSql @($reviewSql, $reviewSql) | Sort-Object)
@@ -252,9 +264,32 @@ commit;
 
   Write-Host "Local Supabase concurrency verification passed."
 } finally {
-  Start-Sleep -Seconds 1
-  & npx.cmd supabase db reset --local --no-seed --yes
-  if ($LASTEXITCODE -ne 0) {
-    throw "Local Supabase cleanup reset failed."
+  $studentIds = @($studentId, $submitStudentAId, $submitStudentBId, $submitStudentCId)
+  $studentNumbers = @($studentNumber, $submitStudentANumber, $submitStudentBNumber, $submitStudentCNumber)
+  $profileIds = @($adminId) + $studentIds + @($deliveryId)
+  $studentIdSql = ($studentIds | ForEach-Object { "'$_'" }) -join ","
+  $studentNumberSql = ($studentNumbers | ForEach-Object { "'$_'" }) -join ","
+  $profileIdSql = ($profileIds | ForEach-Object { "'$_'" }) -join ","
+  $cleanupSql = @(
+    "begin;"
+    "select set_config('pkm.demo_reset', 'true', true);"
+    "delete from public.enrollment_decision_notifications where enrollment_id = '$enrollmentId';"
+    "delete from public.enrollment_clearances where enrollment_id in (select id from public.enrollments where student_id in ($studentIdSql));"
+    "delete from public.enrollment_signatures where enrollment_id in (select id from public.enrollments where student_id in ($studentIdSql));"
+    "delete from public.enrollment_subjects where enrollment_id in (select id from public.enrollments where student_id in ($studentIdSql));"
+    "delete from public.enrollments where student_id in ($studentIdSql);"
+    "delete from public.student_requirements where student_id in ($studentIdSql);"
+    "delete from public.audit_logs where actor_profile_id in ($profileIdSql) or target_id in ($profileIdSql, $studentIdSql, '$enrollmentId');"
+    "delete from public.students where id in ($studentIdSql);"
+    "delete from public.official_student_records where student_id_number in ($studentNumberSql);"
+    "delete from public.profiles where id in ($profileIdSql);"
+    "delete from auth.users where id in ($profileIdSql);"
+    "delete from public.programs where id = '$candidateProgramId' and not exists (select 1 from public.students where program_id = '$candidateProgramId');"
+    "commit;"
+  ) -join "`n"
+  try {
+    Invoke-LocalSql $cleanupSql | Out-Null
+  } catch {
+    Write-Warning "Exact concurrency-fixture cleanup failed. No database reset was attempted. Inspect only fixture suffix $runSuffix before cleanup."
   }
 }
