@@ -102,7 +102,7 @@ async function cleanupSignature(admin: ReturnType<typeof createSupabaseAdminClie
 async function loadEnrollment(supabase: SupabaseClient, enrollmentId: string) {
   const { data, error } = await supabase
     .from("enrollments")
-    .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, financial_document_version, status, enrollment_subjects(id, course_code, course_description, units, day, time, room), students(id, profile_id)")
+    .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, financial_document_version, medical_document_version, status, enrollment_subjects(id, course_code, course_description, units, day, time, room), students(id, profile_id)")
     .eq("id", enrollmentId)
     .maybeSingle();
 
@@ -318,6 +318,8 @@ export async function verifyHealthClearance(
 
   const signatureId = randomUUID();
   const path = buildSignatureStoragePath(enrollmentId, "NURSE", signatureId);
+  const currentEnrollment = await loadEnrollment(supabase, enrollmentId);
+  if (currentEnrollment.error || !currentEnrollment.enrollment) return { success: false, message: "Enrollment data could not be loaded safely." };
   const upload = await safeUploadSignature(path, payload.bytes);
   if (!upload) {
     return { success: false, message: "Secure signature storage is not configured." };
@@ -334,7 +336,8 @@ export async function verifyHealthClearance(
     academicYear: requirement.academic_year,
     semester: requirement.semester,
     applicability: "APPLICABLE",
-    status: "VERIFIED"
+    status: "VERIFIED",
+    medical_document_version: currentEnrollment.enrollment.medical_document_version
   });
   const { data: rpcData, error: rpcError } = await supabase.rpc("verify_health_requirement_with_signature", {
     p_enrollment_id: enrollmentId,

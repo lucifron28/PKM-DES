@@ -29,6 +29,21 @@ test("financial revisions change only Accounting hashes and preserve unset legac
   );
 });
 
+test("medical revisions bind both Nurse document types and leave other roles unchanged", () => {
+  const nurseHash = (version?: number | null) => computeEnrollmentDocumentHash(
+    { ...enrollment, medical_document_version: version }, "NURSE", "HEALTH_CLEARANCE", "ENROLLMENT_CLEARANCE"
+  );
+  assert.equal(nurseHash(), nurseHash(null));
+  assert.notEqual(nurseHash(), nurseHash(1));
+  assert.notEqual(nurseHash(1), nurseHash(2));
+  const health = { enrollmentId: enrollment.id, studentId: "student", academicYear: enrollment.academic_year,
+    semester: enrollment.semester, applicability: "APPLICABLE" as const, status: "VERIFIED" as const };
+  assert.equal(computeHealthRecordDocumentHash(health), computeHealthRecordDocumentHash({ ...health, medical_document_version: null }));
+  assert.notEqual(computeHealthRecordDocumentHash({ ...health, medical_document_version: 1 }), computeHealthRecordDocumentHash({ ...health, medical_document_version: 2 }));
+  assert.equal(computeEnrollmentDocumentHash(enrollment, "ACCOUNTANT", "ACCOUNTING_CLEARANCE", "ENROLLMENT_CLEARANCE"),
+    computeEnrollmentDocumentHash({ ...enrollment, medical_document_version: 2 }, "ACCOUNTANT", "ACCOUNTING_CLEARANCE", "ENROLLMENT_CLEARANCE"));
+});
+
 test("role and clearance mappings fail closed", () => {
   assert.equal(isValidOfficialRoleClearance("LIBRARIAN", "LIBRARY_CLEARANCE"), true);
   assert.equal(isValidOfficialRoleClearance("NURSE", "ACCOUNTING_CLEARANCE"), false);

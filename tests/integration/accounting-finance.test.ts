@@ -139,3 +139,64 @@ test('P4 finance roles, decimal receipts, immutable history and Accounting signa
   }
   assert.equal(rows.get('approved_hash').accountant, rows.get('paid_hash').accountant);
 });
+
+test('authorized SQL demo reset removes application history, preserves staff and delegates Storage cleanup', () => {
+  const f = fixture();
+  const medicalPath = `${f.enrollment}/${f.owner}/${randomUUID()}.pdf`;
+  const resetSubject = randomUUID(), resetSignature = randomUUID();
+  run(`${f.setup}
+    insert into public.subjects(id,program_id,course_code,course_description,units,year_level,semester)
+    select '${resetSubject}',program_id,'RESET-${resetSubject}','Reset fixture subject',3,'1st Year','2nd Semester' from public.enrollments where id='${f.enrollment}';
+    insert into public.enrollment_subjects(enrollment_id,subject_id,course_code,course_description,units)
+    values('${f.enrollment}','${resetSubject}','RESET-${resetSubject}','Reset fixture subject',3);
+    ${f.as(f.accountant)}
+    select * from public.accountant_configure_fee('TUITION_FEE',19.99,true);
+    select * from public.accountant_save_enrollment_assessment('${f.enrollment}',array['TUITION_FEE']);
+    select * from public.accountant_record_enrollment_payment('${f.enrollment}',5.55,'Reset receipt');
+    ${f.as(f.owner)}
+    insert into storage.objects(bucket_id,name,owner_id,metadata)
+    values('enrollment-medical-documents','${medicalPath}','${f.owner}',jsonb_build_object('mimetype','application/pdf','size',123));
+    do $$ begin
+      if (select outcome from public.record_student_medical_document_upload('${f.enrollment}','${medicalPath}','reset.pdf','application/pdf',123,repeat('d',64))) <> 'saved' then raise exception 'reset medical fixture not saved'; end if;
+    end $$;
+    reset role;
+    select set_config('pkm.fixture.reset_accountant_hash',private.enrollment_document_hash('${f.enrollment}','ACCOUNTANT','ACCOUNTING_CLEARANCE','ENROLLMENT_CLEARANCE'),true);
+    ${f.as(f.accountant)}
+    do $$ begin
+      if (select outcome from public.record_official_clearance_signature('${f.enrollment}','ACCOUNTING_CLEARANCE','${resetSignature}','${f.enrollment}/ACCOUNTANT/${resetSignature}.png',repeat('e',64),current_setting('pkm.fixture.reset_accountant_hash'))) <> 'signed' then raise exception 'reset signature fixture did not sign'; end if;
+    end $$;
+    reset role;
+    update public.enrollments set status='APPROVED' where id='${f.enrollment}';
+    ${f.as(f.registrar)}
+    select * from public.pull_out_enrollments(array['${f.enrollment}']::uuid[],'Full reset fixture');
+    do $$ begin
+      begin perform public.reset_demo_student_data(); raise exception 'authenticated reset executed'; exception when insufficient_privilege then null; end;
+      begin delete from public.enrollment_status_events where enrollment_id='${f.enrollment}'; raise exception 'authenticated history deletion executed'; exception when insufficient_privilege then null; end;
+    end $$;
+    reset role; set local role service_role;
+    select set_config('request.jwt.claim.role','service_role',true);
+    select * from public.reset_demo_student_data();
+    reset role;
+    do $$ begin
+      if exists(select 1 from public.students where id='${f.student}') or exists(select 1 from public.enrollments where id='${f.enrollment}')
+        or exists(select 1 from public.enrollment_status_events where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.enrollment_financial_assessments where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.enrollment_financial_payments where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.enrollment_medical_documents where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.enrollment_subjects where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.enrollment_clearances where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.enrollment_signatures where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.student_requirements where student_id='${f.student}')
+        or exists(select 1 from public.health_record_updates where enrollment_id='${f.enrollment}')
+        or exists(select 1 from public.profiles where id='${f.owner}')
+        or exists(select 1 from auth.users where id='${f.owner}') then raise exception 'reset left student data'; end if;
+      if (select count(*) from public.profiles where id in ('${f.accountant}','${f.nurse}','${f.registrar}')) <> 3
+        or (select count(*) from auth.users where id in ('${f.accountant}','${f.nurse}','${f.registrar}')) <> 3 then raise exception 'reset removed staff'; end if;
+      -- The reset service removes bytes/Storage metadata through SDK remove BEFORE this RPC.
+      -- A direct SQL-only call must leave Storage metadata alone; its separate SDK contract is tested.
+      if not exists(select 1 from storage.objects where bucket_id='enrollment-medical-documents' and name='${medicalPath}') then
+        raise exception 'SQL-only reset removed Storage metadata outside the Storage API contract';
+      end if;
+    end $$;
+    rollback;`);
+});

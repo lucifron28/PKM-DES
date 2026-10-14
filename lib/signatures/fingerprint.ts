@@ -20,6 +20,7 @@ export type EnrollmentFingerprintInput = {
   year_level: string;
   registration_pledge_version?: string | null;
   financial_document_version?: number | null;
+  medical_document_version?: number | null;
   enrollment_subjects?: EnrollmentFingerprintSubject[] | null;
 };
 
@@ -117,6 +118,10 @@ export function computeEnrollmentDocumentHash(
       documentType === "ENROLLMENT_CLEARANCE" && (enrollment.financial_document_version ?? 0) > 0) {
     return createHash("sha256").update(`${baseHash}\nfinancial_document_version=${enrollment.financial_document_version}`, "utf8").digest("hex");
   }
+  if (signerRole === "NURSE" && clearanceType === "HEALTH_CLEARANCE" &&
+      documentType === "ENROLLMENT_CLEARANCE" && (enrollment.medical_document_version ?? 0) > 0) {
+    return createHash("sha256").update(`${baseHash}\nmedical_document_version=${enrollment.medical_document_version}`, "utf8").digest("hex");
+  }
   return baseHash;
 }
 
@@ -127,6 +132,7 @@ export type HealthRecordFingerprintInput = {
   semester: string;
   applicability: RequirementApplicability;
   status: "PENDING" | "VERIFIED" | "REJECTED";
+  medical_document_version?: number | null;
 };
 
 export function computeHealthRecordDocumentHash(input: HealthRecordFingerprintInput) {
@@ -144,5 +150,8 @@ export function computeHealthRecordDocumentHash(input: HealthRecordFingerprintIn
     "document_type=HEALTH_RECORD"
   ].join("\n");
 
-  return createHash("sha256").update(material, "utf8").digest("hex");
+  const baseHash = createHash("sha256").update(material, "utf8").digest("hex");
+  return (input.medical_document_version ?? 0) > 0
+    ? createHash("sha256").update(`${baseHash}\nmedical_document_version=${input.medical_document_version}`, "utf8").digest("hex")
+    : baseHash;
 }

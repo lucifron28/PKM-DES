@@ -137,6 +137,7 @@ export type Enrollment = {
   semester: Semester;
   registration_pledge_version?: string | null;
   financial_document_version?: number | null;
+  medical_document_version?: number | null;
   status: EnrollmentReviewStatus;
   submitted_at: string;
   reviewed_at: string | null;

@@ -428,7 +428,8 @@ export default async function PendingEnrollmentsPage({
                               academicYear: enrollment.academic_year,
                               semester: enrollment.semester,
                               applicability: "APPLICABLE",
-                              status: "VERIFIED"
+                              status: "VERIFIED",
+                              medical_document_version: enrollment.medical_document_version
                             })
                           : nurseSignature.document_type === "ENROLLMENT_CLEARANCE" &&
                             nurseSignature.document_hash === computeEnrollmentDocumentHash(
