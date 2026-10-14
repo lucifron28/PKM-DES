@@ -126,7 +126,7 @@ export default async function EnrollmentStatusPage() {
   if (currentTermEnrollment) {
     const { data: detailedEnrollmentData, error: detailedEnrollmentError } = await supabase
       .from("enrollments")
-      .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units, day, time, room)")
+      .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, financial_document_version, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units, day, time, room)")
       .eq("id", currentTermEnrollment.id)
       .maybeSingle();
     if (detailedEnrollmentError) {
@@ -317,6 +317,7 @@ export default async function EnrollmentStatusPage() {
         ) : null}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ButtonLink href="/student/balances" variant="outline" className="w-full">View Balances</ButtonLink>
           {actions.map(([href, label, variant]) => <ButtonLink key={href} href={href} variant={variant as "primary" | "secondary" | "outline"} className="w-full">{label}</ButtonLink>)}
           {ENABLE_STUB_PAGES ? <><ButtonLink href="/student/grades" variant="outline" className="w-full">View Grades</ButtonLink><ButtonLink href="/student/schedule" variant="outline" className="w-full">View Class Schedule</ButtonLink><ButtonLink href="/student/balances" variant="outline" className="w-full">View Balances</ButtonLink></> : null}
         </div>

@@ -19,6 +19,7 @@ import { getHealthVerificationViewState, healthVerificationStateLabel, healthVer
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatName } from "@/lib/utils/format";
 import type { CourseOffering, EnrollmentDecisionNotification } from "@/types/database";
+import { parseEnrollmentFinancialSummary } from "@/lib/finance/presentation";
 
 export default async function AdminRegistrationFormPage({
   params,
@@ -53,6 +54,21 @@ export default async function AdminRegistrationFormPage({
   if (!enrollment) {
     return <EmptyState title="Enrollment record not found." description="The selected registration form is not available." />;
   }
+
+  const [registrarApprovalResult, financialSummaryResult] = await Promise.all([
+    supabase.rpc("get_registrar_approval", { p_enrollment_id: enrollment.id }),
+    supabase.rpc("get_enrollment_financial_summary", { p_enrollment_id: enrollment.id })
+  ]);
+  const { data: registrarApprovalData, error: registrarApprovalError } = registrarApprovalResult;
+  const { data: financialSummaryData, error: financialSummaryError } = financialSummaryResult;
+  if (registrarApprovalError) console.error("registration_form:registrar_approval_load");
+  if (financialSummaryError) console.error("registration_form:financial_summary_load");
+  const approvalCandidate = Array.isArray(registrarApprovalData) ? registrarApprovalData[0] : null;
+  const registrarApproval = approvalCandidate && typeof approvalCandidate.name === "string" && approvalCandidate.name.trim() &&
+    typeof approvalCandidate.approved_at === "string" && Number.isFinite(Date.parse(approvalCandidate.approved_at))
+    ? { name: approvalCandidate.name.trim(), approved_at: approvalCandidate.approved_at }
+    : null;
+  const financialSummary = parseEnrollmentFinancialSummary(financialSummaryData);
 
   const offeringsResult = enrollment.status === "PENDING"
     ? await supabase
@@ -94,7 +110,9 @@ export default async function AdminRegistrationFormPage({
   const presentationEnrollment: PrintableEnrollment = {
     ...enrollment,
     enrollment_signatures: signatureResult.signatures,
-    health_requirement_applicability: healthApplicability
+    health_requirement_applicability: healthApplicability,
+    financial_summary: financialSummary,
+    registrar_approval: registrarApproval
   };
   const studentPledgeSignature = signatureResult.signatures
     .filter((signature) => signature.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE")

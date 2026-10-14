@@ -19,6 +19,7 @@ export type EnrollmentFingerprintInput = {
   program_id: string;
   year_level: string;
   registration_pledge_version?: string | null;
+  financial_document_version?: number | null;
   enrollment_subjects?: EnrollmentFingerprintSubject[] | null;
 };
 
@@ -109,9 +110,14 @@ export function computeEnrollmentDocumentHash(
   clearanceType: SignatureClearanceType,
   documentType: SignatureDocumentType
 ) {
-  return createHash("sha256")
+  const baseHash = createHash("sha256")
     .update(canonicalEnrollmentMaterial(enrollment, signerRole, clearanceType, documentType), "utf8")
     .digest("hex");
+  if (signerRole === "ACCOUNTANT" && clearanceType === "ACCOUNTING_CLEARANCE" &&
+      documentType === "ENROLLMENT_CLEARANCE" && (enrollment.financial_document_version ?? 0) > 0) {
+    return createHash("sha256").update(`${baseHash}\nfinancial_document_version=${enrollment.financial_document_version}`, "utf8").digest("hex");
+  }
+  return baseHash;
 }
 
 export type HealthRecordFingerprintInput = {

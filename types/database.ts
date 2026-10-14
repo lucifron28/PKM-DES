@@ -136,6 +136,7 @@ export type Enrollment = {
   academic_year: string;
   semester: Semester;
   registration_pledge_version?: string | null;
+  financial_document_version?: number | null;
   status: EnrollmentReviewStatus;
   submitted_at: string;
   reviewed_at: string | null;
@@ -146,6 +147,29 @@ export type Enrollment = {
   enrollment_subjects?: EnrollmentSubject[] | null;
   enrollment_clearances?: EnrollmentClearance[] | null;
   enrollment_signatures?: EnrollmentSignature[] | null;
+  financial_summary?: EnrollmentFinancialSummary | null;
+  registrar_approval?: RegistrarApproval | null;
+};
+
+export type RegistrarApproval = {
+  name: string;
+  approved_at: string;
+};
+
+export type EnrollmentFinancialSummary = {
+  fee_items: Array<{ fee_code: string; fee_name: string; amount: number }> | null;
+  assessment_version: string | null;
+  assessed_amount: number | null;
+  paid_amount: number | null;
+  balance_due: number | null;
+  currency_code: "PHP";
+  payment_status: "UNASSESSED" | "UNPAID" | "PARTIAL" | "PAID";
+  payment_receipts: Array<{
+    payment_id: string;
+    amount: number;
+    paid_at: string;
+    reference: string | null;
+  }>;
 };
 
 export type EnrollmentStatusEvent = {

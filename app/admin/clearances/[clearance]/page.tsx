@@ -12,6 +12,8 @@ import {
   type OfficialClearanceQueueRow
 } from "@/lib/official-roles/queue";
 import { healthVerificationStateLabel } from "@/lib/health-records/presentation";
+import { FeeCatalogEditor } from "@/components/accounting/fee-catalog-editor";
+import { parseAccountingFeeCatalog } from "@/lib/finance/fee-codes";
 
 function statusLabel(status: OfficialClearanceQueueRow["clearanceStatus"]) {
   if (status === "SIGNED") return "Signed";
@@ -62,6 +64,15 @@ export default async function OfficialClearanceQueuePage({
     return <EmptyState title={`${workspace.label} is unavailable`} description="The clearance queue could not be loaded safely. Please refresh and try again." />;
   }
 
+  const accountingCatalogResult = workspace.role === "ACCOUNTANT"
+    ? await supabase.rpc("list_accounting_fee_catalog")
+    : null;
+  const accountingCatalog = accountingCatalogResult && !accountingCatalogResult.error
+    ? parseAccountingFeeCatalog(accountingCatalogResult.data)
+    : [];
+  const accountingCatalogError = Boolean(accountingCatalogResult && (accountingCatalogResult.error || accountingCatalog === null));
+  if (accountingCatalogResult?.error) console.error("accounting_fee_catalog:load_failed", { code: accountingCatalogResult.error.code });
+
   const allRows: OfficialClearanceQueueRow[] = result.rows as OfficialClearanceQueueRow[];
   const rows = filterOfficialClearanceQueue(allRows, status, search);
   const pendingCount = allRows.filter((row) => row.clearanceStatus === "PENDING" || row.clearanceStatus === "INVALIDATED").length;
@@ -100,6 +111,8 @@ export default async function OfficialClearanceQueuePage({
           <p className="mt-1 text-sm text-slateui-secondary">Current active enrollment term.</p>
         </div>
       </div>
+
+      {workspace.role === "ACCOUNTANT" ? <FeeCatalogEditor items={accountingCatalog ?? []} loadError={accountingCatalogError} /> : null}
 
       <Card>
         <CardHeader title="Clearance queue" description={workspace.role === "NURSE" ? "Use Pending, Verified, Rejected, or All to focus the applicable Incoming 1st Year female records." : "Use Pending, Signed, or All to focus the list. Search by student, ID, program, or term."} />

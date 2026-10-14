@@ -16,6 +16,19 @@ const enrollment = {
   ]
 };
 
+test("financial revisions change only Accounting hashes and preserve unset legacy hashes", () => {
+  const hash = (version?: number | null) => computeEnrollmentDocumentHash(
+    { ...enrollment, financial_document_version: version }, "ACCOUNTANT", "ACCOUNTING_CLEARANCE", "ENROLLMENT_CLEARANCE"
+  );
+  assert.equal(hash(), hash(null));
+  assert.notEqual(hash(), hash(1));
+  assert.notEqual(hash(1), hash(2));
+  assert.equal(
+    computeEnrollmentDocumentHash(enrollment, "STUDENT", "STUDENT_ENROLLMENT_SIGNATURE", "ENROLLMENT_REGISTRATION"),
+    computeEnrollmentDocumentHash({ ...enrollment, financial_document_version: 2 }, "STUDENT", "STUDENT_ENROLLMENT_SIGNATURE", "ENROLLMENT_REGISTRATION")
+  );
+});
+
 test("role and clearance mappings fail closed", () => {
   assert.equal(isValidOfficialRoleClearance("LIBRARIAN", "LIBRARY_CLEARANCE"), true);
   assert.equal(isValidOfficialRoleClearance("NURSE", "ACCOUNTING_CLEARANCE"), false);
