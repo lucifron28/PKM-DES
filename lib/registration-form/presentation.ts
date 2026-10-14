@@ -2,6 +2,9 @@ import type { EnrollmentReviewStatus, SignatureClearanceType, Subject } from "@/
 
 export type RegistrationLoadItem = Pick<Subject, "id" | "course_code" | "course_description" | "units"> & {
   source?: "legacy_subject" | "course_offering" | "snapshot";
+  day?: string | null;
+  time?: string | null;
+  room?: string | null;
 };
 
 export type RegistrationClassificationMarks = {
