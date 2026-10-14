@@ -1,0 +1,10 @@
+Irregular legacy removal SQL passed: default preserves legacy; explicit selection removes only omitted rows; retained snapshot/source/schedule IDs unchanged; denied mutations leave load unchanged.
+✔ irregular load selection removes only omitted legacy rows and preserves retained snapshots (83.7809ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 151.4991

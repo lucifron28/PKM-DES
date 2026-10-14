@@ -13,7 +13,7 @@ export type EnrollmentClearanceStatus = "PENDING" | "SIGNED" | "NOT_APPLICABLE" 
 export type AccountStatus = "ACTIVE" | "PENDING" | "SETUP";
 export type EnrollmentStatus = "NOT ENROLLED" | "PENDING" | "ENROLLED";
 export type EnrollmentDecision = "APPROVED" | "REJECTED";
-export type EnrollmentReviewStatus = "PENDING" | EnrollmentDecision;
+export type EnrollmentReviewStatus = "PENDING" | EnrollmentDecision | "PULLED_OUT";
 export type EnrollmentDecisionNotificationStatus = "PENDING" | "SENDING" | "SENT" | "FAILED";
 export type StandardLoadStatus = "DRAFT" | "ACTIVE";
 export type StudentType =
@@ -121,6 +121,9 @@ export type EnrollmentSubject = {
   course_code: string;
   course_description: string;
   units: number;
+  day?: string | null;
+  time?: string | null;
+  room?: string | null;
   subjects?: Subject | null;
   course_offerings?: CourseOffering | null;
 };
@@ -133,6 +136,8 @@ export type Enrollment = {
   academic_year: string;
   semester: Semester;
   registration_pledge_version?: string | null;
+  financial_document_version?: number | null;
+  medical_document_version?: number | null;
   status: EnrollmentReviewStatus;
   submitted_at: string;
   reviewed_at: string | null;
@@ -143,6 +148,41 @@ export type Enrollment = {
   enrollment_subjects?: EnrollmentSubject[] | null;
   enrollment_clearances?: EnrollmentClearance[] | null;
   enrollment_signatures?: EnrollmentSignature[] | null;
+  financial_summary?: EnrollmentFinancialSummary | null;
+  registrar_approval?: RegistrarApproval | null;
+};
+
+export type RegistrarApproval = {
+  name: string;
+  approved_at: string;
+};
+
+export type EnrollmentFinancialSummary = {
+  fee_items: Array<{ fee_code: string; fee_name: string; amount: number }> | null;
+  assessment_version: string | null;
+  assessed_amount: number | null;
+  paid_amount: number | null;
+  balance_due: number | null;
+  currency_code: "PHP";
+  payment_status: "UNASSESSED" | "UNPAID" | "PARTIAL" | "PAID";
+  payment_receipts: Array<{
+    payment_id: string;
+    amount: number;
+    paid_at: string;
+    reference: string | null;
+  }>;
+};
+
+export type EnrollmentStatusEvent = {
+  id: string;
+  enrollment_id: string;
+  event_type: "PULLED_OUT" | "REINSTATED";
+  from_status: EnrollmentReviewStatus;
+  to_status: EnrollmentReviewStatus;
+  actor_profile_id: string;
+  reason: string | null;
+  created_at: string;
+  profiles?: Pick<Profile, "first_name" | "last_name"> | null;
 };
 
 export type EnrollmentClearance = {

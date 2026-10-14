@@ -66,7 +66,8 @@ export async function loadEnrollmentSignaturePresentation(
           academicYear: enrollment.academic_year,
           semester: enrollment.semester,
           applicability: "APPLICABLE",
-          status: "VERIFIED"
+          status: "VERIFIED",
+          medical_document_version: enrollment.medical_document_version
         });
       } else if (healthRequirement?.applicability !== "APPLICABLE" && row.document_type === "ENROLLMENT_CLEARANCE") {
         expectedHash = computeEnrollmentDocumentHash(

@@ -44,5 +44,8 @@ export function enrollmentBadgeTone(status?: string): BadgeTone {
   if (status === "REJECTED") {
     return "error";
   }
+  if (status === "PULLED_OUT") {
+    return "warning";
+  }
   return "neutral";
 }

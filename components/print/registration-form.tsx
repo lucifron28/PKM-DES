@@ -10,22 +10,29 @@ import {
   REGISTRATION_FORM_SUBJECT_ROW_COUNT,
   sortRegistrationSubjects
 } from "@/lib/registration-form/presentation";
+import { formatRegistrationAmount, formatRegistrationReceiptDate, presentRegistrationFinance } from "@/lib/registration-form/finance";
 import { formatDate, formatName } from "@/lib/utils/format";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import type { PresentedEnrollmentSignature } from "@/lib/signatures/presentation";
 import type { CourseOffering, Enrollment, EnrollmentClearance, EnrollmentSubject, OfficialStudentRecord, Profile, Student, Subject } from "@/types/database";
 import type { RegistrationLoadItem } from "@/lib/registration-form/presentation";
+import type { PrintableRegistrationFinancialSummary } from "@/lib/registration-form/finance";
 
 type EnrollmentSubjectRow = Pick<EnrollmentSubject, "id" | "subject_id" | "course_offering_id" | "course_code" | "course_description" | "units"> & {
+  day?: string | null;
+  time?: string | null;
+  room?: string | null;
   subjects?: Subject | null;
   course_offerings?: CourseOffering | null;
 };
 
-export type PrintableEnrollment = Omit<Enrollment, "enrollment_clearances" | "enrollment_signatures"> & {
+export type PrintableEnrollment = Omit<Enrollment, "enrollment_clearances" | "enrollment_signatures" | "financial_summary" | "registrar_approval"> & {
   students?: (Student & { profiles?: Profile | null; official_student_records?: OfficialStudentRecord | null }) | null;
   enrollment_subjects?: EnrollmentSubjectRow[] | null;
   enrollment_clearances?: EnrollmentClearance[] | null;
   enrollment_signatures?: PresentedEnrollmentSignature[] | null;
+  financial_summary?: PrintableRegistrationFinancialSummary | null;
+  registrar_approval?: { name: string; approved_at: string } | null;
   health_requirement_applicability?: "APPLICABLE" | "NOT_APPLICABLE" | null;
 };
 
@@ -43,12 +50,15 @@ const REGISTRATION_FORM_COPIES = [
 ] as const;
 
 function getRegistrationLoadItem(row: EnrollmentSubjectRow): RegistrationLoadItem | null {
+  const scheduleSnapshots = { day: row.day, time: row.time, room: row.room };
+
   if (row.course_code.trim() && row.course_description.trim()) {
     return {
       id: row.id,
       course_code: row.course_code,
       course_description: row.course_description,
       units: row.units,
+      ...scheduleSnapshots,
       source: row.course_offering_id ? "course_offering" : "snapshot"
     };
   }
@@ -59,6 +69,7 @@ function getRegistrationLoadItem(row: EnrollmentSubjectRow): RegistrationLoadIte
       course_code: row.course_offerings.course_code,
       course_description: row.course_offerings.course_description,
       units: row.course_offerings.units,
+      ...scheduleSnapshots,
       source: "course_offering"
     };
   }
@@ -69,6 +80,7 @@ function getRegistrationLoadItem(row: EnrollmentSubjectRow): RegistrationLoadIte
       course_code: row.subjects.course_code,
       course_description: row.subjects.course_description,
       units: row.subjects.units,
+      ...scheduleSnapshots,
       source: "legacy_subject"
     };
   }
@@ -84,7 +96,8 @@ function printableDate(value?: string | null) {
   return new Intl.DateTimeFormat("en-PH", {
     day: "numeric",
     month: "long",
-    year: "numeric"
+    year: "numeric",
+    timeZone: "Asia/Manila"
   }).format(new Date(value));
 }
 
@@ -125,6 +138,37 @@ function FeeLine({ label, value, emphasis = false }: { label: string; value: str
   );
 }
 
+function RegistrationPaymentSummary({ finance }: { finance: ReturnType<typeof presentRegistrationFinance> }) {
+  return (
+    <div
+      className="registration-print-finance-summary"
+      aria-label="Assessment and payment summary"
+      data-assessment-version={finance.assessmentVersion ?? undefined}
+    >
+      <span>STATUS: {finance.paymentStatus ?? "Not configured"}</span>
+      <span>PAID: {formatRegistrationAmount(finance.paidAmount, finance.currencyCode)} | BALANCE DUE: {formatRegistrationAmount(finance.balanceDue, finance.currencyCode)}</span>
+    </div>
+  );
+}
+
+function RegistrarApprovalBlock({ approval }: { approval: PrintableEnrollment["registrar_approval"] }) {
+  return (
+    <div className="registration-print-signature registration-print-signature-registrar">
+      <div className="registration-print-signature-image" aria-hidden="true" />
+      <div className={`registration-print-signature-name${approval ? "" : " registration-print-signature-name-spacer"}`}>
+        {approval?.name ?? "\u00a0"}
+      </div>
+      <div className="registration-print-signature-line" />
+      <div className="registration-print-signature-label">Registrar</div>
+      {approval ? (
+        <div className="registration-print-signature-meta print-hidden">
+          <span>Approved — {formatDate(approval.approved_at)}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SignatureBlock({
   label,
   signature,
@@ -144,14 +188,16 @@ function SignatureBlock({
         {signatureIsCurrent && signature?.signed_url ? (
           <img src={signature.signed_url} alt={`${label} electronic signature`} />
         ) : (
-          <span>{signature ? "Signature invalidated" : unsignedLabel}</span>
+          <span className="print-hidden">{signature ? "Signature invalidated" : unsignedLabel}</span>
         )}
+      </div>
+      <div className={`registration-print-signature-name${signatureIsCurrent && signature ? "" : " registration-print-signature-name-spacer"}`}>
+        {signatureIsCurrent && signature ? signature.signer_name_snapshot : "\u00a0"}
       </div>
       <div className="registration-print-signature-line" />
       <div className="registration-print-signature-label">{label}</div>
       {signatureIsCurrent && signature ? (
-        <div className="registration-print-signature-meta">
-          <span>{signature.signer_name_snapshot}</span>
+        <div className="registration-print-signature-meta print-hidden">
           <span>Electronically Signed — {formatDate(signature.signed_at)}</span>
         </div>
       ) : null}
@@ -173,6 +219,7 @@ export function RegistrationForm({
   );
   const totalUnits = getRegistrationTotalUnits(subjects);
   const marks = getRegistrationClassificationMarks(student?.student_type);
+  const finance = presentRegistrationFinance(enrollment.financial_summary);
   const studentName = formatName(profile?.first_name, profile?.last_name);
   const yearNumber = enrollment.year_level.match(/\d+/)?.[0] ?? enrollment.year_level;
   const yearSection = enrollment.programs?.code ? `${enrollment.programs.code} ${yearNumber}` : enrollment.year_level;
@@ -190,7 +237,7 @@ export function RegistrationForm({
           <p className="text-xs font-semibold uppercase tracking-wide text-primary-800">PKM-DES Research MVP</p>
           <h2 className="mt-1 text-xl font-bold text-slateui-text">Registration Form Preview</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slateui-muted">
-            Live enrollment values are placed into the supplied REGISTRATION FORM 4G paper layout. Unsupported fees, schedules, rooms, and receipt fields remain unconfigured.
+            Live enrollment values are placed into the supplied REGISTRATION FORM 4G paper layout. Missing schedules remain TBA; receipt rows stay blank until ledger details are loaded.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -286,9 +333,9 @@ export function RegistrationForm({
                         <td className={isEndMarker ? "registration-print-nothing-follows" : ""}>
                           {subject?.course_description ?? (isEndMarker ? "******nothing follows******" : isEmptyEnrollment ? "No subjects attached to this enrollment." : "")}
                         </td>
-                        <td>{subject ? "TBA" : ""}</td>
-                        <td>{subject ? "TBA" : ""}</td>
-                        <td>{subject ? "TBA" : ""}</td>
+                        <td>{subject ? printableValue(subject.time, "TBA") : ""}</td>
+                        <td>{subject ? printableValue(subject.day, "TBA") : ""}</td>
+                        <td>{subject ? printableValue(subject.room, "TBA") : ""}</td>
                         <td>{subject ? subject.units : ""}</td>
                       </tr>
                     );
@@ -315,23 +362,24 @@ export function RegistrationForm({
                     {REGISTRATION_FORM_MISCELLANEOUS_FEE_LABELS.map((label) => (
                       <tr key={label}>
                         <th scope="row">{label}</th>
-                        <td>Not configured</td>
+                        <td>{formatRegistrationAmount(finance.miscellaneousAmounts[label], finance.currencyCode)}</td>
                       </tr>
                     ))}
                 </tbody>
                 <tfoot>
                   <tr>
                     <th scope="row">TOTAL</th>
-                    <th>Not configured</th>
+                    <th>{formatRegistrationAmount(finance.miscellaneousTotal, finance.currencyCode)}</th>
                   </tr>
                 </tfoot>
               </table>
             </div>
 
             <div className="registration-print-tuition">
-              <FeeLine label="TUITION FEE:" value="Not configured" />
-              <FeeLine label="NSTP FEE (CWTS):" value="Not configured" />
-              <FeeLine label="TOTAL TOSF:" value="Not configured" emphasis />
+              <FeeLine label="TUITION FEE:" value={formatRegistrationAmount(finance.tuitionAmount, finance.currencyCode)} />
+              <FeeLine label="NSTP FEE (CWTS):" value={formatRegistrationAmount(finance.nstpAmount, finance.currencyCode)} />
+              <FeeLine label="TOTAL TOSF:" value={formatRegistrationAmount(finance.assessedAmount, finance.currencyCode)} emphasis />
+              <RegistrationPaymentSummary finance={finance} />
               <table className="registration-print-payment-table">
                 <thead>
                   <tr>
@@ -341,28 +389,38 @@ export function RegistrationForm({
                   </tr>
                 </thead>
                 <tbody>
-                  {[0, 1, 2, 3].map((row) => (
-                    <tr key={row}>
-                      <td><span className="sr-only">Not configured</span></td>
-                      <td><span className="sr-only">Not configured</span></td>
-                      <td><span className="sr-only">Not configured</span></td>
+                  {Array.from({ length: 4 }, (_, index) => {
+                    const receipt = finance.paymentReceipts[index];
+                    return (
+                    <tr key={receipt?.payment_id ?? `empty-receipt-${index}`}>
+                      <td>{receipt ? formatRegistrationReceiptDate(receipt.paid_at) : ""}</td>
+                      <td>{receipt?.reference ?? ""}</td>
+                      <td>{receipt ? formatRegistrationAmount(receipt.amount, finance.currencyCode) : ""}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
+              {finance.unprintedReceiptCount > 0 ? (
+                <p className="registration-print-receipt-overflow print-hidden" role="note">
+                  Showing the {finance.paymentReceipts.length} latest of {finance.paymentReceipts.length + finance.unprintedReceiptCount} receipts. {finance.unprintedReceiptCount} earlier receipts are not shown in this form; the paid total includes all receipts.
+                </p>
+              ) : null}
 
             </div>
 
             <div className="registration-print-approvals">
               <div className="registration-print-scholarship">
                 <h3>SCHOLARSHIP:</h3>
-                <div className="registration-print-scholarship-line"><span>Not configured</span></div>
+                <div className="registration-print-scholarship-line">
+                  <span>{formatRegistrationAmount(finance.scholarshipAmount, finance.currencyCode)}</span>
+                </div>
               </div>
             </div>
 
             <div className="registration-print-signatures" aria-label="Enrollment signatures">
               <SignatureBlock
-                label="Accountant"
+                label="ACTING MUNICIPAL ACCOUNTANT"
                 signature={signatures.get("ACCOUNTING_CLEARANCE")}
                 className="registration-print-signature-accountant"
               />
@@ -372,7 +430,7 @@ export function RegistrationForm({
                 className="registration-print-signature-librarian"
               />
               <SignatureBlock
-                label="School Nurse"
+                label="NURSE"
                 signature={signatures.get("HEALTH_CLEARANCE")}
                 unsignedLabel={healthApplicability === "NOT_APPLICABLE" ? "Not Applicable" : "Pending Nurse Verification"}
                 className="registration-print-signature-nurse"
@@ -382,6 +440,7 @@ export function RegistrationForm({
                 signature={signatures.get("DEAN_CLEARANCE")}
                 className="registration-print-signature-dean"
               />
+              <RegistrarApprovalBlock approval={enrollment.registrar_approval} />
               <SignatureBlock
                 label="Program Chair"
                 signature={signatures.get("PROGRAM_CLEARANCE")}
@@ -398,7 +457,10 @@ export function RegistrationForm({
               I hereby authorize the Pambayang Kolehiyo ng Mauban to collect, process, store and utilize my personal data for the management of my academic records and related administrative purposes. This includes, but is not limited to, the use of my data for instructional purposes, research, data and system improvements.
             </p>
             <div className="registration-print-privacy-signature">
-              <SignatureBlock label="Student" signature={signatures.get("STUDENT_ENROLLMENT_SIGNATURE")} />
+                <SignatureBlock
+                  label="Signature over printed name of the student"
+                  signature={signatures.get("STUDENT_ENROLLMENT_SIGNATURE")}
+                />
             </div>
           </section>
         </div>

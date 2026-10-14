@@ -18,6 +18,8 @@ const overrides = [
   ["portal-navigation.tsx", "./pkm-mark", resolve(stubDir, "pkm-mark.tsx")],
   ["portal-navigation.tsx", "./side-nav", resolve(stubDir, "side-nav.tsx")],
   ["enrollment-review-controls.tsx", "@/app/admin/enrollments/actions", resolve(stubDir, "enrollment-review-actions.ts")],
+  ["enrollment-bulk-actions.tsx", "@/app/admin/enrollments/actions", resolve(stubDir, "enrollment-workflow-actions.ts")],
+  ["enrollment-load-editor.tsx", "@/app/admin/enrollments/load-actions", resolve(stubDir, "enrollment-workflow-actions.ts")],
   ["enrollment-review-controls.tsx", "@/components/requirements/requirement-status-card", resolve(stubDir, "requirement-status-card.tsx")],
   [".tsx", "next/link", resolve(stubDir, "next-link.tsx")],
   [".tsx", "next/navigation", resolve(stubDir, "next-navigation.tsx")],

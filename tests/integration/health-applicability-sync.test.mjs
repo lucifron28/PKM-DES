@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 
@@ -155,7 +155,7 @@ test("Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard 
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id = '${signatureId}';
       DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-SPEC-01'));
       DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-SPEC-01'));
@@ -218,6 +218,29 @@ test("Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard 
   // ATTEMPT 2: Special Nurse verification path is ALLOWED
   const [specHashRes] = query(`SELECT private.health_record_document_hash('${enrollmentId}', '${studentId}', '2025-2026', '2nd Semester', 'APPLICABLE', 'VERIFIED');`);
   const specHash = specHashRes[0];
+  const missingFormSignatureId = "55555555-6666-4444-5555-666666666666";
+  const missingFormPath = `${enrollmentId}/NURSE/${missingFormSignatureId}.png`;
+
+  const [missingForm] = query(`
+    SELECT outcome
+    FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
+    LATERAL public.verify_health_requirement_with_signature(
+      '${enrollmentId}', '${missingFormSignatureId}', '${missingFormPath}', '${sigHash}', '${specHash}', true, 'Must require submitted form'
+    );
+  `);
+  assert.equal(missingForm[0], "health_record_not_submitted");
+  assert.equal(query(`SELECT count(*) FROM public.enrollment_signatures WHERE id = '${missingFormSignatureId}';`)[0][0], "0");
+
+  const [formSaved] = query(`
+    SELECT outcome, record_id
+    FROM (SELECT set_config('request.jwt.claim.sub', '${authUserId}', true) as set_jwt) s,
+    LATERAL public.save_health_record_update(
+      '${enrollmentId}', 'No condition reported', null, null, null, null, null,
+      'None reported', null, null
+    );
+  `);
+  assert.equal(formSaved[0], "saved");
+  assert.ok(formSaved[1]);
 
   const [specSuccess] = query(`
     SELECT outcome
@@ -238,7 +261,7 @@ test("Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard 
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id = '${signatureId}';
       DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
@@ -264,7 +287,7 @@ test("Step 20 & 21: Standard Nurse path allowed for Old Student / Incoming Male 
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id = '${signatureId}';
       DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-STD-01'));
       DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-STD-01'));
@@ -345,7 +368,7 @@ test("Step 20 & 21: Standard Nurse path allowed for Old Student / Incoming Male 
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id = '${signatureId}';
       DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
@@ -362,6 +385,10 @@ test("Step 20 & 21: Standard Nurse path allowed for Old Student / Incoming Male 
 
 test("Step 15: Nurse queue includes all students in authorized scope with workflow mode flags", () => {
   const nurseUserId = "55555555-8888-1111-2222-333333333333";
+  const studentProfileId = randomUUID();
+  const queueStudentId = randomUUID();
+  const queueEnrollmentId = randomUUID();
+  const studentNumber = `QUEUE-${queueStudentId}`;
 
   execute(`
     INSERT INTO auth.users (id, email) VALUES ('${nurseUserId}', 'nurse.queue@example.com') ON CONFLICT (id) DO NOTHING;
@@ -372,13 +399,29 @@ test("Step 15: Nurse queue includes all students in authorized scope with workfl
   `);
 
   const queueRows = query(`
+    BEGIN;
+    INSERT INTO auth.users (id, email) VALUES ('${studentProfileId}', '${studentProfileId}@example.test');
+    INSERT INTO public.profiles (id, role, first_name, last_name, email, account_status)
+    VALUES ('${studentProfileId}', 'student', 'Queue', 'Fixture', '${studentProfileId}@example.test', 'ACTIVE');
+    INSERT INTO public.students (id, profile_id, student_id_number, program_id, year_level, student_type)
+    SELECT '${queueStudentId}', '${studentProfileId}', '${studentNumber}', id, '1st Year', 'Incoming 1st Year Student'
+    FROM public.programs WHERE code = 'BSAIS';
+    INSERT INTO public.official_student_records (student_id_number, first_name, last_name, email, program_id, year_level, student_type, gender_sex, enrollment_status)
+    SELECT '${studentNumber}', 'Queue', 'Fixture', '${studentProfileId}@example.test', id, '1st Year', 'Incoming 1st Year Student', 'Female', 'NOT ENROLLED'
+    FROM public.programs WHERE code = 'BSAIS';
+    INSERT INTO public.enrollments (id, student_id, program_id, year_level, academic_year, semester)
+    SELECT '${queueEnrollmentId}', '${queueStudentId}', id, '1st Year', '2098-2099', '2nd Semester'
+    FROM public.programs WHERE code = 'BSAIS';
     SELECT enrollment_id, student_name, student_type, special_form_required
     FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
-    LATERAL public.list_nurse_health_requirements();
-  `);
+    LATERAL public.list_nurse_health_requirements()
+    WHERE enrollment_id = '${queueEnrollmentId}';
+    ROLLBACK;
+  `).filter((row) => row.length === 4);
 
   // Confirm queue returns rows and distinguishes special_form_required
-  assert.ok(queueRows.length >= 1);
+  assert.equal(queueRows.length, 1);
+  assert.equal(queueRows[0][3], 't');
   for (const row of queueRows) {
     const [, , studentType, specialForm] = row;
     if (studentType === "Incoming 1st Year Student" || studentType === "Transferee") {
@@ -408,7 +451,7 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id IN ('${sig1}', '${sig2}', '${sig3}');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-MODE-01'));
       DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-MODE-01'));
@@ -474,13 +517,35 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
   const [specHashRes] = query(`SELECT private.health_record_document_hash('${enrollmentId}', '${studentId}', '2025-2026', '2nd Semester', 'APPLICABLE', 'VERIFIED');`);
   const sig2Path = `${enrollmentId}/NURSE/${sig2}.png`;
 
-  query(`
+  const [missingForm] = query(`
     SELECT outcome
     FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
     LATERAL public.verify_health_requirement_with_signature(
       '${enrollmentId}', '${sig2}', '${sig2Path}', '${dummyHash}', '${specHashRes[0]}', true, 'Special verified'
     );
   `);
+  assert.equal(missingForm[0], "health_record_not_submitted");
+  assert.equal(query(`SELECT count(*) FROM public.enrollment_signatures WHERE id = '${sig2}';`)[0][0], "0");
+
+  const [formSaved] = query(`
+    SELECT outcome, record_id
+    FROM (SELECT set_config('request.jwt.claim.sub', '${authUserId}', true) as set_jwt) s,
+    LATERAL public.save_health_record_update(
+      '${enrollmentId}', 'No condition reported', null, null, null, null, null,
+      'None reported', null, null
+    );
+  `);
+  assert.equal(formSaved[0], "saved");
+  assert.ok(formSaved[1]);
+
+  const [specSuccess] = query(`
+    SELECT outcome
+    FROM (SELECT set_config('request.jwt.claim.sub', '${nurseUserId}', true) as set_jwt) s,
+    LATERAL public.verify_health_requirement_with_signature(
+      '${enrollmentId}', '${sig2}', '${sig2Path}', '${dummyHash}', '${specHashRes[0]}', true, 'Special verified'
+    );
+  `);
+  assert.equal(specSuccess[0], "signed");
   assert.equal(query(`SELECT private.health_clearance_is_current('${enrollmentId}');`)[0][0], "t");
   assert.equal(query(`SELECT status FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'HEALTH_CLEARANCE';`)[0][0], "SIGNED");
 
@@ -529,7 +594,7 @@ test("Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Stand
     DO $$
     BEGIN
       PERFORM set_config('pkm.demo_reset', 'true', true);
-      DELETE FROM public.audit_logs WHERE actor_profile_id = '${nurseUserId}';
+      DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${authUserId}', '${nurseUserId}');
       DELETE FROM public.enrollment_signatures WHERE id IN ('${sig1}', '${sig2}', '${sig3}');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';
@@ -569,6 +634,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
       PERFORM set_config('pkm.demo_reset', 'true', true);
       DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${adminUserId}', '${libUserId}', '${nurseUserId}', '${chairUserId}', '${acctUserId}', '${deanUserId}', '${studentAuthId}');
       DELETE FROM public.enrollment_decision_notifications WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR'));
+      DELETE FROM public.enrollment_status_events WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR'));
       DELETE FROM public.enrollment_signatures WHERE id IN ('${sigStudent}', '${legacySigStudent}', '${sigLib}', '${sigNurse}', '${sigChair}', '${sigAcct}', '${sigDean}');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR'));
       DELETE FROM public.enrollment_subjects WHERE enrollment_id IN (SELECT id FROM public.enrollments WHERE student_id IN (SELECT id FROM public.students WHERE student_id_number = '25-ALL-CLR'));
@@ -628,7 +694,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   // Test 1: Approval fails with no signatures -> incomplete_clearances
   const [res0] = query(`
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
-    LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
+    LATERAL public.registrar_review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
   `);
   assert.equal(res0[0], "incomplete_clearances");
 
@@ -708,7 +774,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   // Approval remains blocked before the remaining official clearances are signed.
   const [res1] = query(`
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
-    LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
+    LATERAL public.registrar_review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
   `);
   assert.equal(res1[0], "incomplete_clearances");
 
@@ -736,7 +802,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   // Still missing Dean -> incomplete_clearances
   const [res5] = query(`
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
-    LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
+    LATERAL public.registrar_review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
   `);
   assert.equal(res5[0], "incomplete_clearances");
 
@@ -752,7 +818,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   );
   const [staleStudentApproval] = query(`
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
-    LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
+    LATERAL public.registrar_review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
   `);
   assert.equal(staleStudentApproval[0], "incomplete_clearances");
   // Only the new policy acknowledgment and current Student fingerprint can complete the form.
@@ -780,12 +846,112 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
   // Now all 6 required clearances are SIGNED and current -> Approval succeeds!
   const [apprSuccess] = query(`
     SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
-    LATERAL public.review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
+    LATERAL public.registrar_review_pending_enrollment('${enrollmentId}', 'APPROVED', null);
   `);
   assert.equal(apprSuccess[0], "approved");
 
-  // Verify enrollment status is APPROVED
-  assert.equal(query(`SELECT status FROM public.enrollments WHERE id = '${enrollmentId}';`)[0][0], "APPROVED");
+  // Authenticated Registrar calls the guarded wrapper; the former public RPC is no longer executable.
+  const authenticatedReview = query(`
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true);
+    SELECT outcome FROM public.registrar_review_pending_enrollment('${enrollmentId}', 'REJECTED', null);
+    ROLLBACK;
+  `);
+  assert.ok(authenticatedReview.some(([outcome]) => outcome === "already_reviewed"));
+  execute(`
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true);
+    DO $$
+    BEGIN
+      IF has_function_privilege(current_user, 'public.review_pending_enrollment(uuid,text,text)', 'EXECUTE') THEN
+        RAISE EXCEPTION 'authenticated can execute the old approval RPC';
+      END IF;
+      BEGIN
+        PERFORM public.review_pending_enrollment('${enrollmentId}', 'REJECTED', null);
+        RAISE EXCEPTION 'the old approval RPC unexpectedly executed';
+      EXCEPTION WHEN insufficient_privilege THEN
+        NULL;
+      END;
+    END $$;
+    ROLLBACK;
+  `);
+
+  const [officialReview] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${libUserId}', true) as set_jwt) s,
+    LATERAL public.registrar_review_pending_enrollment('${enrollmentId}', 'REJECTED', null);
+  `);
+  assert.equal(officialReview[0], "unauthorized");
+
+  // PULL OUT records the prior APPROVED state and retains student, enrollment, subjects, and signatures.
+  const [subjectRow] = query(`
+    SELECT id, units::text FROM public.enrollment_subjects
+    WHERE enrollment_id = '${enrollmentId}' ORDER BY course_code LIMIT 1;
+  `);
+  assert.ok(subjectRow);
+  const [signatureCountBeforePullOut] = query(`
+    SELECT count(*) FROM public.enrollment_signatures WHERE enrollment_id = '${enrollmentId}';
+  `);
+  const [pullOutResult] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
+    LATERAL public.pull_out_enrollments(ARRAY['${enrollmentId}']::uuid[], 'Registrar integration pull out');
+  `);
+  assert.equal(pullOutResult[0], "pulled_out");
+  assert.equal(query(`SELECT status FROM public.enrollments WHERE id = '${enrollmentId}';`)[0][0], "PULLED_OUT");
+  assert.equal(query(`SELECT count(*) FROM public.students WHERE id = '${studentId}';`)[0][0], "1");
+  assert.equal(query(`SELECT count(*) FROM public.enrollments WHERE id = '${enrollmentId}';`)[0][0], "1");
+  assert.equal(query(`SELECT count(*) FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';`)[0][0] > 0, true);
+  assert.equal(query(`SELECT count(*) FROM public.enrollment_signatures WHERE enrollment_id = '${enrollmentId}';`)[0][0], signatureCountBeforePullOut[0]);
+  const [pullOutEvent] = query(`
+    SELECT from_status, to_status, actor_profile_id, reason, created_at IS NOT NULL
+    FROM public.enrollment_status_events
+    WHERE enrollment_id = '${enrollmentId}' AND event_type = 'PULLED_OUT';
+  `);
+  assert.deepEqual(pullOutEvent, ["APPROVED", "PULLED_OUT", adminUserId, "Registrar integration pull out", "t"]);
+
+  // Finalized subjects remain immutable, and a missing clearance blocks restoring APPROVED.
+  execute(`
+    BEGIN;
+    SET LOCAL ROLE authenticated;
+    SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true);
+    DO $$
+    BEGIN
+      IF has_table_privilege(current_user, 'public.enrollments', 'UPDATE')
+        OR has_table_privilege(current_user, 'public.enrollment_subjects', 'UPDATE') THEN
+        RAISE EXCEPTION 'authenticated Registrar can edit enrollment content';
+      END IF;
+      BEGIN
+        UPDATE public.enrollment_subjects SET units = units + 1 WHERE id = '${subjectRow[0]}';
+        RAISE EXCEPTION 'approved enrollment subject edit unexpectedly executed';
+      EXCEPTION WHEN insufficient_privilege THEN
+        NULL;
+      END;
+    END $$;
+    ROLLBACK;
+  `);
+  execute(`
+    DO $$ BEGIN
+      BEGIN
+        UPDATE public.enrollment_subjects SET units = units + 1 WHERE id = '${subjectRow[0]}';
+        RAISE EXCEPTION 'database owner changed a finalized subject';
+      EXCEPTION WHEN SQLSTATE '55000' THEN NULL;
+      END;
+    END $$;
+    UPDATE public.enrollment_clearances SET status = 'PENDING'
+    WHERE enrollment_id = '${enrollmentId}' AND clearance_type = 'LIBRARY_CLEARANCE';
+  `);
+  assert.equal(query(`SELECT units::text FROM public.enrollment_subjects WHERE id = '${subjectRow[0]}';`)[0][0], subjectRow[1]);
+  const [staleReinstate] = query(`
+    SELECT outcome FROM (SELECT set_config('request.jwt.claim.sub', '${adminUserId}', true) as set_jwt) s,
+    LATERAL public.reinstate_enrollments(ARRAY['${enrollmentId}']::uuid[]);
+  `);
+  assert.equal(staleReinstate[0], "incomplete_clearances");
+  assert.equal(query(`SELECT status FROM public.enrollments WHERE id = '${enrollmentId}';`)[0][0], "PULLED_OUT");
+  assert.equal(query(`SELECT private.enrollment_required_clearances_are_current('${enrollmentId}');`)[0][0], "f");
+
+  // Verify enrollment status remains PULLED_OUT after the rejected stale restore.
+  assert.equal(query(`SELECT status FROM public.enrollments WHERE id = '${enrollmentId}';`)[0][0], "PULLED_OUT");
 
   // Cleanup
   execute(`
@@ -794,6 +960,7 @@ test("Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 requi
       PERFORM set_config('pkm.demo_reset', 'true', true);
       DELETE FROM public.audit_logs WHERE actor_profile_id IN ('${adminUserId}', '${libUserId}', '${nurseUserId}', '${chairUserId}', '${acctUserId}', '${deanUserId}', '${studentAuthId}');
       DELETE FROM public.enrollment_decision_notifications WHERE enrollment_id = '${enrollmentId}';
+      DELETE FROM public.enrollment_status_events WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_signatures WHERE id IN ('${sigStudent}', '${legacySigStudent}', '${sigLib}', '${sigNurse}', '${sigChair}', '${sigAcct}', '${sigDean}');
       DELETE FROM public.enrollment_clearances WHERE enrollment_id = '${enrollmentId}';
       DELETE FROM public.enrollment_subjects WHERE enrollment_id = '${enrollmentId}';

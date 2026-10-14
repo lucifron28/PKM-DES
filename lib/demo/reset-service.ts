@@ -45,16 +45,23 @@ export async function resetStudentDemoData(admin: SupabaseClient): Promise<DemoR
   assertNoError(enrollmentsError, "Could not identify student enrollments");
 
   const enrollmentIds = ((enrollmentData as IdRow[] | null) ?? []).map((row) => row.id);
-  const [signatureResult, specimenResult] = await Promise.all([
+  const [signatureResult, specimenResult, medicalResult] = await Promise.all([
     enrollmentIds.length
       ? admin.from("enrollment_signatures").select("signature_storage_path").in("enrollment_id", enrollmentIds)
       : Promise.resolve({ data: [], error: null }),
     profileIds.length
       ? admin.from("signature_specimens").select("signature_storage_path").in("profile_id", profileIds)
+      : Promise.resolve({ data: [], error: null }),
+    enrollmentIds.length
+      ? admin.from("enrollment_medical_documents").select("storage_path").in("enrollment_id", enrollmentIds)
       : Promise.resolve({ data: [], error: null })
   ]);
   assertNoError(signatureResult.error, "Could not identify enrollment signature files");
   assertNoError(specimenResult.error, "Could not identify saved signature specimen files");
+  assertNoError(medicalResult.error, "Could not identify supporting medical files");
+
+  await removeStorageObjects(admin, "enrollment-medical-documents",
+    ((medicalResult.data as Array<{ storage_path: string }> | null) ?? []).map((row) => row.storage_path));
 
   await removeStorageObjects(
     admin,

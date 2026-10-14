@@ -7,6 +7,9 @@ export type EnrollmentFingerprintSubject = {
   course_code: string;
   course_description: string;
   units: number;
+  day?: string | null;
+  time?: string | null;
+  room?: string | null;
 };
 
 export type EnrollmentFingerprintInput = {
@@ -16,6 +19,8 @@ export type EnrollmentFingerprintInput = {
   program_id: string;
   year_level: string;
   registration_pledge_version?: string | null;
+  financial_document_version?: number | null;
+  medical_document_version?: number | null;
   enrollment_subjects?: EnrollmentFingerprintSubject[] | null;
 };
 
@@ -45,6 +50,24 @@ function canonicalEnrollmentMaterial(
     .map((subject) => `${subject.course_code}|${subject.course_description}|${subject.units}`)
     .join("\n");
   const totalUnits = (enrollment.enrollment_subjects ?? []).reduce((total, subject) => total + subject.units, 0);
+  const scheduledSubjects = (enrollment.enrollment_subjects ?? [])
+    .map((subject) => ({
+      course_code: subject.course_code,
+      course_description: subject.course_description,
+      units: subject.units,
+      day: subject.day?.trim() ?? "",
+      time: subject.time?.trim() ?? "",
+      room: subject.room?.trim() ?? ""
+    }))
+    .sort((left, right) =>
+      compareStrings(left.course_code, right.course_code) ||
+      compareStrings(left.course_description, right.course_description) ||
+      left.units - right.units ||
+      compareStrings(left.day, right.day) ||
+      compareStrings(left.time, right.time) ||
+      compareStrings(left.room, right.room)
+    );
+  const hasSchedule = scheduledSubjects.some((subject) => subject.day || subject.time || subject.room);
   const pledgeVersion =
     signerRole === "STUDENT" &&
     clearanceType === "STUDENT_ENROLLMENT_SIGNATURE" &&
@@ -66,6 +89,15 @@ function canonicalEnrollmentMaterial(
     `document_type=${documentType}`
   ];
 
+  if (hasSchedule) {
+    material.push(
+      `subject_schedules=${scheduledSubjects
+        .map((subject) =>
+          `${subject.course_code}|${subject.course_description}|${subject.units}|${subject.day}|${subject.time}|${subject.room}`
+        )
+        .join("\n")}`
+    );
+  }
   if (pledgeVersion !== null && pledgeVersion !== undefined) {
     material.push(`pledge_policy_version=${pledgeVersion}`);
   }
@@ -79,9 +111,18 @@ export function computeEnrollmentDocumentHash(
   clearanceType: SignatureClearanceType,
   documentType: SignatureDocumentType
 ) {
-  return createHash("sha256")
+  const baseHash = createHash("sha256")
     .update(canonicalEnrollmentMaterial(enrollment, signerRole, clearanceType, documentType), "utf8")
     .digest("hex");
+  if (signerRole === "ACCOUNTANT" && clearanceType === "ACCOUNTING_CLEARANCE" &&
+      documentType === "ENROLLMENT_CLEARANCE" && (enrollment.financial_document_version ?? 0) > 0) {
+    return createHash("sha256").update(`${baseHash}\nfinancial_document_version=${enrollment.financial_document_version}`, "utf8").digest("hex");
+  }
+  if (signerRole === "NURSE" && clearanceType === "HEALTH_CLEARANCE" &&
+      documentType === "ENROLLMENT_CLEARANCE" && (enrollment.medical_document_version ?? 0) > 0) {
+    return createHash("sha256").update(`${baseHash}\nmedical_document_version=${enrollment.medical_document_version}`, "utf8").digest("hex");
+  }
+  return baseHash;
 }
 
 export type HealthRecordFingerprintInput = {
@@ -91,6 +132,7 @@ export type HealthRecordFingerprintInput = {
   semester: string;
   applicability: RequirementApplicability;
   status: "PENDING" | "VERIFIED" | "REJECTED";
+  medical_document_version?: number | null;
 };
 
 export function computeHealthRecordDocumentHash(input: HealthRecordFingerprintInput) {
@@ -108,5 +150,8 @@ export function computeHealthRecordDocumentHash(input: HealthRecordFingerprintIn
     "document_type=HEALTH_RECORD"
   ].join("\n");
 
-  return createHash("sha256").update(material, "utf8").digest("hex");
+  const baseHash = createHash("sha256").update(material, "utf8").digest("hex");
+  return (input.medical_document_version ?? 0) > 0
+    ? createHash("sha256").update(`${baseHash}\nmedical_document_version=${input.medical_document_version}`, "utf8").digest("hex")
+    : baseHash;
 }

@@ -1,0 +1,10 @@
+✔ student signing without registration policy consent is rejected before database access (0.8842ms)
+✔ stored future policy version rejects signing and ignores a client-supplied version (0.2453ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 280.1328

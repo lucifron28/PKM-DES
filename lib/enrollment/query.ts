@@ -157,7 +157,7 @@ export function countEnrollmentStatuses(rows: Array<Pick<EnrollmentReportingRow,
       counts[row.status] += 1;
       return counts;
     },
-    { PENDING: 0, APPROVED: 0, REJECTED: 0, total: 0 }
+    { PENDING: 0, APPROVED: 0, REJECTED: 0, PULLED_OUT: 0, total: 0 }
   );
 }
 

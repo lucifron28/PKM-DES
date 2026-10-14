@@ -1,0 +1,53 @@
+Final CI enrollment UI command exit_code: 0
+Unable to open session log file "C:\\Users\\Ron\\.cache\\starship\\session_aMlsp5EKqR9kxw4O.log": Os { code: 5, kind: PermissionDenied, message: "Access is denied." }!
+
+
+> pkm-des@0.1.0 test:enrollment-review-ui
+> tsx --import ./tests/support/stub-loader.mjs --test components/admin/*.test.tsx
+
+✔ enrollment review opens an accessible modal and restores focus and scroll state (171.8078ms)
+✔ modal disables Confirm Approval when standard student is missing Nurse signature (13.9298ms)
+✔ modal disables Confirm Approval when special student has Health Record pending (12.7224ms)
+✔ modal disables Confirm Approval when Nurse is signed but another clearance is incomplete (11.1767ms)
+✔ modal enables Confirm Approval when all required clearances are complete and current (10.1079ms)
+✔ bulk select-all caps at 100 and keeps counts and submitted IDs aligned, then clears (148.9401ms)
+✔ cancelling bulk rejection prevents the action; confirmation allows it (15.5187ms)
+✔ irregular assignment submits explicitly kept legacy subjects and permits removing all legacy rows (24.7837ms)
+✔ load editor keyed remount submits refreshed subject/schedule values without deleted offering IDs (12.8202ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1259.2211
+
+
+Command: npm run typecheck
+Command: npx tsx --import ./tests/support/stub-loader.mjs --test components/admin/enrollment-workflow.test.tsx
+Exit code: 0
+Focused ESLint on edited component/action/test/loader files: exit 0
+P3 migration SHA256: 98F1D93B5FBE498E8134083C626E582004E5B9A44E86E04A253D30859E7E9344
+Test SHA256: EE19EF8A4FC7F2A4FA3870138997A4CF279FA0D2AA4E5F615C45EC95F91B9349
+Editor SHA256: 99D43E28FBA64AB7F2EC841AC9C36F64A22C6C1558A150946402AC5470423734
+Load action SHA256: F656B0C72394605591EEC57136F69AD3FEAE033989D0853C047DC8B50DF84CA5
+
+Unable to open session log file "C:\\Users\\Ron\\.cache\\starship\\session_mCpaeN0T1B3qM6bD.log": Os { code: 5, kind: PermissionDenied, message: "Access is denied." }!
+
+
+> pkm-des@0.1.0 typecheck
+> tsc --noEmit
+
+✔ bulk select-all caps at 100 and keeps counts and submitted IDs aligned, then clears (157.5953ms)
+✔ cancelling bulk rejection prevents the action; confirmation allows it (16.087ms)
+✔ irregular assignment submits explicitly kept legacy subjects and permits removing all legacy rows (27.259ms)
+✔ load editor keyed remount submits refreshed subject/schedule values without deleted offering IDs (15.7315ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1361.2298

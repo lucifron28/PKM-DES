@@ -1,0 +1,12 @@
+✔ mock SDK reset removes all linked student files before SQL and excludes staff lookups (1.1997ms)
+✔ mock SDK batches medical removal without dropping linked files (0.2801ms)
+✔ mock SDK lookup or file-removal failure aborts before SQL reset (0.6347ms)
+✔ mock SDK reset propagates SQL failure or missing report after successful removals (0.2699ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 123.4869

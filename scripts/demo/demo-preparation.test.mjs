@@ -90,6 +90,21 @@ test("each standard official demo login owns exactly one intended capability", (
   assert.equal(new Set(DEMO_OFFICIAL_ACCOUNTS.map((account) => account.email)).size, 6);
 });
 
+test("official account preparation uses the verified Word names for future profile snapshots", () => {
+  assert.deepEqual(
+    new Map(DEMO_OFFICIAL_ACCOUNTS.map((account) => [account.officialRole ?? "REGISTRAR", account.firstName + " " + account.lastName])),
+    new Map([
+      ["REGISTRAR", "Shaira Mae E. Pajares"],
+      ["LIBRARIAN", "Mary May P. Lanceta"],
+      ["NURSE", "Danella Joyce P. Urgelles, RN"],
+      ["PROGRAM_CHAIR", "Ronel E. Caagbay, CPA, MBA"],
+      ["ACCOUNTANT", "Atty. Romela D. Devera"],
+      ["DEAN", "Justiniano L. Santos, CPA, MBA"]
+    ])
+  );
+  assert.equal(DEMO_SHARED_PASSWORD, "Demo1234!");
+});
+
 test("verification requires the public Supabase key for real login checks", () => {
   assert.equal(readDemoVerificationConfiguration(environment()).anonKey, "anon-key-placeholder");
   assert.throws(

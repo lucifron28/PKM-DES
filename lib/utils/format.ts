@@ -12,7 +12,8 @@ export function formatDate(value?: string | null) {
     month: "short",
     day: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZone: "Asia/Manila"
   }).format(new Date(value));
 }
 

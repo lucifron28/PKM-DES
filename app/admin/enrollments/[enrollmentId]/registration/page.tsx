@@ -2,6 +2,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ClearanceOverview } from "@/components/signatures/clearance-overview";
+import { EnrollmentLoadEditor } from "@/components/admin/enrollment-load-editor";
+import { RegistrarWorkflowSteps } from "@/components/admin/registrar-workflow-steps";
 import { ESignatureInput } from "@/components/signatures/e-signature-input";
 import { RegistrationForm, type PrintableEnrollment } from "@/components/print/registration-form";
 import { retryEnrollmentDecisionEmailAction } from "@/app/admin/enrollments/actions";
@@ -16,21 +18,22 @@ import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatName } from "@/lib/utils/format";
-import type { EnrollmentDecisionNotification } from "@/types/database";
+import type { CourseOffering, EnrollmentDecisionNotification } from "@/types/database";
+import { parseEnrollmentFinancialSummary } from "@/lib/finance/presentation";
 
 export default async function AdminRegistrationFormPage({
   params,
   searchParams
 }: {
   params: Promise<{ enrollmentId: string }>;
-  searchParams?: Promise<{ email?: string }>;
+  searchParams?: Promise<{ email?: string; load?: string; load_error?: string }>;
 }) {
   const { supabase, profile } = await requireRegistrarAdmin();
   const { enrollmentId } = await params;
 
   const { data, error } = await supabase
     .from("enrollments")
-    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, subjects(*), course_offerings(*))")
+    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, day, time, room, subjects(*), course_offerings(*))")
     .eq("id", enrollmentId)
     .maybeSingle();
 
@@ -51,6 +54,32 @@ export default async function AdminRegistrationFormPage({
   if (!enrollment) {
     return <EmptyState title="Enrollment record not found." description="The selected registration form is not available." />;
   }
+
+  const [registrarApprovalResult, financialSummaryResult] = await Promise.all([
+    supabase.rpc("get_registrar_approval", { p_enrollment_id: enrollment.id }),
+    supabase.rpc("get_enrollment_financial_summary", { p_enrollment_id: enrollment.id })
+  ]);
+  const { data: registrarApprovalData, error: registrarApprovalError } = registrarApprovalResult;
+  const { data: financialSummaryData, error: financialSummaryError } = financialSummaryResult;
+  if (registrarApprovalError) console.error("registration_form:registrar_approval_load");
+  if (financialSummaryError) console.error("registration_form:financial_summary_load");
+  const approvalCandidate = Array.isArray(registrarApprovalData) ? registrarApprovalData[0] : null;
+  const registrarApproval = approvalCandidate && typeof approvalCandidate.name === "string" && approvalCandidate.name.trim() &&
+    typeof approvalCandidate.approved_at === "string" && Number.isFinite(Date.parse(approvalCandidate.approved_at))
+    ? { name: approvalCandidate.name.trim(), approved_at: approvalCandidate.approved_at }
+    : null;
+  const financialSummary = parseEnrollmentFinancialSummary(financialSummaryData);
+
+  const offeringsResult = enrollment.status === "PENDING"
+    ? await supabase
+        .from("course_offerings")
+        .select("id, program_id, academic_year, semester, year_level, course_code, course_description, units, source_document, created_at, updated_at")
+        .eq("program_id", enrollment.program_id)
+        .eq("academic_year", enrollment.academic_year)
+        .eq("semester", enrollment.semester)
+        .order("course_code", { ascending: true })
+    : { data: [], error: null };
+  if (offeringsResult.error) console.error("registration_form:course_offerings_load");
 
   const signatureSpecimen = await loadCurrentSignatureSpecimen(supabase, profile.id);
 
@@ -81,7 +110,9 @@ export default async function AdminRegistrationFormPage({
   const presentationEnrollment: PrintableEnrollment = {
     ...enrollment,
     enrollment_signatures: signatureResult.signatures,
-    health_requirement_applicability: healthApplicability
+    health_requirement_applicability: healthApplicability,
+    financial_summary: financialSummary,
+    registrar_approval: registrarApproval
   };
   const studentPledgeSignature = signatureResult.signatures
     .filter((signature) => signature.clearance_type === "STUDENT_ENROLLMENT_SIGNATURE")
@@ -111,9 +142,53 @@ export default async function AdminRegistrationFormPage({
       : emailParams.email === "failed"
         ? "The enrollment decision was saved, but the student notification could not be sent."
         : null;
+  const editorSubjects = (enrollment.enrollment_subjects ?? []).map((subject) => ({
+    id: subject.id,
+    course_offering_id: subject.course_offering_id,
+    course_code: subject.course_code,
+    course_description: subject.course_description,
+    units: subject.units,
+    day: subject.day ?? null,
+    time: subject.time ?? null,
+    room: subject.room ?? null
+  }));
+  const editorKey = JSON.stringify({
+    term: [enrollment.academic_year, enrollment.semester],
+    status: enrollment.status,
+    subjects: editorSubjects.map(({ id, course_offering_id, units, day, time, room }) => [id, course_offering_id, units, day, time, room]),
+    offerings: ((offeringsResult.data as CourseOffering[] | null) ?? []).map((offering) => offering.id)
+  });
 
   return (
     <div className="space-y-4">
+      <div className="print-hidden"><RegistrarWorkflowSteps status={enrollment.status} /></div>
+      {emailParams.load_error ? (
+        <p role="alert" className="print-hidden rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950">
+          {emailParams.load_error === "approved_immutable"
+            ? "Approved enrollment contents cannot be edited. Historical subject data and signatures remain unchanged."
+            : emailParams.load_error === "unauthorized"
+              ? "Registrar access is required to edit this load."
+              : emailParams.load_error === "invalid_schedule_text"
+                ? "Day, time, and room fields cannot contain the | character or line breaks."
+              : "The load or schedule could not be saved. Check the values and try again."}
+        </p>
+      ) : null}
+      {emailParams.load ? (
+        <p role="status" className="print-hidden rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-900">
+          {emailParams.load === "created" ? "Pending Registrar-managed enrollment created." : emailParams.load === "unchanged" ? "No load or schedule values changed." : "Enrollment load and schedules saved."}
+        </p>
+      ) : null}
+      <div className="print-hidden">
+        <EnrollmentLoadEditor
+          key={editorKey}
+          enrollmentId={enrollment.id}
+          status={enrollment.status}
+          studentType={enrollment.students?.student_type ?? "Regular Student"}
+          subjects={editorSubjects}
+          offerings={(offeringsResult.data as CourseOffering[] | null) ?? []}
+          notice={offeringsResult.error ? "Course offerings could not be loaded. Existing schedule values can still be reviewed." : null}
+        />
+      </div>
       {emailMessage ? (
         <div
           role={emailParams.email === "sent" ? "status" : "alert"}

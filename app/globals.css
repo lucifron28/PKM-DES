@@ -790,6 +790,18 @@ textarea {
   font-size: 0.82rem;
 }
 
+.registration-print-finance-summary {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  margin-top: 0.2rem;
+}
+
+.registration-print-finance-summary span {
+  white-space: nowrap;
+}
+
 .registration-print-payment-table {
   margin-top: 0.65rem;
 }
@@ -800,6 +812,13 @@ textarea {
 
 .registration-print-payment-table td {
   height: 1.25rem;
+}
+
+.registration-print-receipt-overflow {
+  color: #7c2d12;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  margin: 0.25rem 0 0;
 }
 
 .registration-print-scholarship {
@@ -820,9 +839,9 @@ textarea {
   gap: 0.55rem 1rem;
   grid-area: signatures;
   grid-template-areas:
-    "accountant librarian"
-    ". nurse"
-    "dean program-chair";
+    "program-chair librarian"
+    "accountant nurse"
+    "dean registrar";
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
   max-width: none;
@@ -847,6 +866,10 @@ textarea {
 
 .registration-print-signature-program-chair {
   grid-area: program-chair;
+}
+
+.registration-print-signature-registrar {
+  grid-area: registrar;
 }
 
 .registration-print-signature {
@@ -874,6 +897,17 @@ textarea {
   font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
+}
+
+.registration-print-signature-name {
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.registration-print-signature-name-spacer {
+  display: none;
 }
 
 .registration-print-signature-line {
@@ -930,6 +964,26 @@ textarea {
   font-weight: 900;
   justify-self: start;
   padding: 0.3rem 0.45rem;
+}
+
+.registration-print[data-copy-recipient="student"] .registration-print-copy-label {
+  border-color: #000000;
+  color: #000000;
+}
+
+.registration-print[data-copy-recipient="dean"] .registration-print-copy-label {
+  border-color: #e97132;
+  color: #e97132;
+}
+
+.registration-print[data-copy-recipient="registrar"] .registration-print-copy-label {
+  border-color: #196b24;
+  color: #196b24;
+}
+
+.registration-print[data-copy-recipient="accountant"] .registration-print-copy-label {
+  border-color: #153d63;
+  color: #153d63;
 }
 
 .registration-print-privacy-signature {
@@ -1072,11 +1126,12 @@ textarea {
 
   .registration-print-signatures {
     grid-template-areas:
+      "program-chair"
       "accountant"
       "librarian"
       "nurse"
       "dean"
-      "program-chair";
+      "registrar";
     grid-template-columns: minmax(0, 1fr);
     margin-inline: 0;
     max-width: none;
@@ -1104,6 +1159,16 @@ textarea {
   @page {
     size: Letter portrait;
     margin: 0.2in 0.22in;
+  }
+
+  @page registration-form {
+    size: Letter portrait;
+    margin: 0.5in 0.3125in 0.2in;
+  }
+
+  @page registration-policy {
+    size: Letter portrait;
+    margin: 0.5in 0.5in 0.2in;
   }
 
   html,
@@ -1147,10 +1212,11 @@ textarea {
     line-height: 1.1 !important;
     margin: 0 !important;
     max-width: none !important;
-    min-height: 10.6in !important;
+    min-height: 10.3in !important;
     page-break-after: always !important;
     page-break-inside: avoid !important;
-    padding-top: 0.28in !important;
+    page: registration-form !important;
+    padding: 0 0.1875in !important;
     width: 100% !important;
   }
 
@@ -1347,6 +1413,12 @@ textarea {
     font-size: 8pt !important;
   }
 
+  .registration-print-finance-summary {
+    font-size: 6pt !important;
+    line-height: 1.15 !important;
+    margin-top: 0.01in !important;
+  }
+
   .registration-print-payment-table {
     margin-top: 0.04in !important;
   }
@@ -1368,21 +1440,53 @@ textarea {
   .registration-print-signatures {
     align-items: start !important;
     break-inside: avoid !important;
-    gap: 0.07in 0.2in !important;
+    gap: 0.03in 0.62in !important;
     grid-template-areas:
-      "accountant librarian"
-      ". nurse"
-      "dean program-chair" !important;
+      ". program-chair"
+      ". dean"
+      "librarian nurse"
+      "accountant registrar" !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    grid-template-rows: auto auto auto !important;
-    margin: 0.05in 0 0 !important;
+    grid-template-rows: repeat(4, auto) !important;
+    margin: -0.03in 0 0 !important;
     max-width: none !important;
     page-break-inside: avoid !important;
+    transform: none !important;
     width: 100% !important;
   }
 
+  .registration-print-signature-program-chair {
+    position: relative;
+    top: 0;
+  }
+
+  .registration-print-signature-dean {
+    position: relative;
+    top: 2px;
+  }
+
+  .registration-print-signature-librarian {
+    position: relative;
+    top: 5px;
+  }
+
+  .registration-print-signature-registrar {
+    position: relative;
+    top: 6px;
+  }
+
+  .registration-print-signature-nurse {
+    position: relative;
+    top: 3px;
+  }
+
+  .registration-print-signature-accountant {
+    position: relative;
+    top: 6px;
+  }
+
   .registration-print-signature-image {
-    height: 0.28in !important;
+    height: 0.16in !important;
   }
 
   .registration-print-signature-image span {
@@ -1390,25 +1494,42 @@ textarea {
   }
 
   .registration-print-signature-line {
-    width: 78% !important;
+    border-top-color: #156082 !important;
+    width: 103% !important;
+  }
+
+  .registration-print-signature-name {
+    font-family: Aptos, Arial, "Segoe UI", sans-serif !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+  }
+
+  .registration-print-signature-name-spacer {
+    display: block !important;
+    min-height: 1.05em !important;
+    visibility: hidden !important;
   }
 
   .registration-print-signature-label {
-    font-size: 7.8pt !important;
+    font-family: Aptos, Arial, "Segoe UI", sans-serif !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    line-height: 1.15 !important;
     margin-top: 0.018in !important;
+    white-space: nowrap !important;
   }
 
   .registration-print-signature-meta {
-    font-size: 6.5pt !important;
-    line-height: 1.1 !important;
-    margin-top: 0.01in !important;
+    display: none !important;
   }
 
   .registration-print-bottom {
     break-inside: avoid !important;
     gap: 0.1in !important;
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 2.2fr) !important;
-    margin-top: 0.08in !important;
+    margin-top: 0.06in !important;
     min-height: 0 !important;
     page-break-inside: avoid !important;
   }
@@ -1417,7 +1538,7 @@ textarea {
     border-radius: 0.12in !important;
     display: flex !important;
     flex-direction: column !important;
-    min-height: 0.9in !important;
+    min-height: 1.12in !important;
     padding: 0.065in 0.09in 0.04in !important;
   }
 
@@ -1427,13 +1548,30 @@ textarea {
   }
 
   .registration-print-copy-label {
-    font-size: 6.5pt !important;
-    padding: 0.04in 0.06in !important;
+    align-self: start !important;
+    border-radius: 0.07in !important;
+    font-family: "Aptos Display", Aptos, Arial, "Segoe UI", sans-serif !important;
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+    margin-left: -0.1875in !important;
+    margin-top: 0.8in !important;
+    padding: 0.08in 0.13in !important;
+    position: relative;
+    top: 0.01in;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .registration-print[data-copy-recipient="student"] .registration-print-copy-label {
+    color: #000000 !important;
   }
 
   .registration-print-privacy-signature {
-    margin-top: 0.04in !important;
-    width: 50% !important;
+    margin-top: auto !important;
+    transform: translateX(0.19in);
+    width: 55.6% !important;
+    position: relative;
+    top: 0.03in;
   }
 
   .registration-print-privacy-signature .registration-print-signature-image {
@@ -1441,7 +1579,23 @@ textarea {
   }
 
   .registration-print-privacy-signature .registration-print-signature-meta {
-    font-size: 6.2pt !important;
+    display: none !important;
+  }
+
+  .registration-print-privacy-signature .registration-print-signature-line {
+    width: 100% !important;
+  }
+
+  .registration-print-privacy-signature .registration-print-signature-name {
+    font-size: 11pt !important;
+  }
+
+  .registration-print-privacy-signature .registration-print-signature-label {
+    font-size: 9pt !important;
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.1 !important;
+    text-transform: none;
   }
 
   .registration-policy-print {
@@ -1456,7 +1610,8 @@ textarea {
     line-height: 1.35 !important;
     margin: 0 !important;
     max-width: none !important;
-    min-height: 10.6in !important;
+    min-height: 10.3in !important;
+    page: registration-policy !important;
     page-break-after: auto !important;
     page-break-before: avoid !important;
     page-break-inside: avoid !important;

@@ -11,7 +11,7 @@ test("rejected enrollment presents REJECTED status and is terminal", () => {
 });
 
 test("no RETURNED or REOPENED status is introduced into review statuses", () => {
-  assert.deepEqual(ENROLLMENT_REVIEW_STATUSES, ["PENDING", "APPROVED", "REJECTED"]);
+  assert.deepEqual(ENROLLMENT_REVIEW_STATUSES, ["PENDING", "APPROVED", "REJECTED", "PULLED_OUT"]);
   assert.equal((ENROLLMENT_REVIEW_STATUSES as string[]).includes("RETURNED"), false);
   assert.equal((ENROLLMENT_REVIEW_STATUSES as string[]).includes("REOPENED"), false);
 });

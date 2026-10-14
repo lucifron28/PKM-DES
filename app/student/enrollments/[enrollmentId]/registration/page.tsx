@@ -12,6 +12,7 @@ import { loadEnrollmentSignaturePresentation, signatureEvidenceByClearance } fro
 import { loadCurrentSignatureSpecimen } from "@/lib/signatures/specimens";
 import { REGISTRATION_POLICY_TEXT, REGISTRATION_POLICY_VERSION } from "@/lib/registration-form/policy";
 import { formatName } from "@/lib/utils/format";
+import { parseEnrollmentFinancialSummary } from "@/lib/finance/presentation";
 
 export default async function StudentExplicitRegistrationFormPage({
   params
@@ -40,7 +41,7 @@ export default async function StudentExplicitRegistrationFormPage({
 
   const { data, error } = await supabase
     .from("enrollments")
-    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, subjects(*), course_offerings(*))")
+    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, day, time, room, subjects(*), course_offerings(*))")
     .eq("id", enrollmentId)
     .maybeSingle();
 
@@ -75,6 +76,21 @@ export default async function StudentExplicitRegistrationFormPage({
     );
   }
 
+  const [registrarApprovalResult, financialSummaryResult] = await Promise.all([
+    supabase.rpc("get_registrar_approval", { p_enrollment_id: enrollment.id }),
+    supabase.rpc("get_enrollment_financial_summary", { p_enrollment_id: enrollment.id })
+  ]);
+  const { data: registrarApprovalData, error: registrarApprovalError } = registrarApprovalResult;
+  const { data: financialSummaryData, error: financialSummaryError } = financialSummaryResult;
+  if (registrarApprovalError) console.error("student_registration:registrar_approval_load");
+  if (financialSummaryError) console.error("student_registration:financial_summary_load");
+  const approvalCandidate = Array.isArray(registrarApprovalData) ? registrarApprovalData[0] : null;
+  const registrarApproval = approvalCandidate && typeof approvalCandidate.name === "string" && approvalCandidate.name.trim() &&
+    typeof approvalCandidate.approved_at === "string" && Number.isFinite(Date.parse(approvalCandidate.approved_at))
+    ? { name: approvalCandidate.name.trim(), approved_at: approvalCandidate.approved_at }
+    : null;
+  const financialSummary = parseEnrollmentFinancialSummary(financialSummaryData);
+
   const healthApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
     student_type: enrollment.students?.student_type ?? student.student_type,
     official_gender_sex: enrollment.students?.official_student_records?.gender_sex ?? student.official_student_records?.gender_sex ?? null
@@ -98,7 +114,9 @@ export default async function StudentExplicitRegistrationFormPage({
   const presentationEnrollment: PrintableEnrollment = {
     ...enrollment,
     enrollment_signatures: signatureResult.signatures,
-    health_requirement_applicability: healthApplicability
+    health_requirement_applicability: healthApplicability,
+    financial_summary: financialSummary,
+    registrar_approval: registrarApproval
   };
   const clearanceOverview = getEnrollmentClearanceOverview(
     healthApplicability,

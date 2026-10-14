@@ -12,7 +12,8 @@ values
   ('00000000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'nonapplicable.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('00000000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'setup.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
   ('00000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'delivery.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'gate.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
+  ('00000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'gate.student@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'nurse@example.test', 'not-used', '{}'::jsonb, '{}'::jsonb, now(), now());
 
 insert into public.profiles (id, role, first_name, last_name, email, account_status)
 values
@@ -21,7 +22,11 @@ values
   ('00000000-0000-4000-8000-000000000003', 'student', 'Nonapplicable', 'Student', 'nonapplicable.student@example.test', 'ACTIVE'),
   ('00000000-0000-4000-8000-000000000004', 'student', 'Setup', 'Student', 'setup.student@example.test', 'SETUP'),
   ('00000000-0000-4000-8000-000000000005', 'student', 'Delivery', 'Student', 'delivery.student@example.test', 'SETUP'),
-  ('00000000-0000-4000-8000-000000000006', 'student', 'Gate', 'Student', 'gate.student@example.test', 'ACTIVE');
+  ('00000000-0000-4000-8000-000000000006', 'student', 'Gate', 'Student', 'gate.student@example.test', 'ACTIVE'),
+  ('00000000-0000-4000-8000-000000000007', 'admin', 'Assigned', 'Nurse', 'nurse@example.test', 'ACTIVE');
+
+insert into public.official_role_assignments (profile_id, official_role, program_id, active)
+values ('00000000-0000-4000-8000-000000000007', 'NURSE', null, true);
 
 do $program_fixture$
 declare
@@ -113,21 +118,26 @@ $verify$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 do $verify$
+begin
+  if has_function_privilege(current_user, 'public.review_pending_enrollment(uuid,text,text)', 'EXECUTE') then
+    raise exception 'authenticated role can still execute the unguarded review endpoint';
+  end if;
+end;
+$verify$;
+do $verify$
 declare
   before_status text;
   before_student_status text;
 begin
   select status into before_status from public.enrollments where id = '40000000-0000-4000-8000-000000000004';
   select enrollment_status into before_student_status from public.students where id = '20000000-0000-4000-8000-000000000001';
-  if (select outcome from public.review_pending_enrollment(
+  if (select outcome from public.registrar_review_pending_enrollment(
     '40000000-0000-4000-8000-000000000004', 'APPROVED', null
   )) <> 'invalid_enrollment_load' then
     raise exception 'empty enrollment load was approved';
   end if;
   if (select status from public.enrollments where id = '40000000-0000-4000-8000-000000000004') <> before_status
-    or (select enrollment_status from public.students where id = '20000000-0000-4000-8000-000000000001') <> before_student_status
-    or (select count(*) from public.audit_logs where target_id = '40000000-0000-4000-8000-000000000004') <> 0
-    or (select count(*) from public.enrollment_decision_notifications where enrollment_id = '40000000-0000-4000-8000-000000000004') <> 0 then
+    or (select enrollment_status from public.students where id = '20000000-0000-4000-8000-000000000001') <> before_student_status then
     raise exception 'invalid load review mutated protected records';
   end if;
 end;
@@ -136,6 +146,10 @@ $verify$;
 reset role;
 do $verify$
 begin
+  if (select count(*) from public.audit_logs where target_id = '40000000-0000-4000-8000-000000000004') <> 0
+    or (select count(*) from public.enrollment_decision_notifications where enrollment_id = '40000000-0000-4000-8000-000000000004') <> 0 then
+    raise exception 'invalid load review wrote an audit record or decision notification';
+  end if;
   if (select account_status from public.profiles where id = '00000000-0000-4000-8000-000000000004') <> 'ACTIVE' then
     raise exception 'setup completion did not activate profile';
   end if;
@@ -158,6 +172,7 @@ do $verify$
 declare
   visible_count integer;
   changed_count integer;
+  function_outcome text;
 begin
   select count(*) into visible_count
   from public.student_requirements
@@ -181,13 +196,17 @@ begin
   end if;
 
   perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
-  update public.student_requirements
-  set status = 'VERIFIED'
-  where student_id = '20000000-0000-4000-8000-000000000001'
-    and requirement_code = 'HEALTH_RECORD_UPDATE'
-    and academic_year = '2025-2026'
-    and semester = '2nd Semester';
-  get diagnostics changed_count = row_count;
+  begin
+    update public.student_requirements
+    set status = 'VERIFIED'
+    where student_id = '20000000-0000-4000-8000-000000000001'
+      and requirement_code = 'HEALTH_RECORD_UPDATE'
+      and academic_year = '2025-2026'
+      and semester = '2nd Semester';
+    get diagnostics changed_count = row_count;
+  exception when insufficient_privilege then
+    changed_count := 0;
+  end;
   if changed_count <> 0 then
     raise exception 'student bypassed requirement update RLS';
   end if;
@@ -198,22 +217,96 @@ begin
       and semester = '2nd Semester') <> 'PENDING' then
     raise exception 'student direct update changed requirement status';
   end if;
-  if (select outcome from public.update_enrollment_requirement_status(
-    '40000000-0000-4000-8000-000000000001', 'HEALTH_RECORD_UPDATE', 'VERIFIED', null
-  )) <> 'unauthorized' then
+  begin
+    select outcome into function_outcome from public.update_enrollment_requirement_status(
+      '40000000-0000-4000-8000-000000000001', 'HEALTH_RECORD_UPDATE', 'VERIFIED', null
+    );
+  exception when insufficient_privilege then
+    function_outcome := 'execute_denied';
+  end;
+  if function_outcome not in ('unauthorized', 'execute_denied') then
     raise exception 'student invoked admin requirement function';
   end if;
 end;
 $verify$;
 
--- Admin requirement verification records metadata and one status-change audit row.
+-- The generic status RPC is intentionally unavailable to authenticated users;
+-- applicable health requirements are cleared only through the student form and Nurse signature flow.
+reset role;
+select set_config('pkm.fixture.health_document_hash', private.health_record_document_hash(
+  '40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+  '2025-2026', '2nd Semester', 'APPLICABLE', 'VERIFIED'
+), true);
+set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 do $verify$
 begin
-  if (select outcome from public.update_enrollment_requirement_status(
-    '40000000-0000-4000-8000-000000000001', 'HEALTH_RECORD_UPDATE', 'VERIFIED', 'Paper form checked'
-  )) <> 'updated' then
-    raise exception 'admin could not verify applicable requirement';
+  if has_function_privilege(current_user, 'public.update_enrollment_requirement_status(uuid,text,text,text)', 'EXECUTE') then
+    raise exception 'authenticated admin can execute the revoked generic requirement RPC';
+  end if;
+  begin
+    perform 1 from public.update_enrollment_requirement_status(
+      '40000000-0000-4000-8000-000000000001', 'HEALTH_RECORD_UPDATE', 'VERIFIED', 'Must use Nurse verification'
+    );
+    raise exception 'authenticated admin unexpectedly executed the generic requirement RPC';
+  exception when insufficient_privilege then
+    null;
+  end;
+end;
+$verify$;
+
+-- A Nurse cannot sign before the student submits the required form.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
+do $verify$
+declare
+  v_outcome text;
+  v_signature_id uuid := '60000000-0000-4000-8000-000000000001';
+  v_signature_hash text := repeat('a', 64);
+  v_document_hash text;
+begin
+  v_document_hash := current_setting('pkm.fixture.health_document_hash');
+  select outcome into v_outcome
+  from public.verify_health_requirement_with_signature(
+    '40000000-0000-4000-8000-000000000001', v_signature_id,
+    '40000000-0000-4000-8000-000000000001/NURSE/60000000-0000-4000-8000-000000000001.png',
+    v_signature_hash, v_document_hash, true, 'Required form was not submitted'
+  );
+  if v_outcome <> 'health_record_not_submitted'
+    or exists (select 1 from public.enrollment_signatures where id = v_signature_id) then
+    raise exception 'Nurse verification did not deny the missing form without recording a signature';
+  end if;
+end;
+$verify$;
+
+-- Submit the form through the student-owned RPC, then record the current Nurse signature.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000002', true);
+do $verify$
+begin
+  if (select outcome from public.save_health_record_update(
+    '40000000-0000-4000-8000-000000000001', 'No condition reported', null, null,
+    null, null, null, 'None reported', null, null
+  )) <> 'saved' then
+    raise exception 'student-owned health form submission did not save';
+  end if;
+end;
+$verify$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
+do $verify$
+declare
+  v_outcome text;
+  v_signature_id uuid := '60000000-0000-4000-8000-000000000001';
+  v_signature_hash text := repeat('a', 64);
+  v_document_hash text := current_setting('pkm.fixture.health_document_hash');
+begin
+  select outcome into v_outcome
+  from public.verify_health_requirement_with_signature(
+    '40000000-0000-4000-8000-000000000001', v_signature_id,
+    '40000000-0000-4000-8000-000000000001/NURSE/60000000-0000-4000-8000-000000000001.png',
+    v_signature_hash, v_document_hash, true, 'Medical form reviewed'
+  );
+  if v_outcome <> 'signed' then
+    raise exception 'assigned Nurse could not sign the submitted Health Record Update (outcome: %)', v_outcome;
   end if;
 end;
 $verify$;
@@ -239,8 +332,8 @@ begin
     where student_id = '20000000-0000-4000-8000-000000000001'
       and requirement_code = 'HEALTH_RECORD_UPDATE'
       and academic_year = '2025-2026'
-      and semester = '2nd Semester') <> '00000000-0000-4000-8000-000000000001' then
-    raise exception 'admin requirement verification did not set verified_by';
+      and semester = '2nd Semester') <> '00000000-0000-4000-8000-000000000007' then
+    raise exception 'Nurse verification did not set verified_by';
   end if;
   if (select count(*) from public.audit_logs
     where target_id = (select id from public.student_requirements
@@ -248,34 +341,88 @@ begin
         and requirement_code = 'HEALTH_RECORD_UPDATE'
         and academic_year = '2025-2026'
         and semester = '2nd Semester')
-      and action = 'UPDATE_STUDENT_REQUIREMENT_STATUS'
+      and action = 'NURSE_VERIFY_HEALTH_REQUIREMENT'
   ) <> 1 then
-    raise exception 'requirement status audit count was not one';
+    raise exception 'Nurse requirement audit count was not one';
+  end if;
+  if not exists (select 1 from public.health_record_updates where enrollment_id = '40000000-0000-4000-8000-000000000001')
+    or not private.health_clearance_is_current('40000000-0000-4000-8000-000000000001') then
+    raise exception 'submitted form or signed Nurse health clearance is not current';
   end if;
 end;
 $verify$;
 
 -- Applicable current-term approval is blocked until Registrar verification; no partial review write occurs.
+select private.reconcile_health_requirement_for_student('20000000-0000-4000-8000-000000000003');
+-- This fixture combines normally separate RPC transactions. End the reconciliation flag here.
+select set_config('pkm.health_applicability_reconciliation', 'false', true);
+select set_config('pkm.fixture.gate_health_document_hash', private.health_record_document_hash(
+  '40000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003',
+  '2025-2026', '2nd Semester', 'APPLICABLE', 'VERIFIED'
+), true);
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 do $verify$
+declare
+  v_outcome text;
+  v_signature_id uuid := '60000000-0000-4000-8000-000000000002';
+  v_signature_hash text := repeat('b', 64);
+  v_document_hash text;
 begin
-  if (select outcome from public.review_pending_enrollment(
+  select outcome into v_outcome from public.registrar_review_pending_enrollment(
     '40000000-0000-4000-8000-000000000003', 'APPROVED', null
-  )) <> 'unverified_requirements' then
-    raise exception 'applicable approval was not blocked';
+  );
+  if v_outcome <> 'incomplete_clearances' then
+    raise exception 'applicable approval was not blocked by requirements (outcome: %)', v_outcome;
   end if;
-  if (select outcome from public.update_enrollment_requirement_status(
-    '40000000-0000-4000-8000-000000000003', 'HEALTH_RECORD_UPDATE', 'VERIFIED', 'Paper form checked'
-  )) <> 'updated' then
-    raise exception 'admin could not verify gated requirement';
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
+  v_document_hash := current_setting('pkm.fixture.gate_health_document_hash');
+  select outcome into v_outcome
+  from public.verify_health_requirement_with_signature(
+    '40000000-0000-4000-8000-000000000003', v_signature_id,
+    '40000000-0000-4000-8000-000000000003/NURSE/60000000-0000-4000-8000-000000000002.png',
+    v_signature_hash, v_document_hash, true, 'Required form was not submitted'
+  );
+  if v_outcome <> 'health_record_not_submitted' then
+    raise exception 'Nurse verification did not deny the gate fixture without a submitted form';
   end if;
-  if (select outcome from public.review_pending_enrollment(
+  if exists (select 1 from public.enrollment_signatures where id = v_signature_id) then
+    raise exception 'missing-form denial recorded a Nurse signature for the gate fixture';
+  end if;
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000006', true);
+  select outcome into v_outcome
+  from public.save_health_record_update(
+    '40000000-0000-4000-8000-000000000003', 'No condition reported', null, null,
+    null, null, null, 'None reported', null, null
+  );
+  if v_outcome <> 'saved' then
+    raise exception 'gate student could not submit the required Health Record Update';
+  end if;
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
+  select outcome into v_outcome
+  from public.verify_health_requirement_with_signature(
+    '40000000-0000-4000-8000-000000000003', v_signature_id,
+    '40000000-0000-4000-8000-000000000003/NURSE/60000000-0000-4000-8000-000000000002.png',
+    v_signature_hash, v_document_hash, true, 'Medical form reviewed'
+  );
+  if v_outcome <> 'signed' then
+    raise exception 'assigned Nurse could not sign the submitted gate fixture form (outcome: %)', v_outcome;
+  end if;
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
+  if (select outcome from public.registrar_review_pending_enrollment(
     '40000000-0000-4000-8000-000000000003', 'APPROVED', null
-  )) <> 'approved' then
-    raise exception 'verified applicable enrollment did not approve';
+  )) <> 'incomplete_clearances' then
+    raise exception 'Nurse verification bypassed the other required clearances';
   end if;
-  if (select outcome from public.review_pending_enrollment(
+  if (select outcome from public.registrar_review_pending_enrollment(
+    '40000000-0000-4000-8000-000000000003', 'REJECTED', 'Other clearances incomplete'
+  )) <> 'rejected' then
+    raise exception 'Registrar could not reject the incomplete enrollment';
+  end if;
+  if (select outcome from public.registrar_review_pending_enrollment(
     '40000000-0000-4000-8000-000000000003', 'REJECTED', 'late call'
   )) <> 'already_reviewed' then
     raise exception 'stale review overwrote decision';
@@ -286,40 +433,133 @@ $verify$;
 reset role;
 do $verify$
 begin
-  if (select status from public.enrollments where id = '40000000-0000-4000-8000-000000000003') <> 'APPROVED' then
-    raise exception 'verified applicable enrollment did not persist approval';
+  if (select status from public.enrollments where id = '40000000-0000-4000-8000-000000000003') <> 'REJECTED' then
+    raise exception 'incomplete enrollment did not persist rejection';
   end if;
   if (select count(*) from public.audit_logs
-    where target_id = '40000000-0000-4000-8000-000000000003' and action = 'APPROVE_ENROLLMENT'
+    where target_id = '40000000-0000-4000-8000-000000000003' and action = 'REJECT_ENROLLMENT'
   ) <> 1 then
-    raise exception 'approval audit count was not one';
+    raise exception 'rejection audit count was not one';
   end if;
   if (select count(*) from public.enrollment_decision_notifications
     where enrollment_id = '40000000-0000-4000-8000-000000000003'
-      and decision = 'APPROVED'
+      and decision = 'REJECTED'
       and status = 'PENDING'
   ) <> 1 then
-    raise exception 'approved enrollment did not create one pending notification';
+    raise exception 'rejected enrollment did not create one pending notification';
   end if;
 end;
 $verify$;
 
--- Non-applicable student is not blocked by Health Record Update.
+-- Non-applicable students still require all six current clearances.
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
 do $verify$
 begin
-  if (select outcome from public.review_pending_enrollment(
+  if (select outcome from public.registrar_review_pending_enrollment(
     '40000000-0000-4000-8000-000000000002', 'APPROVED', null
-  )) <> 'approved' then
-    raise exception 'non-applicable enrollment was blocked';
+  )) <> 'incomplete_clearances' then
+    raise exception 'non-applicable enrollment bypassed required clearances';
+  end if;
+  if (select outcome from public.registrar_review_pending_enrollment(
+    '40000000-0000-4000-8000-000000000002', 'REJECTED', 'Other clearances incomplete'
+  )) <> 'rejected' then
+    raise exception 'non-applicable enrollment could not be rejected';
   end if;
   if (select count(*) from public.enrollment_decision_notifications
     where enrollment_id = '40000000-0000-4000-8000-000000000002'
-      and decision = 'APPROVED'
+      and decision = 'REJECTED'
       and status = 'PENDING'
   ) <> 1 then
-    raise exception 'approved non-applicable enrollment did not create one pending notification';
+    raise exception 'rejected non-applicable enrollment did not create one pending notification';
+  end if;
+end;
+$verify$;
+
+-- PULL OUT is reversible, records the prior status and actor, and retains student and subject rows.
+do $verify$
+declare
+  v_rejected integer;
+  v_pulled integer;
+  v_already_pulled integer;
+  v_reinstate_outcome text;
+begin
+  select count(*) into v_rejected
+  from public.registrar_bulk_review_enrollments(
+    array[
+      '40000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000004'
+    ]::uuid[], 'REJECTED', 'Rejected before pull out'
+  ) where outcome = 'rejected';
+  if v_rejected <> 2 then
+    raise exception 'authenticated Registrar bulk rejection did not process both pending records';
+  end if;
+  if (select outcome from public.pull_out_enrollments(
+    array['40000000-0000-4000-8000-000000000004']::uuid[], 'Rejected enrollment pull out'
+  )) <> 'pulled_out' then
+    raise exception 'rejected enrollment could not be marked PULL OUT';
+  end if;
+
+  select count(*) into v_pulled
+  from public.pull_out_enrollments(
+    array[
+      '40000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000004'
+    ]::uuid[], 'Mixed bulk pull out'
+  ) where outcome = 'pulled_out';
+  select count(*) into v_already_pulled
+  from public.enrollment_status_events
+  where enrollment_id = '40000000-0000-4000-8000-000000000004'
+    and event_type = 'PULLED_OUT'
+    and from_status = 'REJECTED'
+    and actor_profile_id = '00000000-0000-4000-8000-000000000001'
+    and reason = 'Rejected enrollment pull out'
+    and created_at is not null;
+  if v_pulled <> 1 or v_already_pulled <> 1 then
+    raise exception 'bulk PULL OUT did not report one change and retain one already-pulled record';
+  end if;
+  if (select status from public.enrollments where id = '40000000-0000-4000-8000-000000000001') <> 'PULLED_OUT'
+    or (select status from public.enrollments where id = '40000000-0000-4000-8000-000000000004') <> 'PULLED_OUT'
+    or not exists (select 1 from public.students where id = '20000000-0000-4000-8000-000000000001')
+    or not exists (select 1 from public.enrollments where id = '40000000-0000-4000-8000-000000000001')
+    or (select count(*) from public.enrollment_subjects where enrollment_id = '40000000-0000-4000-8000-000000000001') <> 1 then
+    raise exception 'PULL OUT deleted student, enrollment, or subject history';
+  end if;
+  select outcome into v_reinstate_outcome from public.reinstate_enrollments(array['40000000-0000-4000-8000-000000000001']::uuid[]);
+  if v_reinstate_outcome <> 'reinstated'
+    or (select status from public.enrollments where id = '40000000-0000-4000-8000-000000000001') <> 'REJECTED'
+    or not exists (
+      select 1 from public.enrollment_status_events
+      where enrollment_id = '40000000-0000-4000-8000-000000000001'
+        and event_type = 'REINSTATED' and from_status = 'PULLED_OUT' and to_status = 'REJECTED'
+    ) then
+    raise exception 'rejected enrollment status could not be restored from retained event history';
+  end if;
+  if has_table_privilege(current_user, 'public.enrollments', 'UPDATE')
+    or has_table_privilege(current_user, 'public.enrollment_subjects', 'UPDATE') then
+    raise exception 'authenticated Registrar can directly edit enrollment content';
+  end if;
+end;
+$verify$;
+
+-- An assigned official must not gain Registrar approval or PULL OUT access through shared admin identity.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000007', true);
+do $verify$
+begin
+  if (select outcome from public.registrar_review_pending_enrollment(
+    '40000000-0000-4000-8000-000000000001', 'APPROVED', null
+  )) <> 'unauthorized' then
+    raise exception 'assigned Nurse could invoke Registrar review';
+  end if;
+  if (select outcome from public.registrar_bulk_review_enrollments(
+    array['40000000-0000-4000-8000-000000000002']::uuid[], 'REJECTED', null
+  )) <> 'unauthorized' then
+    raise exception 'assigned Nurse could invoke Registrar bulk review';
+  end if;
+  if (select outcome from public.pull_out_enrollments(
+    array['40000000-0000-4000-8000-000000000001']::uuid[], 'Should be denied'
+  )) <> 'unauthorized' then
+    raise exception 'assigned Nurse could invoke Registrar PULL OUT';
   end if;
 end;
 $verify$;

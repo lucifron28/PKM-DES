@@ -18,6 +18,13 @@ export function normalizeEnrollmentReviewId(value: FormDataEntryValue | null) {
   return UUID_PATTERN.test(enrollmentId) ? enrollmentId : null;
 }
 
+export function normalizeEnrollmentReviewIds(values: FormDataEntryValue[]) {
+  if (values.length === 0 || values.length > 100) return null;
+  const ids = values.map((value) => typeof value === "string" ? value.trim() : "");
+  if (ids.some((id) => !UUID_PATTERN.test(id))) return null;
+  return [...new Set(ids)];
+}
+
 export function normalizeRejectionRemarks(value: FormDataEntryValue | null) {
   const remarks = String(value ?? "").trim();
   return remarks || null;

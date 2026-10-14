@@ -8,6 +8,7 @@ import { applyStudentEnrollmentSignatureAction } from "@/app/student/enrollment/
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
+import { getEnrollmentStatusLabel } from "@/lib/constants/enrollment";
 import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
@@ -125,7 +126,7 @@ export default async function EnrollmentStatusPage() {
   if (currentTermEnrollment) {
     const { data: detailedEnrollmentData, error: detailedEnrollmentError } = await supabase
       .from("enrollments")
-      .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units)")
+      .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, financial_document_version, medical_document_version, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units, day, time, room)")
       .eq("id", currentTermEnrollment.id)
       .maybeSingle();
     if (detailedEnrollmentError) {
@@ -166,6 +167,8 @@ export default async function EnrollmentStatusPage() {
       ? "border-amber-500 bg-amber-50"
       : status === "REJECTED"
         ? "border-red-600 bg-red-50"
+        : status === "PULLED_OUT"
+          ? "border-amber-600 bg-amber-50"
         : "border-primary-800 bg-primary-50";
 
   const actions = status === "ENROLLED"
@@ -197,7 +200,7 @@ export default async function EnrollmentStatusPage() {
                   : "No active academic term configured."}
               </p>
             </div>
-            <Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>
+            <Badge tone={enrollmentBadgeTone(status)}>{getEnrollmentStatusLabel(status)}</Badge>
           </div>
 
           {status === "PENDING" ? (
@@ -229,6 +232,12 @@ export default async function EnrollmentStatusPage() {
               <p className="text-xs text-slateui-muted">
                 Reviewed: {formatDate(currentTermEnrollment?.reviewed_at)}
               </p>
+            </div>
+          ) : status === "PULLED_OUT" ? (
+            <div className="mt-4 space-y-2">
+              <p className="text-base font-semibold text-amber-950">This enrollment is marked PULL OUT.</p>
+              <p className="text-sm leading-6 text-slateui-secondary">Your student record and enrollment history remain on file. Contact the Registrar if this status needs review.</p>
+              <p className="text-xs text-slateui-muted">Marked PULL OUT: {formatDate(currentTermEnrollment?.reviewed_at ?? currentTermEnrollment?.submitted_at)}</p>
             </div>
           ) : (
             <p className="mt-4 text-base font-semibold text-slateui-text">
@@ -308,6 +317,8 @@ export default async function EnrollmentStatusPage() {
         ) : null}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {currentTermEnrollment?.status === "PENDING" ? <ButtonLink href={`/student/enrollments/${currentTermEnrollment.id}/medical-documents`} variant="secondary">Attach Medical Papers</ButtonLink> : null}
+          <ButtonLink href="/student/balances" variant="outline" className="w-full">View Balances</ButtonLink>
           {actions.map(([href, label, variant]) => <ButtonLink key={href} href={href} variant={variant as "primary" | "secondary" | "outline"} className="w-full">{label}</ButtonLink>)}
           {ENABLE_STUB_PAGES ? <><ButtonLink href="/student/grades" variant="outline" className="w-full">View Grades</ButtonLink><ButtonLink href="/student/schedule" variant="outline" className="w-full">View Class Schedule</ButtonLink><ButtonLink href="/student/balances" variant="outline" className="w-full">View Balances</ButtonLink></> : null}
         </div>
@@ -337,7 +348,7 @@ export default async function EnrollmentStatusPage() {
                       {record.academic_year} – {record.semester}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge tone={enrollmentBadgeTone(record.status)}>{record.status}</Badge>
+                      <Badge tone={enrollmentBadgeTone(record.status)}>{getEnrollmentStatusLabel(record.status)}</Badge>
                     </td>
                     <td className="px-4 py-3 text-slateui-secondary">
                       {formatDate(record.submitted_at)}

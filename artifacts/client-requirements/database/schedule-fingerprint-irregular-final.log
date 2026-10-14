@@ -1,0 +1,10 @@
+SQL fingerprint evidence {"legacy_blank":["89c6bfbe72ad2857f42e026ddb7484153ba4100e49cbb50bd660a8269780757c"],"pledge_blank":["d474b28eb3e6e88a78dd0b7d71d73a4f425941456820833f500b239a4a17e10e"],"official_blank":["f148f18c298667dbc5bb722c087d4edf6c018a05e0c78dd3f45b92714ffade95"],"sql_sort":["English_United States.1252","ACCT-81DAE01D 101,GE-81DAE01D 102,IT-81DAE01D 201"],"schedule_rpc":["updated","3"],"pledge_scheduled":["f502e68a698dc2890b446580475fa821e9d8cd4196e09cf4804b20ccadb75b20"],"official_scheduled":["7b67afa1f47d81b85f4e7cf1dbea364f06f74e1866369c9c97949c5cf8aac8ac"],"legacy_scheduled":["d1d4fe41a786a68e16d776241108d9f059940a0e17fafbfb7eea847ccc5d9ff4"],"pipe_a_rpc":["invalid_schedule_text","0"],"pipe_a_hash":["f502e68a698dc2890b446580475fa821e9d8cd4196e09cf4804b20ccadb75b20"],"pipe_b_rpc":["invalid_schedule_text","0"],"pipe_b_hash":["f502e68a698dc2890b446580475fa821e9d8cd4196e09cf4804b20ccadb75b20"],"newline_a_rpc":["invalid_schedule_text","0"],"newline_a_hash":["f502e68a698dc2890b446580475fa821e9d8cd4196e09cf4804b20ccadb75b20"],"newline_b_rpc":["invalid_schedule_text","0"],"newline_b_hash":["f502e68a698dc2890b446580475fa821e9d8cd4196e09cf4804b20ccadb75b20"],"invalid_day_rpc":["invalid_enrollment_load","0"],"invalid_day_hash":["f502e68a698dc2890b446580475fa821e9d8cd4196e09cf4804b20ccadb75b20"],"invalid_room_rpc":["invalid_enrollment_load","0"],"invalid_room_hash":["f502e68a698dc2890b446580475fa821e9d8cd4196e09cf4804b20ccadb75b20"],"blank_rpc":["updated","3"],"pledge_whitespace":["d474b28eb3e6e88a78dd0b7d71d73a4f425941456820833f500b239a4a17e10e"],"approved_hash_before":["d474b28eb3e6e88a78dd0b7d71d73a4f425941456820833f500b239a4a17e10e"],"approved_rpc":["enrollment_not_pending"],"approved_hash_after":["d474b28eb3e6e88a78dd0b7d71d73a4f425941456820833f500b239a4a17e10e"],"unknown_pledge":["null"]}
+✔ multi-subject SQL and TypeScript fingerprints match for student and official signatures without changing blank legacy hashes (140.2022ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 265.4087

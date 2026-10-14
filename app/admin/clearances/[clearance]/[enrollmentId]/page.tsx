@@ -18,6 +18,11 @@ import type { StudentRequirementRecord } from "@/lib/requirements/types";
 import { formatName } from "@/lib/utils/format";
 import type { EnrollmentClearanceStatus } from "@/types/database";
 import type { PrintableEnrollment } from "@/components/print/registration-form";
+import { EnrollmentFinanceEditor } from "@/components/accounting/enrollment-finance-editor";
+import { parseEnrollmentFinancialSummary } from "@/lib/finance/presentation";
+import { parseAccountingFeeCatalog } from "@/lib/finance/fee-codes";
+import { loadMedicalDocuments } from "@/lib/requirements/medical-documents";
+import { formatDate } from "@/lib/utils/format";
 
 function statusTone(status: EnrollmentClearanceStatus) {
   if (status === "SIGNED") return "success" as const;
@@ -45,7 +50,7 @@ export default async function OfficialClearanceReviewPage({
   const { supabase, profile, assignments } = await requireOfficialSignerRole(workspace.role);
   const { data, error } = await supabase
     .from("enrollments")
-    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, subjects(*), course_offerings(*))")
+    .select("*, students(*, profiles(*), official_student_records(*)), programs(*), enrollment_subjects(id, subject_id, course_offering_id, course_code, course_description, units, day, time, room, subjects(*), course_offerings(*))")
     .eq("id", enrollmentId)
     .maybeSingle();
 
@@ -56,6 +61,31 @@ export default async function OfficialClearanceReviewPage({
 
   const enrollment = data as PrintableEnrollment | null;
   if (!enrollment || !hasActiveOfficialRoleForProgram(assignments, workspace.role, enrollment.program_id)) notFound();
+
+  const financeResults = workspace.role === "ACCOUNTANT"
+    ? await Promise.all([
+        supabase.rpc("get_enrollment_financial_summary", { p_enrollment_id: enrollment.id }),
+        supabase.rpc("list_accounting_fee_catalog")
+      ])
+    : null;
+  const financialSummary = financeResults && !financeResults[0].error
+    ? parseEnrollmentFinancialSummary(financeResults[0].data)
+    : null;
+  const accountingCatalog = financeResults && !financeResults[1].error
+    ? parseAccountingFeeCatalog(financeResults[1].data)
+    : null;
+  const financeLoadError = Boolean(
+    financeResults && (
+      financeResults[0].error ||
+      financeResults[1].error ||
+      financialSummary === null ||
+      accountingCatalog === null
+    )
+  );
+  if (financeLoadError) console.error("accounting_enrollment_finance:load_failed", {
+    summaryCode: financeResults?.[0].error?.code,
+    catalogCode: financeResults?.[1].error?.code
+  });
 
   const healthApplicability = getRequirementApplicability("HEALTH_RECORD_UPDATE", {
     student_type: enrollment.students?.student_type ?? "",
@@ -79,6 +109,8 @@ export default async function OfficialClearanceReviewPage({
     : { record: null, error: null };
   if (healthRecordResult.error) console.error("official_clearance_review:health_record_load");
   const healthRecord = healthRecordResult.record;
+  const medicalDocuments = workspace.role === "NURSE"
+    ? await loadMedicalDocuments(supabase, enrollment.id) : null;
   const signatureResult = await loadEnrollmentSignaturePresentation(supabase, enrollment, {
     applicability: healthApplicability,
     status: healthRequirement?.status ?? "PENDING"
@@ -161,9 +193,31 @@ export default async function OfficialClearanceReviewPage({
         ) : <p className="text-sm text-slateui-secondary">No submitted subject load is available for this enrollment.</p>}
       </Card>
 
+      {workspace.role === "ACCOUNTANT" ? (
+        <EnrollmentFinanceEditor
+          key={`${enrollment.id}:${JSON.stringify(financialSummary)}:${JSON.stringify(accountingCatalog)}`}
+          enrollmentId={enrollment.id}
+          summary={financialSummary}
+          catalog={accountingCatalog ?? []}
+          editable={enrollment.status === "PENDING"}
+          loadError={financeLoadError}
+        />
+      ) : null}
+
+      {medicalDocuments ? <Card>
+        <CardHeader title="Supporting medical papers" description="Review all submitted papers before signing health clearance. New submissions require another review." />
+        {medicalDocuments.error ? <p role="alert">Medical papers could not be loaded. Refresh before signing.</p> : <ul className="space-y-3">
+          {medicalDocuments.documents.map((document) => <li key={document.id}>
+            {document.signed_url ? <a href={document.signed_url} target="_blank" rel="noopener noreferrer" className="font-semibold underline">{document.original_file_name}</a> : <span>{document.original_file_name} could not be opened. Refresh before signing.</span>}
+            <p className="text-sm">Submitted {formatDate(document.uploaded_at)}, revision {document.revision}</p>
+          </li>)}
+          {!medicalDocuments.documents.length ? <li>No supporting medical papers submitted.</li> : null}
+        </ul>}
+      </Card> : null}
+
       <Card>
         <CardHeader title={`${workspace.label} evidence`} description={workspace.description} />
-        {signatureResult.error ? (
+        {signatureResult.error || medicalDocuments?.error || medicalDocuments?.documents.some((document) => !document.signed_url) ? (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" role="alert">Signature evidence could not be loaded safely. Signing controls are unavailable until the page is refreshed.</p>
         ) : isHealthSyncMismatch ? (
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" role="alert">Health clearance status is being synchronized. Please refresh the record.</p>
