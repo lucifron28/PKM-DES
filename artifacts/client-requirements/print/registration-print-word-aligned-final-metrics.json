@@ -1,0 +1,1259 @@
+{
+  "cssCompiledWithTailwind": true,
+  "matchedFixtureInput": false,
+  "current": {
+    "caseType": "APPROVED QA fixture with reference-verified names, synthetic e-signatures, Registrar metadata, and synthetic receipts",
+    "signatureSource": "Synthetic e-signature SVGs and payment receipts are QA fixtures; Registrar name/date are reviewer metadata only, with no Registrar signature image",
+    "cssSource": "workspace app/globals.css",
+    "screenLabels": [
+      {
+        "text": "STUDENT'S COPY",
+        "color": "rgb(0, 0, 0)",
+        "borderColor": "rgb(0, 0, 0)"
+      },
+      {
+        "text": "DEAN'S COPY",
+        "color": "rgb(233, 113, 50)",
+        "borderColor": "rgb(233, 113, 50)"
+      },
+      {
+        "text": "REGISTRAR'S COPY",
+        "color": "rgb(25, 107, 36)",
+        "borderColor": "rgb(25, 107, 36)"
+      },
+      {
+        "text": "ACCOUNTANT'S COPY",
+        "color": "rgb(21, 61, 99)",
+        "borderColor": "rgb(21, 61, 99)"
+      }
+    ],
+    "screenReceiptOverflow": {
+      "text": "Showing the 4 latest of 6 receipts. 2 earlier receipts are not shown in this form; the paid total includes all receipts.",
+      "display": "block"
+    },
+    "printLabels": [
+      {
+        "text": "STUDENT'S COPY",
+        "color": "rgb(0, 0, 0)",
+        "borderColor": "rgb(0, 0, 0)"
+      },
+      {
+        "text": "DEAN'S COPY",
+        "color": "rgb(233, 113, 50)",
+        "borderColor": "rgb(233, 113, 50)"
+      },
+      {
+        "text": "REGISTRAR'S COPY",
+        "color": "rgb(25, 107, 36)",
+        "borderColor": "rgb(25, 107, 36)"
+      },
+      {
+        "text": "ACCOUNTANT'S COPY",
+        "color": "rgb(21, 61, 99)",
+        "borderColor": "rgb(21, 61, 99)"
+      }
+    ],
+    "viewportScrollY": 0,
+    "copies": [
+      {
+        "recipient": "student",
+        "left": 0,
+        "top": 0,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 0,
+            "bottom": 48,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 55.67,
+            "bottom": 145.39,
+            "height": 89.72,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 177.86,
+            "bottom": 438.16,
+            "height": 260.3,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 177.86,
+            "bottom": 425.7,
+            "height": 247.84,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 443.42,
+            "bottom": 867.41,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 651.59,
+            "bottom": 867.41,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 873.16,
+            "bottom": 981.95,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 950.91,
+            "bottom": 982.91,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(0, 0, 0)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      },
+      {
+        "recipient": "dean",
+        "left": 0,
+        "top": 988.8,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 988.8,
+            "bottom": 1036.8,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 1044.47,
+            "bottom": 1134.19,
+            "height": 89.72,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 1166.66,
+            "bottom": 1426.95,
+            "height": 260.3,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 1166.66,
+            "bottom": 1414.5,
+            "height": 247.84,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 1432.22,
+            "bottom": 1856.2,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 1640.39,
+            "bottom": 1856.2,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 1861.95,
+            "bottom": 1970.75,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 1939.7,
+            "bottom": 1971.7,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(233, 113, 50)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      },
+      {
+        "recipient": "registrar",
+        "left": 0,
+        "top": 1977.59,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 1977.59,
+            "bottom": 2025.59,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 2033.27,
+            "bottom": 2122.98,
+            "height": 89.72,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 2155.45,
+            "bottom": 2415.75,
+            "height": 260.3,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 2155.45,
+            "bottom": 2403.3,
+            "height": 247.84,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 2421.02,
+            "bottom": 2845,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 2629.19,
+            "bottom": 2845,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 2850.75,
+            "bottom": 2959.55,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 2928.5,
+            "bottom": 2960.5,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(25, 107, 36)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      },
+      {
+        "recipient": "accountant",
+        "left": 0,
+        "top": 2966.39,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 2966.39,
+            "bottom": 3014.39,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 3022.06,
+            "bottom": 3111.78,
+            "height": 89.72,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 3144.25,
+            "bottom": 3404.55,
+            "height": 260.3,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 3144.25,
+            "bottom": 3392.09,
+            "height": 247.84,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 3409.81,
+            "bottom": 3833.8,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 3617.98,
+            "bottom": 3833.8,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 3839.55,
+            "bottom": 3948.34,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 3917.3,
+            "bottom": 3949.3,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(21, 61, 99)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      }
+    ],
+    "studentCopySignatureImages": 4,
+    "policyPages": 1,
+    "policySignatureImages": 1,
+    "syntheticSignatureImages": 25,
+    "policyHeight": 988.796875,
+    "policyPageName": "registration-policy",
+    "fixtureFields": {
+      "details": [
+        "QA-CURRENT-001",
+        "Alexandria Maximiliana Christina QA Print Fixture",
+        "Bachelor of Science in Information Technology - Long Program Name Fixture",
+        "Mauban, Quezon",
+        "October 9, 2026",
+        "BSIT 1",
+        "1ST/2026-2027"
+      ],
+      "scheduleRows": [
+        [
+          "7:30 AM - 9:00 AM",
+          "M/W/F",
+          "Computer Laboratory 204"
+        ],
+        [
+          "10:00 AM - 12:00 PM",
+          "T/TH",
+          "Science Laboratory 2"
+        ],
+        [
+          "TBA",
+          "W",
+          "TBA"
+        ],
+        [
+          "TBA",
+          "TBA",
+          "TBA"
+        ]
+      ],
+      "scheduleFallbackCellCount": 20
+    },
+    "financeFields": {
+      "miscellaneousAmounts": [
+        "PHP 500.00",
+        "PHP 100.00",
+        "PHP 300.00",
+        "PHP 150.00",
+        "PHP 250.00",
+        "PHP 200.00",
+        "PHP 100.00",
+        "PHP 75.00",
+        "PHP 400.00",
+        "PHP 100.00",
+        "PHP 125.00",
+        "PHP 100.00",
+        "PHP 50.00"
+      ],
+      "miscellaneousTotal": "PHP 2,450.00",
+      "feeLines": [
+        "TUITION FEE: PHP 18,000.00",
+        "NSTP FEE (CWTS): PHP 1,500.00",
+        "TOTAL TOSF: PHP 19,950.00"
+      ],
+      "scholarship": "PHP 2,000.00",
+      "paymentSummary": [
+        "STATUS: PARTIAL",
+        "PAID: PHP 5,000.00 | BALANCE DUE: PHP 14,950.00"
+      ],
+      "ledgerRows": 4,
+      "receiptRows": [
+        [
+          "Oct 10, 2026",
+          "OR-2026-003",
+          "PHP 1,000.00"
+        ],
+        [
+          "Oct 11, 2026",
+          "OR-2026-004",
+          "PHP 650.00"
+        ],
+        [
+          "Oct 12, 2026",
+          "OR-2026-005",
+          "PHP 1,100.00"
+        ],
+        [
+          "Oct 14, 2026",
+          "OR-2026-006",
+          "PHP 1,000.00"
+        ]
+      ],
+      "receiptOverflowNote": "Showing the 4 latest of 6 receipts. 2 earlier receipts are not shown in this form; the paid total includes all receipts.",
+      "receiptOverflowDisplayInPrint": "none"
+    },
+    "staffSignatureGeometry": [
+      {
+        "slot": "registration-print-signature-accountant",
+        "name": "Atty. Romela D. Devera",
+        "role": "ACTING MUNICIPAL ACCOUNTANT",
+        "image": {
+          "left": 250.16,
+          "top": 821.61,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 250.16,
+          "top": 836.97,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 250.16,
+          "top": 853.83,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 250.16,
+          "top": 856.55,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-librarian",
+        "name": "Mary May P. Lanceta",
+        "role": "Librarian",
+        "image": {
+          "left": 250.16,
+          "top": 765.94,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 250.16,
+          "top": 781.3,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 250.16,
+          "top": 798.16,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 250.16,
+          "top": 800.88,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-nurse",
+        "name": "Danella Joyce P. Urgelles, RN",
+        "role": "NURSE",
+        "image": {
+          "left": 553.83,
+          "top": 763.94,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 779.3,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 796.16,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 798.88,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-dean",
+        "name": "Justiniano L. Santos, CPA, MBA",
+        "role": "Dean",
+        "image": {
+          "left": 553.83,
+          "top": 708.27,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 723.63,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 740.48,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 743.2,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-registrar",
+        "name": "Shaira Mae E. Pajares",
+        "role": "Registrar",
+        "image": {
+          "left": 553.83,
+          "top": 821.61,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 836.97,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 853.83,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 856.55,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-program-chair",
+        "name": "Ronel E. Caagbay, CPA, MBA",
+        "role": "Program Chair",
+        "image": {
+          "left": 553.83,
+          "top": 651.59,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 666.95,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 683.81,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 686.53,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      }
+    ],
+    "registrarApproval": {
+      "label": "Registrar",
+      "reviewer": "Shaira Mae E. Pajares",
+      "approvedAt": "Approved — Oct 14, 2026, 12:30 AM",
+      "signatureImageCount": 0,
+      "lineCount": 1
+    },
+    "srOnlyHeadingPosition": "absolute",
+    "pageSizeSupported": true,
+    "pdfPath": "C:\\Users\\Ron\\Documents\\projects\\clients\\PKM-DES\\artifacts\\client-requirements\\print\\registration-current-official-names-finance-receipts-registrar-synthetic-word-aligned-final.pdf"
+  },
+  "historical": {
+    "caseType": "historical QA fixture; original QA signature snapshots and names retained without current policy coverage",
+    "signatureSource": "Unmodified QA snapshots cropped from artifacts/registration-watermark/phase1a-current-page-{1,2}-20261009.png",
+    "cssSource": "workspace app/globals.css",
+    "screenLabels": [
+      {
+        "text": "STUDENT'S COPY",
+        "color": "rgb(0, 0, 0)",
+        "borderColor": "rgb(0, 0, 0)"
+      },
+      {
+        "text": "DEAN'S COPY",
+        "color": "rgb(233, 113, 50)",
+        "borderColor": "rgb(233, 113, 50)"
+      },
+      {
+        "text": "REGISTRAR'S COPY",
+        "color": "rgb(25, 107, 36)",
+        "borderColor": "rgb(25, 107, 36)"
+      },
+      {
+        "text": "ACCOUNTANT'S COPY",
+        "color": "rgb(21, 61, 99)",
+        "borderColor": "rgb(21, 61, 99)"
+      }
+    ],
+    "screenReceiptOverflow": null,
+    "printLabels": [
+      {
+        "text": "STUDENT'S COPY",
+        "color": "rgb(0, 0, 0)",
+        "borderColor": "rgb(0, 0, 0)"
+      },
+      {
+        "text": "DEAN'S COPY",
+        "color": "rgb(233, 113, 50)",
+        "borderColor": "rgb(233, 113, 50)"
+      },
+      {
+        "text": "REGISTRAR'S COPY",
+        "color": "rgb(25, 107, 36)",
+        "borderColor": "rgb(25, 107, 36)"
+      },
+      {
+        "text": "ACCOUNTANT'S COPY",
+        "color": "rgb(21, 61, 99)",
+        "borderColor": "rgb(21, 61, 99)"
+      }
+    ],
+    "viewportScrollY": 0,
+    "copies": [
+      {
+        "recipient": "student",
+        "left": 0,
+        "top": 0,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 0,
+            "bottom": 48,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 55.67,
+            "bottom": 132.81,
+            "height": 77.14,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 165.28,
+            "bottom": 407.73,
+            "height": 242.45,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 165.28,
+            "bottom": 395.28,
+            "height": 230,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 413,
+            "bottom": 836.98,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 621.17,
+            "bottom": 836.98,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 842.73,
+            "bottom": 951.53,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 920.48,
+            "bottom": 952.48,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(0, 0, 0)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      },
+      {
+        "recipient": "dean",
+        "left": 0,
+        "top": 988.8,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 988.8,
+            "bottom": 1036.8,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 1044.47,
+            "bottom": 1121.61,
+            "height": 77.14,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 1154.08,
+            "bottom": 1396.53,
+            "height": 242.45,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 1154.08,
+            "bottom": 1384.08,
+            "height": 230,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 1401.8,
+            "bottom": 1825.78,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 1609.97,
+            "bottom": 1825.78,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 1831.53,
+            "bottom": 1940.33,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 1909.28,
+            "bottom": 1941.28,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(233, 113, 50)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      },
+      {
+        "recipient": "registrar",
+        "left": 0,
+        "top": 1977.59,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 1977.59,
+            "bottom": 2025.59,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 2033.27,
+            "bottom": 2110.41,
+            "height": 77.14,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 2142.88,
+            "bottom": 2385.33,
+            "height": 242.45,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 2142.88,
+            "bottom": 2372.88,
+            "height": 230,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 2390.59,
+            "bottom": 2814.58,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 2598.77,
+            "bottom": 2814.58,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 2820.33,
+            "bottom": 2929.13,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 2898.08,
+            "bottom": 2930.08,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(25, 107, 36)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      },
+      {
+        "recipient": "accountant",
+        "left": 0,
+        "top": 2966.39,
+        "width": 816,
+        "height": 988.796875,
+        "scrollHeight": 989,
+        "pageName": "registration-form",
+        "contentBoxes": {
+          "header": {
+            "top": 2966.39,
+            "bottom": 3014.39,
+            "height": 48,
+            "display": "block",
+            "position": "static"
+          },
+          "details": {
+            "top": 3022.06,
+            "bottom": 3099.2,
+            "height": 77.14,
+            "display": "grid",
+            "position": "static"
+          },
+          "subjects": {
+            "top": 3131.67,
+            "bottom": 3374.13,
+            "height": 242.45,
+            "display": "block",
+            "position": "static"
+          },
+          "table": {
+            "top": 3131.67,
+            "bottom": 3361.67,
+            "height": 230,
+            "display": "table",
+            "position": "static"
+          },
+          "assessment": {
+            "top": 3379.39,
+            "bottom": 3803.38,
+            "height": 423.98,
+            "display": "block",
+            "position": "static"
+          },
+          "signatures": {
+            "top": 3587.56,
+            "bottom": 3803.38,
+            "height": 215.81,
+            "display": "grid",
+            "position": "static"
+          },
+          "bottom": {
+            "top": 3809.13,
+            "bottom": 3917.92,
+            "height": 108.8,
+            "display": "grid",
+            "position": "static"
+          },
+          "copyLabel": {
+            "top": 3886.88,
+            "bottom": 3918.88,
+            "height": 32,
+            "display": "block",
+            "position": "relative"
+          }
+        },
+        "labelColor": "rgb(21, 61, 99)",
+        "watermarkCount": 1,
+        "watermarkOpacity": "0.05",
+        "watermarkLoaded": true,
+        "signatureImageCount": 6
+      }
+    ],
+    "studentCopySignatureImages": 4,
+    "policyPages": 1,
+    "policySignatureImages": 0,
+    "syntheticSignatureImages": 0,
+    "policyHeight": 988.796875,
+    "policyPageName": "registration-policy",
+    "fixtureFields": {
+      "details": [
+        "QA-HISTORY-001",
+        "QA Fixture",
+        "Bachelor of Information Technology",
+        "Mauban, Quezon",
+        "October 9, 2026",
+        "BSIT 1",
+        "1ST/2026-2027"
+      ],
+      "scheduleRows": [
+        [
+          "TBA",
+          "TBA",
+          "TBA"
+        ],
+        [
+          "TBA",
+          "TBA",
+          "TBA"
+        ],
+        [
+          "TBA",
+          "TBA",
+          "TBA"
+        ],
+        [
+          "TBA",
+          "TBA",
+          "TBA"
+        ]
+      ],
+      "scheduleFallbackCellCount": 27
+    },
+    "financeFields": {
+      "miscellaneousAmounts": [
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured",
+        "Not configured"
+      ],
+      "miscellaneousTotal": "Not configured",
+      "feeLines": [
+        "TUITION FEE: Not configured",
+        "NSTP FEE (CWTS): Not configured",
+        "TOTAL TOSF: Not configured"
+      ],
+      "scholarship": "Not configured",
+      "paymentSummary": [
+        "STATUS: Not configured",
+        "PAID: Not configured | BALANCE DUE: Not configured"
+      ],
+      "ledgerRows": 4,
+      "receiptRows": [
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          ""
+        ]
+      ],
+      "receiptOverflowNote": null,
+      "receiptOverflowDisplayInPrint": null
+    },
+    "staffSignatureGeometry": [
+      {
+        "slot": "registration-print-signature-accountant",
+        "name": "QA ACCOUNTING OFFICE",
+        "role": "ACTING MUNICIPAL ACCOUNTANT",
+        "image": {
+          "left": 250.16,
+          "top": 791.19,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 250.16,
+          "top": 806.55,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 250.16,
+          "top": 823.41,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 250.16,
+          "top": 826.13,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-librarian",
+        "name": "QA LIBRARY OFFICE",
+        "role": "Librarian",
+        "image": {
+          "left": 250.16,
+          "top": 735.52,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 250.16,
+          "top": 750.88,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 250.16,
+          "top": 767.73,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 250.16,
+          "top": 770.45,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-nurse",
+        "name": "QA HEALTH OFFICE",
+        "role": "NURSE",
+        "image": {
+          "left": 553.83,
+          "top": 733.52,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 748.88,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 765.73,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 768.45,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-dean",
+        "name": "QA DEAN'S OFFICE",
+        "role": "Dean",
+        "image": {
+          "left": 553.83,
+          "top": 677.84,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 693.2,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 710.06,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 712.78,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      },
+      {
+        "slot": "registration-print-signature-registrar",
+        "name": "",
+        "role": "Registrar",
+        "image": {
+          "left": 553.83,
+          "top": 791.19,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 806.55,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 823.41,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 826.13,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": null
+      },
+      {
+        "slot": "registration-print-signature-program-chair",
+        "name": "QA PROGRAM OFFICE",
+        "role": "Program Chair",
+        "image": {
+          "left": 553.83,
+          "top": 621.17,
+          "width": 244.16,
+          "height": 15.36
+        },
+        "nameBox": {
+          "left": 553.83,
+          "top": 636.53,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "line": {
+          "left": 553.83,
+          "top": 653.39,
+          "width": 251.47,
+          "height": 1
+        },
+        "roleBox": {
+          "left": 553.83,
+          "top": 656.11,
+          "width": 244.16,
+          "height": 16.86
+        },
+        "dateDisplayInPrint": "none"
+      }
+    ],
+    "registrarApproval": {
+      "label": "Registrar",
+      "reviewer": "",
+      "approvedAt": null,
+      "signatureImageCount": 0,
+      "lineCount": 1
+    },
+    "srOnlyHeadingPosition": "absolute",
+    "pageSizeSupported": true,
+    "pdfPath": "C:\\Users\\Ron\\Documents\\projects\\clients\\PKM-DES\\artifacts\\client-requirements\\print\\registration-historical-original-signatures-unsigned-pledge-word-aligned-final.pdf"
+  }
+}

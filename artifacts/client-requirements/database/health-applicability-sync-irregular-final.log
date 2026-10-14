@@ -1,0 +1,15 @@
+✔ Database: Canonical rule evaluation via private.get_health_requirement_applicability (751.1211ms)
+✔ Step 19 & 21: Special Nurse path allowed for Incoming Female and Standard path DENIED (1322.0895ms)
+✔ Step 20 & 21: Standard Nurse path allowed for Old Student / Incoming Male and Special path DENIED (737.3596ms)
+✔ Step 15: Nurse queue includes all students in authorized scope with workflow mode flags (160.1542ms)
+✔ Step 33: Mode-change 3-signature cycle (Standard S1 -> Special S2 -> Standard S3 with no resurrection of S1) (2007.6048ms)
+✔ Step 26 & 35: Registrar approval gate authoritatively enforces ALL 6 required clearances (3671.1282ms)
+✔ Audit Finding 3: Missing HEALTH_CLEARANCE row is recreated by reconciliation without fake signatures (719.4555ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9438.001

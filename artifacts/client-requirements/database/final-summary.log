@@ -1,0 +1,40 @@
+PKM-DES client requirements database verification, 2026-10-14
+Branch: feature/client-requirements
+Database: client_req_p3_98f1d9
+Cluster: C:\Users\Ron\Documents\projects\clients\PKM-DES\tmp\client-requirements-pg-6695beff8db547eda2e27106a4274be5
+Runtime: PostgreSQL 18.4, Windows x86_64, English_United States.1252
+
+Clean migration build through P5:
+scripts/dev/verify-local-supabase.ps1 -ReuseClusterName client-requirements-pg-6695beff8db547eda2e27106a4274be5 -DatabaseName client_req_p3_98f1d9 -ThroughMigration 20261014150000_medical_supporting_documents.sql -SkipWorkflowSql -IntegrationTestName irregular-legacy-removal.test.mjs
+Migration transcript: irregular-clean-migrations.log
+
+Final focused command:
+scripts/dev/verify-local-supabase-resume.ps1 -IncludeFinance -IncludeMedical -LogSuffix irregular-final
+Command exit: 0
+Server stop exit: 0
+Cluster preserved, stopped.
+
+P2 SHA256 890651D9393ED4A0527A4A468BAE955FEC20040DE8E3BE2EE2EB1E2078D85C20
+P3 SHA256 98F1D93B5FBE498E8134083C626E582004E5B9A44E86E04A253D30859E7E9344
+P4 SHA256 CA3CBBFEAE816A83153D3DC6D1464655AF33A03982CBC9E1DBEF142FCC510E9D
+P5 SHA256 4E19F85986CC3CB71E3A0144254E7182C1248215C04EF410526A15A09D4CE03A
+
+health-applicability-sync-irregular-final.log: 7 pass, 0 fail, exit 0
+schedule-fingerprint-irregular-final.log: 1 pass, 0 fail, exit 0
+direct-update-irregular-final.log: 1 pass, 0 fail, exit 0
+irregular-legacy-removal-irregular-final.log: 1 pass, 0 fail, exit 0
+workflow-sql-irregular-final.log: exit 0, ROLLBACK
+accounting-finance-irregular-final.log: 2 pass, 0 fail, exit 0
+medical-documents-irregular-final.log: 2 pass, 0 fail, exit 0
+demo-reset-storage-contract-irregular-final.log: 4 pass, 0 fail, exit 0, MOCK SDK
+signature-service-irregular-final.log: 2 pass, 0 fail, exit 0
+Total: 20 tests pass, 0 fail. Shared workflow SQL passes separately.
+New removal test SHA256 C67D3AB8ADED89BA019D975E3243CBF6EF2B83E42530755721ED64B9C871E794
+Legacy removal: optional selection tested; retained snapshot IDs/source references/schedules unchanged.
+Unrelated IDs, unauthorized actors, regular/approved edits, empty/>60-unit loads denied.
+
+Reset: application-data cleanup and staff preservation passed in real PostgreSQL.
+Storage cleanup: production service removes linked files before SQL; SDK contract mocked.
+Direct SQL reset deliberately retains Storage object metadata for API cleanup.
+Real Supabase Auth/Storage API/PostgREST and physical file transfer/removal unverified.
+No hosted DB, .env.local connection, production reset, migration edits, commits or deployment.
