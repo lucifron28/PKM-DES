@@ -3,7 +3,7 @@ PowerShell transcript start
 Start time: 20261014135642
 Username: RON\Ron
 RunAs User: RON\Ron
-Configuration Name: 
+Configuration Name:
 Machine: RON (Microsoft Windows NT 10.0.26200.0)
 Host Application: C:\Users\Ron\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
 Start-Transcript -Path artifacts/client-requirements/database/irregular-clean-migrations.log

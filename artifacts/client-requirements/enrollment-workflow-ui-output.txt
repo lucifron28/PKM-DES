@@ -51,4 +51,3 @@ Unable to open session log file "C:\\Users\\Ron\\.cache\\starship\\session_mCpae
 ℹ skipped 0
 ℹ todo 0
 ℹ duration_ms 1361.2298
-

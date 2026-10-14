@@ -1,7 +1,7 @@
 # Registration print QA report
 
-Date: 2026-10-14  
-Status: Layout accepted after main's final visual review. Typography remains limited by the local renderer's Arial fallback for Aptos.  
+Date: 2026-10-14
+Status: Layout accepted after main's final visual review. Typography remains limited by the local renderer's Arial fallback for Aptos.
 Scope: registration print presentation and timezone formatting only. No hosted database operations, signature-snapshot edits, commits, or deployment.
 
 ## Reference and geometry
