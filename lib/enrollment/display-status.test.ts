@@ -27,6 +27,10 @@ test("current-term rejected status maps to REJECTED", () => {
   assert.equal(getDisplayedEnrollmentStatus("REJECTED"), "REJECTED");
 });
 
+test("current-term pulled-out status remains visible without changing overall student status", () => {
+  assert.equal(getDisplayedEnrollmentStatus("PULLED_OUT"), "PULLED_OUT");
+});
+
 test("null status maps to NOT ENROLLED (no current-term enrollment)", () => {
   assert.equal(getDisplayedEnrollmentStatus(null), "NOT ENROLLED");
 });

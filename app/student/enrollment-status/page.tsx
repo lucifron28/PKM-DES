@@ -8,6 +8,7 @@ import { applyStudentEnrollmentSignatureAction } from "@/app/student/enrollment/
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
+import { getEnrollmentStatusLabel } from "@/lib/constants/enrollment";
 import { getHealthVerificationViewState, healthVerificationStateLabel, healthVerificationStateTone } from "@/lib/health-records/presentation";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
@@ -166,6 +167,8 @@ export default async function EnrollmentStatusPage() {
       ? "border-amber-500 bg-amber-50"
       : status === "REJECTED"
         ? "border-red-600 bg-red-50"
+        : status === "PULLED_OUT"
+          ? "border-amber-600 bg-amber-50"
         : "border-primary-800 bg-primary-50";
 
   const actions = status === "ENROLLED"
@@ -197,7 +200,7 @@ export default async function EnrollmentStatusPage() {
                   : "No active academic term configured."}
               </p>
             </div>
-            <Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>
+            <Badge tone={enrollmentBadgeTone(status)}>{getEnrollmentStatusLabel(status)}</Badge>
           </div>
 
           {status === "PENDING" ? (
@@ -229,6 +232,12 @@ export default async function EnrollmentStatusPage() {
               <p className="text-xs text-slateui-muted">
                 Reviewed: {formatDate(currentTermEnrollment?.reviewed_at)}
               </p>
+            </div>
+          ) : status === "PULLED_OUT" ? (
+            <div className="mt-4 space-y-2">
+              <p className="text-base font-semibold text-amber-950">This enrollment is marked PULL OUT.</p>
+              <p className="text-sm leading-6 text-slateui-secondary">Your student record and enrollment history remain on file. Contact the Registrar if this status needs review.</p>
+              <p className="text-xs text-slateui-muted">Marked PULL OUT: {formatDate(currentTermEnrollment?.reviewed_at ?? currentTermEnrollment?.submitted_at)}</p>
             </div>
           ) : (
             <p className="mt-4 text-base font-semibold text-slateui-text">
@@ -337,7 +346,7 @@ export default async function EnrollmentStatusPage() {
                       {record.academic_year} – {record.semester}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge tone={enrollmentBadgeTone(record.status)}>{record.status}</Badge>
+                      <Badge tone={enrollmentBadgeTone(record.status)}>{getEnrollmentStatusLabel(record.status)}</Badge>
                     </td>
                     <td className="px-4 py-3 text-slateui-secondary">
                       {formatDate(record.submitted_at)}

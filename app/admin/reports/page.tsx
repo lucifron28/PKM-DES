@@ -7,6 +7,7 @@ import { EnrollmentFilterGrid } from "@/components/forms/enrollment-filter-grid"
 import { PrintButton } from "@/components/print/print-button";
 import { StatCard } from "@/components/ui/stat-card";
 import { requireRegistrarAdmin } from "@/lib/auth/session";
+import { getEnrollmentStatusLabel } from "@/lib/constants/enrollment";
 import {
   countEnrollmentStatuses,
   fetchEnrollmentFilterData,
@@ -108,7 +109,7 @@ export default async function EnrollmentReportsPage({
                       <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{enrollment.year_level}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{enrollment.academic_year}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{enrollment.semester}</td>
-                      <td className="whitespace-nowrap px-4 py-3"><Badge tone={enrollmentBadgeTone(enrollment.status)}>{enrollment.status}</Badge></td>
+                      <td className="whitespace-nowrap px-4 py-3"><Badge tone={enrollmentBadgeTone(enrollment.status)}>{getEnrollmentStatusLabel(enrollment.status)}</Badge></td>
                       <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{formatDate(enrollment.submitted_at)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{formatDate(enrollment.reviewed_at)}</td>
                       <td className="max-w-sm px-4 py-3 text-slateui-secondary">{enrollment.remarks || "None"}</td>

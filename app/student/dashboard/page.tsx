@@ -7,6 +7,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { getStudentQueryResult, requireRole } from "@/lib/auth/session";
 import { getDisplayedEnrollmentStatus, separateEnrollmentsByTerm } from "@/lib/enrollment/display-status";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
+import { getEnrollmentStatusLabel } from "@/lib/constants/enrollment";
 import { formatDate, formatName } from "@/lib/utils/format";
 import type { EnrollmentReviewStatus } from "@/types/database";
 import { ENABLE_STUB_PAGES } from "@/lib/constants/navigation";
@@ -81,7 +82,7 @@ export default async function StudentDashboardPage() {
 
   const primaryAction = status === "ENROLLED"
     ? { href: "/student/cor", label: "View / Print Registration Form", icon: FileText, variant: "secondary" as const }
-    : status === "PENDING" || status === "REJECTED"
+    : status === "PENDING" || status === "REJECTED" || status === "PULLED_OUT"
       ? { href: "/student/enrollment-status", label: "View Enrollment Status", icon: ClipboardCheck, variant: "primary" as const }
       : { href: "/student/enrollment", label: "Start Online Enrollment", icon: ClipboardCheck, variant: "primary" as const };
   const PrimaryIcon = primaryAction.icon;
@@ -106,7 +107,7 @@ export default async function StudentDashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <StatCard
           label="Current Term Status"
-          value={<Badge tone={enrollmentBadgeTone(status)}>{status}</Badge>}
+          value={<Badge tone={enrollmentBadgeTone(status)}>{getEnrollmentStatusLabel(status)}</Badge>}
           helper={
             activeTerm
               ? currentTermEnrollment
@@ -183,7 +184,7 @@ export default async function StudentDashboardPage() {
                       {record.academic_year} – {record.semester}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge tone={enrollmentBadgeTone(record.status)}>{record.status}</Badge>
+                      <Badge tone={enrollmentBadgeTone(record.status)}>{getEnrollmentStatusLabel(record.status)}</Badge>
                     </td>
                     <td className="px-4 py-3 text-slateui-secondary">
                       {formatDate(record.submitted_at)}

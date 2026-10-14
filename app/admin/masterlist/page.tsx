@@ -7,6 +7,7 @@ import { EnrollmentFilterGrid } from "@/components/forms/enrollment-filter-grid"
 import { PrintButton } from "@/components/print/print-button";
 import { SimpleTable } from "@/components/tables/simple-table";
 import { requireRegistrarAdmin } from "@/lib/auth/session";
+import { getEnrollmentStatusLabel } from "@/lib/constants/enrollment";
 import {
   fetchEnrollmentFilterData,
   getEnrollmentReportCriteria,
@@ -81,7 +82,7 @@ export default async function EnrollmentMasterlistPage({
             enrollment.year_level,
             enrollment.academic_year,
             enrollment.semester,
-            <Badge key={`${enrollment.id}-review`} tone={enrollmentBadgeTone(enrollment.status)}>{enrollment.status}</Badge>,
+            <Badge key={`${enrollment.id}-review`} tone={enrollmentBadgeTone(enrollment.status)}>{getEnrollmentStatusLabel(enrollment.status)}</Badge>,
             <Badge key={`${enrollment.id}-student`} tone={enrollmentBadgeTone(enrollment.students?.enrollment_status)}>{enrollment.students?.enrollment_status ?? "NOT AVAILABLE"}</Badge>,
             <ButtonLink key={`${enrollment.id}-form`} href={`/admin/enrollments/${enrollment.id}/registration`} variant="outline" className="print-hidden min-h-9 px-3 py-1.5">View/Print</ButtonLink>
           ])}

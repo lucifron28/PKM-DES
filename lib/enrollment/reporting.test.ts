@@ -113,8 +113,8 @@ test("searches only student identity fields with normalized partial matching", (
 });
 
 test("counts canonical filtered enrollment rows", () => {
-  const counts = countEnrollmentStatuses([{ status: "PENDING" }, { status: "APPROVED" }]);
-  assert.deepEqual(counts, { PENDING: 1, APPROVED: 1, REJECTED: 0, total: 2 });
+  const counts = countEnrollmentStatuses([{ status: "PENDING" }, { status: "APPROVED" }, { status: "PULLED_OUT" }]);
+  assert.deepEqual(counts, { PENDING: 1, APPROVED: 1, REJECTED: 0, PULLED_OUT: 1, total: 3 });
 });
 
 test("formats print criteria without raw program identifiers", () => {

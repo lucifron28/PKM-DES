@@ -1,6 +1,6 @@
 import type { EnrollmentReviewStatus, EnrollmentStatus } from "@/types/database";
 
-export type DisplayedEnrollmentStatus = EnrollmentStatus | "REJECTED";
+export type DisplayedEnrollmentStatus = EnrollmentStatus | "REJECTED" | "PULLED_OUT";
 
 /**
  * Resolves the displayed enrollment status from a current-term enrollment record.

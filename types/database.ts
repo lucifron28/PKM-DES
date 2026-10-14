@@ -13,7 +13,7 @@ export type EnrollmentClearanceStatus = "PENDING" | "SIGNED" | "NOT_APPLICABLE" 
 export type AccountStatus = "ACTIVE" | "PENDING" | "SETUP";
 export type EnrollmentStatus = "NOT ENROLLED" | "PENDING" | "ENROLLED";
 export type EnrollmentDecision = "APPROVED" | "REJECTED";
-export type EnrollmentReviewStatus = "PENDING" | EnrollmentDecision;
+export type EnrollmentReviewStatus = "PENDING" | EnrollmentDecision | "PULLED_OUT";
 export type EnrollmentDecisionNotificationStatus = "PENDING" | "SENDING" | "SENT" | "FAILED";
 export type StandardLoadStatus = "DRAFT" | "ACTIVE";
 export type StudentType =
@@ -143,6 +143,18 @@ export type Enrollment = {
   enrollment_subjects?: EnrollmentSubject[] | null;
   enrollment_clearances?: EnrollmentClearance[] | null;
   enrollment_signatures?: EnrollmentSignature[] | null;
+};
+
+export type EnrollmentStatusEvent = {
+  id: string;
+  enrollment_id: string;
+  event_type: "PULLED_OUT" | "REINSTATED";
+  from_status: EnrollmentReviewStatus;
+  to_status: EnrollmentReviewStatus;
+  actor_profile_id: string;
+  reason: string | null;
+  created_at: string;
+  profiles?: Pick<Profile, "first_name" | "last_name"> | null;
 };
 
 export type EnrollmentClearance = {

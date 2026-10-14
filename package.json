@@ -15,7 +15,7 @@
     "test:smoke:public": "playwright test tests/smoke/public.spec.ts",
     "test:smoke:workflow": "node --env-file-if-exists=.env.smoke.local scripts/smoke/run-demo-workflow.mjs",
     "test:portal-navigation": "tsx --import ./tests/support/stub-loader.mjs --test components/layout/portal-navigation.test.tsx",
-    "test:enrollment-review-ui": "tsx --import ./tests/support/stub-loader.mjs --test components/admin/enrollment-review-controls.test.tsx",
+    "test:enrollment-review-ui": "tsx --import ./tests/support/stub-loader.mjs --test components/admin/*.test.tsx",
     "test:email": "tsx --conditions react-server --test lib/email/*.test.ts",
     "db:sqlite:init": "node scripts/sqlite/init-dev-db.mjs",
     "demo:prepare": "node --env-file-if-exists=.env.local scripts/demo/prepare-demo.mjs",

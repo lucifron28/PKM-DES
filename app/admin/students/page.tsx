@@ -9,6 +9,7 @@ import { SimpleTable } from "@/components/tables/simple-table";
 import { addOfficialStudentRecordAction } from "./actions";
 import { OfficialStudentRecordForm } from "./official-record-form";
 import { requireRegistrarAdmin } from "@/lib/auth/session";
+import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import {
   ACCOUNT_MATCH_LABELS,
   buildOfficialRecordSearchFilter,
@@ -186,7 +187,7 @@ export default async function StudentRecordsPage({
   const recordStudentIds = [
     ...new Set(records.map((record) => normalizeOfficialRecordStudentId(record.student_id_number)).filter(Boolean))
   ];
-  const [emailLookupResult, studentIdLookupResult] = await Promise.all([
+  const [emailLookupResult, studentIdLookupResult, linkedStudentsResult, activeTermResult] = await Promise.all([
     recordEmails.length
       ? supabase
           .from("profiles")
@@ -199,7 +200,11 @@ export default async function StudentRecordsPage({
           .from("students")
           .select("id, student_id_number, profiles(id, email, account_status)")
           .in("student_id_number", recordStudentIds)
-      : Promise.resolve({ data: [], error: null })
+      : Promise.resolve({ data: [], error: null }),
+    records.length
+      ? supabase.from("students").select("id, official_record_id").in("official_record_id", records.map((record) => record.id))
+      : Promise.resolve({ data: [], error: null }),
+    getActiveEnrollmentTermResult(supabase)
   ]);
   const accountMatchUnavailable = Boolean(emailLookupResult.error || studentIdLookupResult.error);
 
@@ -242,6 +247,24 @@ export default async function StudentRecordsPage({
   const accountsOnPage = accountMatches.filter((match) => !["none", "unavailable"].includes(match.state)).length;
   const exactMatches = accountMatches.filter((match) => match.state === "exact").length;
   const needsAccountOrReview = records.length - exactMatches;
+
+  const linkedStudents = linkedStudentsResult.data ?? [];
+  const studentByRecordId = new Map(linkedStudents.map((student) => [student.official_record_id, student.id]));
+  let enrollmentQuery = supabase.from("enrollments")
+    .select("id, student_id, status, academic_year, semester, submitted_at")
+    .in("student_id", linkedStudents.map((student) => student.id))
+    .order("submitted_at", { ascending: false }).order("id", { ascending: false });
+  if (activeTermResult.ok && activeTermResult.term) {
+    enrollmentQuery = enrollmentQuery.eq("academic_year", activeTermResult.term.academicYear)
+      .eq("semester", activeTermResult.term.semester);
+  }
+  const enrollmentResult = linkedStudents.length && activeTermResult.ok
+    ? await enrollmentQuery : { data: [], error: null };
+  const enrollmentHistoryUnavailable = Boolean(linkedStudentsResult.error || !activeTermResult.ok || enrollmentResult.error);
+  const latestEnrollmentByStudent = new Map<string, NonNullable<typeof enrollmentResult.data>[number]>();
+  for (const enrollment of enrollmentResult.data ?? []) {
+    if (!latestEnrollmentByStudent.has(enrollment.student_id)) latestEnrollmentByStudent.set(enrollment.student_id, enrollment);
+  }
 
   return (
     <div className="space-y-6">
@@ -319,6 +342,8 @@ export default async function StudentRecordsPage({
             <SimpleTable
               columns={["Student name", "Student ID", "Email", "Program", "Year Level", "Type", "Official Record Status", "Account", "Updated", "Action"]}
               rows={records.map((record) => {
+                const linkedStudentId = studentByRecordId.get(record.id);
+                const retainedEnrollment = linkedStudentId ? latestEnrollmentByStudent.get(linkedStudentId) : null;
                 const accountMatch = accountMatchByRecordId.get(record.id) ?? {
                   state: "unavailable",
                   accountStatus: null
@@ -331,9 +356,15 @@ export default async function StudentRecordsPage({
                   record.programs?.name ?? "Not available",
                   record.year_level,
                   record.student_type,
-                  <Badge key={`${record.id}-enrollment`} tone={enrollmentBadgeTone(record.enrollment_status)}>
-                    {record.enrollment_status}
-                  </Badge>,
+                  <span key={`${record.id}-enrollment`} className="inline-flex flex-col items-start gap-1 whitespace-normal">
+                    <Badge tone={enrollmentBadgeTone(record.enrollment_status)}>{record.enrollment_status}</Badge>
+                    {retainedEnrollment?.status === "PULLED_OUT" ? <>
+                      <Badge tone={enrollmentBadgeTone("PULLED_OUT")}>PULL OUT</Badge>
+                      <span className="text-xs">{retainedEnrollment.academic_year}, {retainedEnrollment.semester}</span>
+                      <ButtonLink href={`/admin/enrollments?status=PULLED_OUT&academic_year=${encodeURIComponent(retainedEnrollment.academic_year)}&semester=${encodeURIComponent(retainedEnrollment.semester)}#enrollment-${retainedEnrollment.id}`} variant="outline" className="min-h-9 px-2 text-xs">Withdrawal history</ButtonLink>
+                    </> : null}
+                    {enrollmentHistoryUnavailable ? <span className="text-xs text-amber-900">Enrollment history unavailable</span> : null}
+                  </span>,
                   <span key={`${record.id}-account`} className="inline-flex min-w-40 flex-col gap-1 whitespace-normal">
                     <Badge tone={accountMatchTone(accountMatch.state)}>{ACCOUNT_MATCH_LABELS[accountMatch.state]}</Badge>
                     {accountMatch.accountStatus ? (

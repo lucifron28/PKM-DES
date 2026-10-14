@@ -3,13 +3,15 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EnrollmentReviewControls } from "@/components/admin/enrollment-review-controls";
+import { EnrollmentBulkActions, EnrollmentSelectionCheckbox } from "@/components/admin/enrollment-bulk-actions";
 import { requireRegistrarAdmin } from "@/lib/auth/session";
 import { getActiveEnrollmentTermResult } from "@/lib/enrollment/term-authority";
 import { getRequirementApplicability } from "@/lib/requirements/rules";
 import { formatDate, formatName } from "@/lib/utils/format";
 import { computeEnrollmentDocumentHash, computeHealthRecordDocumentHash } from "@/lib/signatures/fingerprint";
+import { getEnrollmentStatusLabel } from "@/lib/constants/enrollment";
 import type { StudentRequirementRecord } from "@/lib/requirements/types";
-import type { Enrollment, OfficialStudentRecord, Profile, Semester, Student } from "@/types/database";
+import type { Enrollment, EnrollmentReviewStatus, OfficialStudentRecord, Profile, Semester, Student } from "@/types/database";
 
 type EnrollmentRow = Enrollment & {
   students?: (Student & { profiles?: Profile | null }) | null;
@@ -37,6 +39,15 @@ type ClearanceStatusRow = {
   clearance_type: string;
   status: "PENDING" | "SIGNED" | "NOT_APPLICABLE" | "INVALIDATED";
 };
+type EnrollmentStatusEventRow = {
+  enrollment_id: string;
+  event_type: "PULLED_OUT" | "REINSTATED";
+  from_status: string;
+  to_status: string;
+  reason: string | null;
+  created_at: string;
+  profiles?: Pick<Profile, "first_name" | "last_name"> | null;
+};
 
 function requirementKey(studentId: string, academicYear: string | null, semester: string | null) {
   return `${studentId}:${academicYear ?? ""}:${semester ?? ""}`;
@@ -48,10 +59,17 @@ const ACADEMIC_YEAR_REGEX = /^\d{4}-\d{4}$/;
 export default async function PendingEnrollmentsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ error?: string; success?: string; email?: string; academic_year?: string; semester?: string }>;
+  searchParams?: Promise<{ error?: string; success?: string; email?: string; processed?: string; skipped?: string; skip_summary?: string; status?: string; academic_year?: string; semester?: string }>;
 }) {
   const { supabase } = await requireRegistrarAdmin();
   const params = (await searchParams) ?? {};
+  const activeStatus = ["PENDING", "APPROVED", "REJECTED", "PULLED_OUT"].includes(params.status ?? "")
+    ? params.status as EnrollmentReviewStatus
+    : "PENDING";
+  const statusTitle = activeStatus === "PULLED_OUT"
+    ? "PULL OUT"
+    : `${activeStatus[0]}${activeStatus.slice(1).toLowerCase()}`;
+  const statusHeading = `${statusTitle} Enrollments`;
 
   const activeTermResult = await getActiveEnrollmentTermResult(supabase);
 
@@ -60,7 +78,7 @@ export default async function PendingEnrollmentsPage({
     return (
       <Card>
         <CardHeader
-          title="Pending Enrollments"
+          title={statusHeading}
           description="Submitted Online Enrollment requests awaiting Registrar review."
         />
         <EmptyState
@@ -95,7 +113,7 @@ export default async function PendingEnrollmentsPage({
     return (
       <Card>
         <CardHeader
-          title="Pending Enrollments"
+          title={statusHeading}
           description="No active enrollment term is currently configured in the database."
         />
         <div className="p-4">
@@ -126,7 +144,7 @@ export default async function PendingEnrollmentsPage({
   const query = supabase
     .from("enrollments")
     .select("*, students(*, profiles(*)), programs(*), enrollment_subjects(id, course_code, course_description, units)")
-    .eq("status", "PENDING")
+    .eq("status", activeStatus)
     .eq("academic_year", academicYear)
     .eq("semester", semester);
 
@@ -137,7 +155,7 @@ export default async function PendingEnrollmentsPage({
     return (
       <Card>
         <CardHeader
-          title="Pending Enrollments"
+          title={statusHeading}
           description={`Term: AY ${academicYear}, ${semester}`}
         />
         <EmptyState
@@ -149,20 +167,46 @@ export default async function PendingEnrollmentsPage({
   }
 
   const enrollments = (data as EnrollmentRow[] | null) ?? [];
+  const statusHistoryResult = enrollments.length
+    ? await supabase
+        .from("enrollment_status_events")
+        .select("enrollment_id, event_type, from_status, to_status, reason, created_at, profiles(first_name, last_name)")
+        .in("enrollment_id", enrollments.map((enrollment) => enrollment.id))
+        .order("event_sequence", { ascending: false })
+    : { data: [], error: null };
+  if (statusHistoryResult.error) console.error("pending_enrollments:status_history_load");
+  const statusHistoryByEnrollmentId = new Map<string, EnrollmentStatusEventRow[]>();
+  for (const event of (statusHistoryResult.data as EnrollmentStatusEventRow[] | null) ?? []) {
+    const enrollmentEvents = statusHistoryByEnrollmentId.get(event.enrollment_id) ?? [];
+    enrollmentEvents.push(event);
+    statusHistoryByEnrollmentId.set(event.enrollment_id, enrollmentEvents);
+  }
 
   const errorMessages: Record<string, string> = {
-    not_found: "Enrollment request is not available. Refresh the pending list.",
-    already_reviewed: "This enrollment request has already been reviewed. Refresh the pending list.",
+    already_reviewed: "This enrollment request has already been reviewed. Refresh the list.",
     invalid_request: "Enrollment request could not be reviewed. Please try again.",
     review_failed: "Enrollment request could not be reviewed. Please try again.",
     invalid_enrollment_load: "This enrollment cannot be approved because its subject load is missing or invalid.",
-    incomplete_clearances: "All required clearance signatures must be complete and current before approval.",
-    unverified_requirements: "Applicable Health Record Update verification is still pending for this enrollment term."
+    incomplete_clearances: "All required signatures and clearances must be current before approval or reinstatement.",
+    unverified_requirements: "Applicable Health Record Update verification is still pending for this enrollment term.",
+    bulk_review_failed: "No selected enrollment was changed. Refresh the list and try again.",
+    pull_out_failed: "Selected enrollments could not be pulled out. Refresh the list and try again.",
+    reinstate_failed: "Selected enrollments could not be reinstated. Refresh the list and try again.",
+    unauthorized: "Registrar access is required for this action.",
+    not_found: "A selected enrollment is no longer available. Refresh the list.",
+    already_pulled_out: "The selected enrollments are already marked PULL OUT.",
+    history_unavailable: "The previous enrollment status could not be restored because its history is unavailable.",
+    no_eligible_records: "No selected enrollment was eligible for this action. Refresh the list and review each status.",
+    no_results: "The server did not return an enrollment result. No changes were confirmed.",
+    invalid_rpc_results: "The enrollment result could not be verified. No follow-up actions were taken. Refresh the list."
   };
 
   const successMessages: Record<string, string> = {
     approved: "Enrollment request approved successfully.",
-    rejected: "Enrollment request rejected successfully."
+    rejected: "Enrollment request rejected successfully.",
+    bulk_reviewed: `${params.processed ?? "Selected"} enrollment decisions were saved.${params.skipped && params.skipped !== "0" ? ` ${params.skipped} skipped: ${params.skip_summary ?? "not eligible for that action"}.` : ""}`,
+    pulled_out: `${params.processed ?? "Selected"} enrollment${params.processed === "1" ? " was" : "s were"} marked PULL OUT. History was retained.${params.skipped && params.skipped !== "0" ? ` ${params.skipped} skipped: ${params.skip_summary ?? "not eligible"}.` : ""}`,
+    reinstated: `${params.processed ?? "Selected"} enrollment${params.processed === "1" ? " was" : "s were"} reinstated.${params.skipped && params.skipped !== "0" ? ` ${params.skipped} skipped: ${params.skip_summary ?? "not eligible"}.` : ""}`
   };
 
   const emailMessages: Record<string, string> = {
@@ -173,9 +217,10 @@ export default async function PendingEnrollmentsPage({
 
   const studentIds = [...new Set(enrollments.map((enrollment) => enrollment.student_id))];
   const studentIdNumbers = [...new Set(enrollments.map((enrollment) => enrollment.students?.student_id_number).filter(Boolean))] as string[];
+  const loadReviewDetails = activeStatus === "PENDING";
 
   const [requirementsResult, officialRecordsResult, signaturesResult, clearanceStatusesResult] = await Promise.all([
-    studentIds.length
+    loadReviewDetails && studentIds.length
       ? supabase
           .from("student_requirements")
           .select("student_id, academic_year, semester, applicability, status, note")
@@ -184,20 +229,20 @@ export default async function PendingEnrollmentsPage({
           .eq("academic_year", academicYear as string)
           .eq("semester", semester as string)
       : Promise.resolve({ data: [], error: null }),
-    studentIdNumbers.length
+    loadReviewDetails && studentIdNumbers.length
       ? supabase
           .from("official_student_records")
           .select("student_id_number, gender_sex")
           .in("student_id_number", studentIdNumbers)
       : Promise.resolve({ data: [], error: null }),
-    enrollments.length
+    loadReviewDetails && enrollments.length
       ? supabase
           .from("enrollment_signatures")
           .select("id, enrollment_id, student_id, signer_role, clearance_type, document_type, signer_name_snapshot, document_hash, signed_at")
           .in("enrollment_id", enrollments.map((enrollment) => enrollment.id))
           .order("signed_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
-    enrollments.length
+    loadReviewDetails && enrollments.length
       ? supabase
           .from("enrollment_clearances")
           .select("enrollment_id, clearance_type, status")
@@ -235,12 +280,13 @@ export default async function PendingEnrollmentsPage({
   const isActiveTermFilter = Boolean(
     activeTerm && academicYear === activeTerm.academicYear && semester === activeTerm.semester
   );
+  const bulkMode = activeStatus === "PENDING" ? "pending" : activeStatus === "PULLED_OUT" ? "reinstate" : "pull_out";
 
   return (
     <Card>
       <CardHeader
-        title="Pending Enrollments"
-        description={`Showing pending requests for AY ${academicYear}, ${semester}.${
+        title={statusHeading}
+        description={`Showing ${statusTitle.toLowerCase()} enrollments for AY ${academicYear}, ${semester}.${
           isActiveTermFilter ? " (Authoritative Active Term)" : " (Historical Term Filter)"
         }`}
       />
@@ -275,6 +321,27 @@ export default async function PendingEnrollmentsPage({
         )}
       </div>
 
+      <nav aria-label="Enrollment status filter" className="flex flex-wrap gap-2 border-b border-slateui-border px-6 pb-4">
+        {([
+          ["PENDING", "Pending"],
+          ["APPROVED", "Approved"],
+          ["REJECTED", "Rejected"],
+          ["PULLED_OUT", "PULL OUT"]
+        ] as const).map(([status, label]) => {
+          const queryParams = new URLSearchParams({ academic_year: academicYear, semester, status });
+          return (
+            <ButtonLink
+              key={status}
+              href={`/admin/enrollments?${queryParams.toString()}`}
+              variant={activeStatus === status ? "primary" : "outline"}
+              className="text-xs"
+            >
+              {label}
+            </ButtonLink>
+          );
+        })}
+      </nav>
+
       {params.success ? (
         <div role="status" aria-live="polite" className="mx-6 mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
           {successMessages[params.success] ?? "Action completed successfully."}
@@ -295,14 +362,22 @@ export default async function PendingEnrollmentsPage({
         </div>
       ) : null}
       {enrollments.length ? (
-        <div className="px-6 pb-6">
-          <p className="mb-2 text-xs text-slateui-muted sm:hidden">Swipe horizontally to view all enrollment details and actions.</p>
-          <div className="overflow-hidden rounded-lg border border-slateui-border bg-white">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
-                <thead className="bg-primary-800 text-white">
-                  <tr>
-                    {[
+        <EnrollmentBulkActions
+          key={`${academicYear}:${semester}:${activeStatus}:${enrollments.map((enrollment) => enrollment.id).join(",")}`}
+          mode={bulkMode}
+          academicYear={academicYear}
+          semester={semester}
+          status={activeStatus}
+        >
+          <div className="px-6 pb-6">
+            <p className="mb-2 text-xs text-slateui-muted sm:hidden">Swipe horizontally to view all enrollment details and actions.</p>
+            <div className="overflow-hidden rounded-lg border border-slateui-border bg-white">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slateui-border text-left text-sm">
+                  <thead className="bg-primary-800 text-white">
+                    <tr>
+                      <th scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">Select</th>
+                      {[
                       "Student name",
                       "Student ID",
                       "Program",
@@ -313,15 +388,15 @@ export default async function PendingEnrollmentsPage({
                       "Submitted date",
                       "Status",
                       "Actions"
-                    ].map((column) => (
-                      <th key={column} scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">
-                        {column}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slateui-border">
-                  {enrollments.map((enrollment) => {
+                      ].map((column) => (
+                        <th key={column} scope="col" className="whitespace-nowrap px-4 py-3 font-semibold">
+                          {column}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slateui-border">
+                    {enrollments.map((enrollment) => {
                     const student = enrollment.students;
                     const profile = student?.profiles;
                     const requirement = requirementsByTerm.get(
@@ -417,8 +492,14 @@ export default async function PendingEnrollmentsPage({
                       missingLabels
                     };
 
-                    return (
-                      <tr key={enrollment.id} className="bg-white align-top">
+                      return (
+                        <tr key={enrollment.id} id={`enrollment-${enrollment.id}`} className="bg-white align-top">
+                        <td className="px-4 py-3">
+                          <EnrollmentSelectionCheckbox
+                            id={enrollment.id}
+                            label={formatName(profile?.first_name, profile?.last_name)}
+                          />
+                        </td>
                         <td className="whitespace-nowrap px-4 py-3 font-semibold text-slateui-text">
                           {formatName(profile?.first_name, profile?.last_name)}
                         </td>
@@ -434,7 +515,7 @@ export default async function PendingEnrollmentsPage({
                         <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{enrollment.semester}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-slateui-secondary">{formatDate(enrollment.submitted_at)}</td>
                         <td className="whitespace-nowrap px-4 py-3">
-                          <Badge tone={enrollmentBadgeTone(enrollment.status)}>{enrollment.status}</Badge>
+                          <Badge tone={enrollmentBadgeTone(enrollment.status)}>{getEnrollmentStatusLabel(enrollment.status)}</Badge>
                         </td>
                         <td className="min-w-[220px] whitespace-normal px-4 py-3">
                           <div className="space-y-3">
@@ -445,7 +526,31 @@ export default async function PendingEnrollmentsPage({
                             >
                               View/Print Form
                             </ButtonLink>
-                            <EnrollmentReviewControls
+                            {statusHistoryResult.error ? (
+                              <p className="text-xs text-amber-800">Enrollment status history could not be loaded.</p>
+                            ) : statusHistoryByEnrollmentId.get(enrollment.id)?.length ? (
+                              <details className="rounded border border-slateui-border px-3 py-2">
+                                <summary className="cursor-pointer text-sm font-semibold text-slateui-text">
+                                  {enrollment.status === "PULLED_OUT" ? "PULL OUT history" : "Status history"} ({statusHistoryByEnrollmentId.get(enrollment.id)?.length})
+                                </summary>
+                                <ol className="mt-2 space-y-2 text-xs text-slateui-secondary">
+                                  {statusHistoryByEnrollmentId.get(enrollment.id)?.map((event) => (
+                                    <li key={`${event.event_type}:${event.created_at}`} className="border-t border-slateui-border pt-2">
+                                      <p className="font-semibold text-slateui-text">
+                                        {event.event_type === "PULLED_OUT"
+                                          ? `PULL OUT from ${getEnrollmentStatusLabel(event.from_status)}`
+                                          : `Reinstated to ${getEnrollmentStatusLabel(event.to_status)}`}
+                                      </p>
+                                      <p>
+                                        {formatName(event.profiles?.first_name, event.profiles?.last_name)} · {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.created_at))}
+                                      </p>
+                                      {event.reason ? <p className="mt-1">Reason: {event.reason}</p> : null}
+                                    </li>
+                                  ))}
+                                </ol>
+                              </details>
+                            ) : null}
+                            {activeStatus === "PENDING" ? <EnrollmentReviewControls
                               enrollmentId={enrollment.id}
                               studentName={formatName(profile?.first_name, profile?.last_name)}
                               studentId={student?.student_id_number ?? "Not provided"}
@@ -472,22 +577,23 @@ export default async function PendingEnrollmentsPage({
                                 nurseSignedAt: nurseSignature?.signed_at ?? null
                               }}
                               clearanceReadiness={clearanceReadiness}
-                            />
+                            /> : null}
                           </div>
                         </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
+        </EnrollmentBulkActions>
       ) : (
         <div className="px-6 pb-6">
           <EmptyState
-            title="No pending enrollments found for this term."
-            description={`No pending enrollment requests are recorded for AY ${academicYear}, ${semester}.`}
+            title={`No ${statusTitle.toLowerCase()} enrollments found for this term.`}
+            description={`No ${statusTitle.toLowerCase()} enrollment requests are recorded for AY ${academicYear}, ${semester}.`}
           />
         </div>
       )}
