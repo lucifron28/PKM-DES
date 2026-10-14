@@ -102,7 +102,7 @@ async function cleanupSignature(admin: ReturnType<typeof createSupabaseAdminClie
 async function loadEnrollment(supabase: SupabaseClient, enrollmentId: string) {
   const { data, error } = await supabase
     .from("enrollments")
-    .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, enrollment_subjects(id, course_code, course_description, units), students(id, profile_id)")
+    .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, enrollment_subjects(id, course_code, course_description, units, day, time, room), students(id, profile_id)")
     .eq("id", enrollmentId)
     .maybeSingle();
 

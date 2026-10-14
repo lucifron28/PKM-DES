@@ -126,7 +126,7 @@ export default async function EnrollmentStatusPage() {
   if (currentTermEnrollment) {
     const { data: detailedEnrollmentData, error: detailedEnrollmentError } = await supabase
       .from("enrollments")
-      .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units)")
+      .select("id, student_id, program_id, year_level, academic_year, semester, registration_pledge_version, status, submitted_at, reviewed_at, reviewed_by, remarks, enrollment_subjects(id, course_code, course_description, units, day, time, room)")
       .eq("id", currentTermEnrollment.id)
       .maybeSingle();
     if (detailedEnrollmentError) {

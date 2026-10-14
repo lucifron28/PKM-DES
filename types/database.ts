@@ -121,6 +121,9 @@ export type EnrollmentSubject = {
   course_code: string;
   course_description: string;
   units: number;
+  day?: string | null;
+  time?: string | null;
+  room?: string | null;
   subjects?: Subject | null;
   course_offerings?: CourseOffering | null;
 };

@@ -7,6 +7,9 @@ export type EnrollmentFingerprintSubject = {
   course_code: string;
   course_description: string;
   units: number;
+  day?: string | null;
+  time?: string | null;
+  room?: string | null;
 };
 
 export type EnrollmentFingerprintInput = {
@@ -45,6 +48,24 @@ function canonicalEnrollmentMaterial(
     .map((subject) => `${subject.course_code}|${subject.course_description}|${subject.units}`)
     .join("\n");
   const totalUnits = (enrollment.enrollment_subjects ?? []).reduce((total, subject) => total + subject.units, 0);
+  const scheduledSubjects = (enrollment.enrollment_subjects ?? [])
+    .map((subject) => ({
+      course_code: subject.course_code,
+      course_description: subject.course_description,
+      units: subject.units,
+      day: subject.day?.trim() ?? "",
+      time: subject.time?.trim() ?? "",
+      room: subject.room?.trim() ?? ""
+    }))
+    .sort((left, right) =>
+      compareStrings(left.course_code, right.course_code) ||
+      compareStrings(left.course_description, right.course_description) ||
+      left.units - right.units ||
+      compareStrings(left.day, right.day) ||
+      compareStrings(left.time, right.time) ||
+      compareStrings(left.room, right.room)
+    );
+  const hasSchedule = scheduledSubjects.some((subject) => subject.day || subject.time || subject.room);
   const pledgeVersion =
     signerRole === "STUDENT" &&
     clearanceType === "STUDENT_ENROLLMENT_SIGNATURE" &&
@@ -66,6 +87,15 @@ function canonicalEnrollmentMaterial(
     `document_type=${documentType}`
   ];
 
+  if (hasSchedule) {
+    material.push(
+      `subject_schedules=${scheduledSubjects
+        .map((subject) =>
+          `${subject.course_code}|${subject.course_description}|${subject.units}|${subject.day}|${subject.time}|${subject.room}`
+        )
+        .join("\n")}`
+    );
+  }
   if (pledgeVersion !== null && pledgeVersion !== undefined) {
     material.push(`pledge_policy_version=${pledgeVersion}`);
   }

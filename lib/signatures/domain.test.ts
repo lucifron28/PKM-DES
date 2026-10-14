@@ -149,3 +149,68 @@ test("pledge versions change only the Student registration fingerprint", () => {
     officialHash
   );
 });
+
+test("optional schedules are hash-bound without changing legacy no-schedule hashes", () => {
+  const legacyHash = computeEnrollmentDocumentHash(
+    enrollment,
+    "STUDENT",
+    "STUDENT_ENROLLMENT_SIGNATURE",
+    "ENROLLMENT_REGISTRATION"
+  );
+  const scheduledEnrollment = {
+    ...enrollment,
+    registration_pledge_version: REGISTRATION_POLICY_VERSION,
+    enrollment_subjects: [
+      { ...enrollment.enrollment_subjects[0], day: " MWF ", time: "8:00 AM", room: " 101 " },
+      { ...enrollment.enrollment_subjects[1], day: null, time: null, room: null }
+    ]
+  };
+  const scheduledHash = computeEnrollmentDocumentHash(
+    scheduledEnrollment,
+    "STUDENT",
+    "STUDENT_ENROLLMENT_SIGNATURE",
+    "ENROLLMENT_REGISTRATION"
+  );
+  const reorderedHash = computeEnrollmentDocumentHash(
+    {
+      ...scheduledEnrollment,
+      enrollment_subjects: [...scheduledEnrollment.enrollment_subjects].reverse()
+    },
+    "STUDENT",
+    "STUDENT_ENROLLMENT_SIGNATURE",
+    "ENROLLMENT_REGISTRATION"
+  );
+  assert.equal(legacyHash, "32a05c7c422028bb91aea7fa8917212b0b616f4c38101c3f8b631427bfedb4ce");
+  assert.equal(scheduledHash, reorderedHash);
+  assert.notEqual(scheduledHash, legacyHash);
+  assert.notEqual(
+    scheduledHash,
+    computeEnrollmentDocumentHash(
+      {
+        ...scheduledEnrollment,
+        enrollment_subjects: [
+          { ...scheduledEnrollment.enrollment_subjects[0], room: "102" },
+          scheduledEnrollment.enrollment_subjects[1]
+        ]
+      },
+      "STUDENT",
+      "STUDENT_ENROLLMENT_SIGNATURE",
+      "ENROLLMENT_REGISTRATION"
+    )
+  );
+  assert.notEqual(
+    scheduledHash,
+    computeEnrollmentDocumentHash(
+      {
+        ...scheduledEnrollment,
+        enrollment_subjects: [
+          { ...scheduledEnrollment.enrollment_subjects[0], day: "TTh" },
+          scheduledEnrollment.enrollment_subjects[1]
+        ]
+      },
+      "STUDENT",
+      "STUDENT_ENROLLMENT_SIGNATURE",
+      "ENROLLMENT_REGISTRATION"
+    )
+  );
+});

@@ -143,7 +143,7 @@ export default async function PendingEnrollmentsPage({
   const semester = filterSemester!;
   const query = supabase
     .from("enrollments")
-    .select("*, students(*, profiles(*)), programs(*), enrollment_subjects(id, course_code, course_description, units)")
+    .select("*, students(*, profiles(*)), programs(*), enrollment_subjects(id, course_code, course_description, units, day, time, room)")
     .eq("status", activeStatus)
     .eq("academic_year", academicYear)
     .eq("semester", semester);
@@ -292,6 +292,9 @@ export default async function PendingEnrollmentsPage({
       />
       <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-slateui-border px-6 pb-4 text-sm">
         <span className="font-semibold text-slateui-text">Term Filter:</span>
+        {activeStatus === "PENDING" ? (
+          <ButtonLink href="/admin/enrollments/load" variant="outline" className="text-xs">Create irregular-student load</ButtonLink>
+        ) : null}
         {activeTerm ? (
           <ButtonLink
             href="/admin/enrollments"
