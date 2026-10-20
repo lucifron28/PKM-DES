@@ -6,24 +6,60 @@ import {
   parseSetupClaim
 } from "@/lib/auth/setup-token";
 
+function buildErrorResponse(errorUrl: URL): NextResponse {
+  const res = NextResponse.redirect(errorUrl, 303);
+  res.cookies.delete(SETUP_CLAIM_COOKIE_NAME);
+  res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.headers.set("Pragma", "no-cache");
+  return res;
+}
+
 export async function POST(request: NextRequest) {
   const requestOrigin = request.headers.get("origin");
-  const requestHost = request.headers.get("host");
+  const requestReferer = request.headers.get("referer");
 
-  // CSRF protection: validate that request origin matches the server host
+  // Determine trusted origins: request.nextUrl.origin, request.url origin, and forwarded headers
+  const trustedOrigins = new Set<string>();
+  try {
+    trustedOrigins.add(new URL(request.url).origin);
+  } catch {
+    // ignore
+  }
+  if (request.nextUrl) {
+    trustedOrigins.add(request.nextUrl.origin);
+  }
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedHost =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
+  if (forwardedProto && forwardedHost) {
+    trustedOrigins.add(`${forwardedProto}://${forwardedHost}`);
+  }
+
+  // Determine actual client origin from Origin or Referer header
+  let clientOrigin: string | null = null;
   if (requestOrigin) {
     try {
-      const originHost = new URL(requestOrigin).host;
-      if (originHost !== requestHost) {
-        const errorUrl = new URL("/setup-account", request.url);
-        errorUrl.searchParams.set("error", "invalid_origin");
-        return NextResponse.redirect(errorUrl, 303);
-      }
+      clientOrigin = new URL(requestOrigin).origin;
     } catch {
       const errorUrl = new URL("/setup-account", request.url);
       errorUrl.searchParams.set("error", "invalid_origin");
-      return NextResponse.redirect(errorUrl, 303);
+      return buildErrorResponse(errorUrl);
     }
+  } else if (requestReferer) {
+    try {
+      clientOrigin = new URL(requestReferer).origin;
+    } catch {
+      const errorUrl = new URL("/setup-account", request.url);
+      errorUrl.searchParams.set("error", "invalid_origin");
+      return buildErrorResponse(errorUrl);
+    }
+  }
+
+  // CSRF protection: fail closed if origin/referer is missing or does not match trusted origins
+  if (!clientOrigin || !trustedOrigins.has(clientOrigin)) {
+    const errorUrl = new URL("/setup-account", request.url);
+    errorUrl.searchParams.set("error", "invalid_origin");
+    return buildErrorResponse(errorUrl);
   }
 
   // Retrieve and validate the temporary setup claim cookie
@@ -33,7 +69,7 @@ export async function POST(request: NextRequest) {
   if (!claim) {
     const errorUrl = new URL("/setup-account", request.url);
     errorUrl.searchParams.set("error", "session_expired");
-    return NextResponse.redirect(errorUrl, 303);
+    return buildErrorResponse(errorUrl);
   }
 
   // Prepare destination redirect (HTTP 303 See Other ensures browser uses GET)
@@ -47,7 +83,13 @@ export async function POST(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
+      setAll(
+        cookiesToSet: Array<{
+          name: string;
+          value: string;
+          options: CookieOptions;
+        }>
+      ) {
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
         });
@@ -68,7 +110,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       const errorUrl = new URL("/setup-account", request.url);
       errorUrl.searchParams.set("error", "verification_failed");
-      return NextResponse.redirect(errorUrl, 303);
+      return buildErrorResponse(errorUrl);
     }
 
     // Protect against caching
@@ -77,9 +119,8 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch {
-    response.cookies.delete(SETUP_CLAIM_COOKIE_NAME);
     const errorUrl = new URL("/setup-account", request.url);
     errorUrl.searchParams.set("error", "verification_failed");
-    return NextResponse.redirect(errorUrl, 303);
+    return buildErrorResponse(errorUrl);
   }
 }

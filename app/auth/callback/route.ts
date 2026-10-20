@@ -56,8 +56,14 @@ export async function GET(request: Request) {
         ? tokenTypeParam
         : "magiclink";
 
-    // Store token hash in short-lived, signed HttpOnly/SameSite=Lax cookie
-    const cookieValue = serializeSetupClaim(tokenHash.trim(), type);
+    let cookieValue: string;
+    try {
+      cookieValue = serializeSetupClaim(tokenHash.trim(), type);
+    } catch {
+      // Fail closed if server-side signing secret is missing
+      setupUrl.searchParams.set("error", "configuration_error");
+      return NextResponse.redirect(setupUrl, 303);
+    }
 
     // Redirect to confirmation page on the same origin with sensitive parameters removed
     const confirmUrl = new URL("/auth/confirm-setup", request.url);

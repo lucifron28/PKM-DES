@@ -42,6 +42,12 @@ export default async function SetupAccountPage({
 
   const isEligible = Boolean(!callbackError && user && isEligibleStudentSetupProfile(profile));
   const isAlreadyActive = Boolean(user && profile?.account_status === "ACTIVE");
+  const activeDashboardHref = profile?.role === "admin" ? "/admin/dashboard" : "/student/dashboard";
+  const activePortalLabel = profile?.role === "admin" ? "Go to Admin Dashboard" : "Go to Student Portal";
+  const activeDescription =
+    profile?.role === "admin"
+      ? "Your administrator account is already active. You can log in directly to access the admin portal."
+      : "Your official student account is already active and your password has been set. You can log in directly to access your student portal.";
 
   return (
     <div className="min-h-screen bg-slateui-background">
@@ -62,11 +68,11 @@ export default async function SetupAccountPage({
               <h2 className="text-xl font-bold text-slateui-text">Account Already Active</h2>
             </div>
             <p className="mt-3 text-sm leading-6 text-slateui-secondary">
-              Your official student account is already active and your password has been set. You can log in directly to access your student portal.
+              {activeDescription}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <ButtonLink href="/student/dashboard" variant="primary" className="w-full sm:w-auto">
-                Go to Student Portal
+              <ButtonLink href={activeDashboardHref} variant="primary" className="w-full sm:w-auto">
+                {activePortalLabel}
               </ButtonLink>
               <ButtonLink href="/login" variant="outline" className="w-full sm:w-auto">
                 Go to Login

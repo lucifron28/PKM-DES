@@ -47,9 +47,8 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
     .maybeSingle();
   const profile = profileData as { role: UserRole; account_status: AccountStatus } | null;
   if (profile?.account_status === "ACTIVE") {
-    redirect("/student/dashboard");
+    redirect(profile.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
   }
-
   if (profileLookupError || !isEligibleStudentSetupProfile(profile)) {
     return { message: "Your setup session has expired or is invalid. Please request a new setup email." };
   }

@@ -9,6 +9,7 @@ import {
   serializeSetupClaim
 } from "./setup-token";
 
+process.env.ACCOUNT_CLAIM_SECRET = "test-secret-at-least-32-characters-long-for-auth";
 test("supported OTP types include magiclink, email, invite, signup, recovery", () => {
   assert.equal(isSupportedOtpType("magiclink"), true);
   assert.equal(isSupportedOtpType("email"), true);
@@ -73,6 +74,27 @@ test("rejects malformed and empty cookies", () => {
   assert.equal(parseSetupClaim("not-a-valid-token"), null);
   assert.equal(parseSetupClaim("nodotshere"), null);
   assert.equal(parseSetupClaim("a.b.c"), null);
+});
+
+test("getSigningSecret requires configured secret and fails closed without fallback", () => {
+  const originalClaimSecret = process.env.ACCOUNT_CLAIM_SECRET;
+  const originalServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  delete process.env.ACCOUNT_CLAIM_SECRET;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  try {
+    assert.throws(
+      () => serializeSetupClaim("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "magiclink"),
+      /Missing required server secret/
+    );
+
+    // parseSetupClaim fails closed and returns null instead of throwing or using a fallback
+    assert.equal(parseSetupClaim("somepayload.somesig"), null);
+  } finally {
+    process.env.ACCOUNT_CLAIM_SECRET = originalClaimSecret || "test-secret-at-least-32-characters-long-for-auth";
+    if (originalServiceKey) process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceKey;
+  }
 });
 
 test("getSetupCookieOptions returns secure, Lax, HttpOnly attributes", () => {
