@@ -125,6 +125,50 @@ test("the browser submission input contains certification only", () => {
   assert.deepEqual(Object.keys(input), ["certified"]);
 });
 
-test("eligibility uses the stored student year level", () => {
+test("eligibility accepts stored 2nd Year student with complete standard load", () => {
   assert.equal(evaluateStandardLoadEligibility(context({ yearLevel: "2nd Year" })), "eligible");
+});
+
+test("eligibility accepts stored 3rd Year student with complete standard load", () => {
+  assert.equal(evaluateStandardLoadEligibility(context({ yearLevel: "3rd Year", standardLoadAvailability: "configured_complete" })), "eligible");
+});
+
+test("eligibility correctly identifies 3rd Year student when standard load is not configured (e.g. CRIM)", () => {
+  assert.equal(
+    evaluateStandardLoadEligibility(context({ yearLevel: "3rd Year", standardLoadAvailability: "not_configured" })),
+    "no_configured_load"
+  );
+  assert.match(
+    getStudentSubmissionMessage("no_configured_load"),
+    /does not contain a complete standard load for your program and year level/
+  );
+});
+
+test("eligibility correctly identifies 3rd Year student when standard load is incomplete", () => {
+  assert.equal(
+    evaluateStandardLoadEligibility(context({ yearLevel: "3rd Year", standardLoadAvailability: "incomplete" })),
+    "incomplete_configured_load"
+  );
+});
+
+test("3rd Year Transferee or Irregular student requires Registrar-managed loading", () => {
+  assert.equal(
+    evaluateStandardLoadEligibility(context({ yearLevel: "3rd Year", studentType: "Transferee" })),
+    "registrar_managed_load"
+  );
+  assert.equal(
+    evaluateStandardLoadEligibility(context({ yearLevel: "3rd Year", studentType: "Irregular Student" })),
+    "registrar_managed_load"
+  );
+});
+
+test("3rd Year student with missing student ID is blocked", () => {
+  assert.equal(
+    evaluateStandardLoadEligibility(context({ yearLevel: "3rd Year", studentIdNumber: "  " })),
+    "missing_student_id"
+  );
+});
+
+test("eligibility accepts stored 4th Year student with complete standard load", () => {
+  assert.equal(evaluateStandardLoadEligibility(context({ yearLevel: "4th Year", standardLoadAvailability: "configured_complete" })), "eligible");
 });

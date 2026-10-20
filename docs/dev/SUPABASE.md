@@ -49,6 +49,22 @@ RLS policies protect student, enrollment, clearance, health-record, and signatur
 
 The Health Record Update currently stores medical-condition details, identification dates, medications, allergy, last menstrual period, and other notes. Student-owner and assigned-Nurse policies control access to those records.
 
+## Student account setup and trusted origins
+
+Student account setup uses a two-stage verification process to prevent automated email link scanners (anti-phishing bots and link prefetchers) from consuming single-use magic-link tokens:
+
+1. **Stage A (GET `/auth/callback`):** When a student or link preview bot opens the emailed link (`/auth/callback?token_hash=...&type=magiclink`), the route validates that `type=magiclink` and a non-empty `token_hash` are present. It does **not** invoke `verifyOtp()` on GET. It serializes the validated claim into a short-lived (15 min) `HttpOnly`, `SameSite=Lax` signed cookie (`pkm_setup_claim`) and redirects to `/auth/confirm-setup` on the same trusted origin, stripping sensitive query parameters.
+2. **Stage B (POST `/auth/confirm-setup/verify`):** The student confirms setup by clicking "Continue Account Setup", sending a POST request. The server verifies the request origin against explicitly trusted application origins (CSRF protection), verifies the token via `supabase.auth.verifyOtp({ token_hash, type: "magiclink" })`, writes `@supabase/ssr` session cookies to the HTTP 303 redirect response, clears the temporary cookie, and redirects to `/setup-account`.
+
+### Trusted origin configuration
+
+POST confirmation validates `Origin` (or fallback `Referer`) against authorized origins:
+
+- **Production:** Set `APP_BASE_URL` to the canonical production URL (e.g. `https://pkm-des.edu.ph` or `https://pkm-des.vercel.app`). When deployed on Vercel, `VERCEL_PROJECT_PRODUCTION_URL` is automatically recognized.
+- **Preview Deployments:** Vercel preview deployments (`VERCEL_URL`, `VERCEL_BRANCH_URL`, and project-scoped subdomains matching `https://pkm-des-*.vercel.app`) are trusted when running in preview environments.
+- **Localhost Development:** In non-production environments (`NODE_ENV !== "production"` or when `APP_BASE_URL` is configured to localhost), `http://localhost:*` and `http://127.0.0.1:*` are automatically permitted.
+- **Security Enforcement:** Client-supplied forwarded headers (`x-forwarded-host`, `x-forwarded-proto`) are untrusted and are **never** used to authorize origins. Requests with missing, malformed, or untrusted origins fail closed and redirect to `/setup-account?error=invalid_origin` with the temporary claim cookie cleared.
+
 ## Hosted deployment checks
 
 Before deploying the hosted application:
@@ -56,10 +72,10 @@ Before deploying the hosted application:
 1. Set the Supabase URL, public key, service-role key, account-claim secret, and application URL in the hosting environment.
 2. Confirm `DATABASE_PROVIDER=supabase`.
 3. Confirm the hosted migration history contains the migrations required by the application revision.
-4. Run `npm run check:production-env` and the relevant checks in [Testing and verification](TESTING.md).
+4. Confirm `APP_BASE_URL` matches the canonical deployment URL.
+5. Run `npm run check:production-env` and the relevant checks in [Testing and verification](TESTING.md).
 
 The Vercel build runs `scripts/check-vercel-env.mjs` through the `prebuild` script. A hosted build must pass the Supabase provider check.
-
 ## Security review state
 
 RLS was enabled on the application tables inspected in the current Supabase project review. The Supabase advisor still reports warnings, including mutable function search paths, executable security-definer functions, and disabled leaked-password protection. The repository does not treat the current state as a security certification. Review advisor findings before changing authentication, RLS, database functions, or signature storage.
