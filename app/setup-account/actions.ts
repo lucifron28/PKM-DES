@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { isEligibleStudentSetupProfile } from "@/lib/account-setup/rules";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AccountStatus, UserRole } from "@/types/database";
@@ -45,6 +46,9 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
     .eq("id", user.id)
     .maybeSingle();
   const profile = profileData as { role: UserRole; account_status: AccountStatus } | null;
+  if (profile?.account_status === "ACTIVE") {
+    redirect("/student/dashboard");
+  }
 
   if (profileLookupError || !isEligibleStudentSetupProfile(profile)) {
     return { message: "Your setup session has expired or is invalid. Please request a new setup email." };
@@ -64,5 +68,7 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
     };
   }
 
+  revalidatePath("/student", "layout");
+  revalidatePath("/student/dashboard");
   redirect("/student/dashboard");
 }
