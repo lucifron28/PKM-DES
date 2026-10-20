@@ -10,24 +10,20 @@ export type SetupClaimPayload = {
   issuedAt: number;
 };
 
-const VALID_EMAIL_OTP_TYPES: readonly EmailOtpType[] = Object.freeze([
-  "magiclink",
-  "email",
-  "invite",
-  "signup",
-  "recovery",
-  "email_change"
-]);
+export const REQUIRED_SETUP_OTP_TYPE: EmailOtpType = "magiclink";
 
-export function isSupportedOtpType(type: string): type is EmailOtpType {
-  return VALID_EMAIL_OTP_TYPES.includes(type as EmailOtpType);
+export function isSupportedSetupOtpType(
+  type: string | null | undefined
+): type is "magiclink" {
+  return type === "magiclink";
 }
 
 export function getSigningSecret(secretOverride?: string): string {
   const secret =
-    secretOverride?.trim() ||
-    process.env.ACCOUNT_CLAIM_SECRET?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    secretOverride !== undefined
+      ? secretOverride.trim()
+      : process.env.ACCOUNT_CLAIM_SECRET?.trim() ||
+        process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!secret) {
     throw new Error(
@@ -47,9 +43,14 @@ export function serializeSetupClaim(
   type: EmailOtpType = "magiclink",
   secretOverride?: string
 ): string {
+  if (type !== "magiclink") {
+    throw new Error(
+      `Unsupported OTP type for account setup: expected magiclink, received ${type}`
+    );
+  }
   const payload: SetupClaimPayload = {
     token_hash: tokenHash,
-    type,
+    type: "magiclink",
     issuedAt: Date.now()
   };
   const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -103,8 +104,7 @@ export function parseSetupClaim(
       typeof raw !== "object" ||
       typeof (raw as SetupClaimPayload).token_hash !== "string" ||
       !(raw as SetupClaimPayload).token_hash.trim() ||
-      typeof (raw as SetupClaimPayload).type !== "string" ||
-      !isSupportedOtpType((raw as SetupClaimPayload).type) ||
+      (raw as SetupClaimPayload).type !== "magiclink" ||
       typeof (raw as SetupClaimPayload).issuedAt !== "number"
     ) {
       return null;

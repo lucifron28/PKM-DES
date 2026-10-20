@@ -9,6 +9,7 @@ import {
   serializeSetupClaim
 } from "./setup-token";
 
+process.env.APP_BASE_URL = "https://pkm-des.example.test";
 process.env.ACCOUNT_CLAIM_SECRET = "test-secret-at-least-32-characters-long-for-auth";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://pkm-des.supabase.co";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
@@ -85,6 +86,30 @@ test("Stage A: GET /auth/callback with Supabase error passes explicit error para
   assert.equal(destUrl.pathname, "/setup-account");
   assert.equal(destUrl.searchParams.get("error"), "access_denied");
   assert.equal(destUrl.searchParams.get("error_description"), "OTP has expired");
+});
+
+test("Stage A: GET /auth/callback with unsupported or missing OTP type is rejected", async () => {
+  const tokenHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+  // 1. type=email is rejected
+  const reqEmail = new Request(
+    `https://pkm-des.example.test/auth/callback?token_hash=${tokenHash}&type=email`,
+    { method: "GET" }
+  );
+  const resEmail = await callbackGet(reqEmail);
+  const destEmail = new URL(resEmail.headers.get("location")!, "https://pkm-des.example.test");
+  assert.equal(destEmail.pathname, "/setup-account");
+  assert.equal(destEmail.searchParams.get("error"), "unsupported_token_type");
+
+  // 2. missing type is rejected
+  const reqNoType = new Request(
+    `https://pkm-des.example.test/auth/callback?token_hash=${tokenHash}`,
+    { method: "GET" }
+  );
+  const resNoType = await callbackGet(reqNoType);
+  const destNoType = new URL(resNoType.headers.get("location")!, "https://pkm-des.example.test");
+  assert.equal(destNoType.pathname, "/setup-account");
+  assert.equal(destNoType.searchParams.get("error"), "unsupported_token_type");
 });
 
 test("Stage B: POST /auth/confirm-setup/verify successfully verifies OTP, establishes session cookies, clears temp cookie, and redirects to /setup-account", async () => {

@@ -5,10 +5,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   SETUP_CLAIM_COOKIE_NAME,
   getSetupCookieOptions,
-  isSupportedOtpType,
+  isSupportedSetupOtpType,
   serializeSetupClaim
 } from "@/lib/auth/setup-token";
-import type { EmailOtpType } from "@supabase/supabase-js";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -51,14 +50,14 @@ export async function GET(request: Request) {
   // DO NOT call verifyOtp() during GET to prevent email scanners / link preview bots
   // from consuming single-use magic link tokens.
   if (tokenHash && tokenHash.trim()) {
-    const type: EmailOtpType =
-      tokenTypeParam && isSupportedOtpType(tokenTypeParam)
-        ? tokenTypeParam
-        : "magiclink";
-
+    // Student account setup strictly requires type=magiclink
+    if (!tokenTypeParam || !isSupportedSetupOtpType(tokenTypeParam)) {
+      setupUrl.searchParams.set("error", "unsupported_token_type");
+      return NextResponse.redirect(setupUrl, 303);
+    }
     let cookieValue: string;
     try {
-      cookieValue = serializeSetupClaim(tokenHash.trim(), type);
+      cookieValue = serializeSetupClaim(tokenHash.trim(), "magiclink");
     } catch {
       // Fail closed if server-side signing secret is missing
       setupUrl.searchParams.set("error", "configuration_error");

@@ -5,6 +5,10 @@ import {
   SETUP_CLAIM_COOKIE_NAME,
   parseSetupClaim
 } from "@/lib/auth/setup-token";
+import {
+  extractClientOrigin,
+  isTrustedOrigin
+} from "@/lib/auth/trusted-origins";
 
 function buildErrorResponse(errorUrl: URL): NextResponse {
   const res = NextResponse.redirect(errorUrl, 303);
@@ -15,48 +19,11 @@ function buildErrorResponse(errorUrl: URL): NextResponse {
 }
 
 export async function POST(request: NextRequest) {
-  const requestOrigin = request.headers.get("origin");
-  const requestReferer = request.headers.get("referer");
+  // CSRF protection: validate request origin against explicitly trusted application origins.
+  // Never trust arbitrary client-supplied forwarded headers as proof of authorization.
+  const clientOrigin = extractClientOrigin(request);
 
-  // Determine trusted origins: request.nextUrl.origin, request.url origin, and forwarded headers
-  const trustedOrigins = new Set<string>();
-  try {
-    trustedOrigins.add(new URL(request.url).origin);
-  } catch {
-    // ignore
-  }
-  if (request.nextUrl) {
-    trustedOrigins.add(request.nextUrl.origin);
-  }
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  const forwardedHost =
-    request.headers.get("x-forwarded-host") || request.headers.get("host");
-  if (forwardedProto && forwardedHost) {
-    trustedOrigins.add(`${forwardedProto}://${forwardedHost}`);
-  }
-
-  // Determine actual client origin from Origin or Referer header
-  let clientOrigin: string | null = null;
-  if (requestOrigin) {
-    try {
-      clientOrigin = new URL(requestOrigin).origin;
-    } catch {
-      const errorUrl = new URL("/setup-account", request.url);
-      errorUrl.searchParams.set("error", "invalid_origin");
-      return buildErrorResponse(errorUrl);
-    }
-  } else if (requestReferer) {
-    try {
-      clientOrigin = new URL(requestReferer).origin;
-    } catch {
-      const errorUrl = new URL("/setup-account", request.url);
-      errorUrl.searchParams.set("error", "invalid_origin");
-      return buildErrorResponse(errorUrl);
-    }
-  }
-
-  // CSRF protection: fail closed if origin/referer is missing or does not match trusted origins
-  if (!clientOrigin || !trustedOrigins.has(clientOrigin)) {
+  if (!clientOrigin || !isTrustedOrigin(clientOrigin)) {
     const errorUrl = new URL("/setup-account", request.url);
     errorUrl.searchParams.set("error", "invalid_origin");
     return buildErrorResponse(errorUrl);
@@ -69,6 +36,13 @@ export async function POST(request: NextRequest) {
   if (!claim) {
     const errorUrl = new URL("/setup-account", request.url);
     errorUrl.searchParams.set("error", "session_expired");
+    return buildErrorResponse(errorUrl);
+  }
+
+  // Explicitly validate token type again during confirmation
+  if (claim.type !== "magiclink") {
+    const errorUrl = new URL("/setup-account", request.url);
+    errorUrl.searchParams.set("error", "unsupported_token_type");
     return buildErrorResponse(errorUrl);
   }
 

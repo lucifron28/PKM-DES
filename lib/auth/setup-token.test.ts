@@ -1,23 +1,33 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import {
   SETUP_CLAIM_COOKIE_NAME,
   SETUP_CLAIM_COOKIE_MAX_AGE,
   getSetupCookieOptions,
-  isSupportedOtpType,
+  isSupportedSetupOtpType,
   parseSetupClaim,
   serializeSetupClaim
 } from "./setup-token";
 
 process.env.ACCOUNT_CLAIM_SECRET = "test-secret-at-least-32-characters-long-for-auth";
-test("supported OTP types include magiclink, email, invite, signup, recovery", () => {
-  assert.equal(isSupportedOtpType("magiclink"), true);
-  assert.equal(isSupportedOtpType("email"), true);
-  assert.equal(isSupportedOtpType("invite"), true);
-  assert.equal(isSupportedOtpType("signup"), true);
-  assert.equal(isSupportedOtpType("recovery"), true);
-  assert.equal(isSupportedOtpType("invalid_type"), false);
-  assert.equal(isSupportedOtpType(""), false);
+test("isSupportedSetupOtpType strictly accepts magiclink only", () => {
+  assert.equal(isSupportedSetupOtpType("magiclink"), true);
+  assert.equal(isSupportedSetupOtpType("email"), false);
+  assert.equal(isSupportedSetupOtpType("invite"), false);
+  assert.equal(isSupportedSetupOtpType("signup"), false);
+  assert.equal(isSupportedSetupOtpType("recovery"), false);
+  assert.equal(isSupportedSetupOtpType("email_change"), false);
+  assert.equal(isSupportedSetupOtpType(null), false);
+  assert.equal(isSupportedSetupOtpType(undefined), false);
+  assert.equal(isSupportedSetupOtpType(""), false);
+});
+
+test("serializeSetupClaim rejects unsupported OTP types", () => {
+  assert.throws(
+    () => serializeSetupClaim("0123456789abcdef", "email" as unknown as EmailOtpType),
+    /Unsupported OTP type/
+  );
 });
 
 test("serializes and parses a valid setup claim cookie", () => {
@@ -77,24 +87,13 @@ test("rejects malformed and empty cookies", () => {
 });
 
 test("getSigningSecret requires configured secret and fails closed without fallback", () => {
-  const originalClaimSecret = process.env.ACCOUNT_CLAIM_SECRET;
-  const originalServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  assert.throws(
+    () => serializeSetupClaim("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "magiclink", ""),
+    /Missing required server secret/
+  );
 
-  delete process.env.ACCOUNT_CLAIM_SECRET;
-  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  try {
-    assert.throws(
-      () => serializeSetupClaim("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "magiclink"),
-      /Missing required server secret/
-    );
-
-    // parseSetupClaim fails closed and returns null instead of throwing or using a fallback
-    assert.equal(parseSetupClaim("somepayload.somesig"), null);
-  } finally {
-    process.env.ACCOUNT_CLAIM_SECRET = originalClaimSecret || "test-secret-at-least-32-characters-long-for-auth";
-    if (originalServiceKey) process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceKey;
-  }
+  // parseSetupClaim fails closed and returns null instead of throwing or using a fallback
+  assert.equal(parseSetupClaim("somepayload.somesig", 900, ""), null);
 });
 
 test("getSetupCookieOptions returns secure, Lax, HttpOnly attributes", () => {
