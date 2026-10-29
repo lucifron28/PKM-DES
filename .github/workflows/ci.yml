@@ -65,3 +65,88 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-for-ci-build
+
+  student-account-setup-integration:
+    name: Disposable Supabase Auth setup lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.121.0
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start disposable Supabase and run Auth lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e supabase/.temp/project-ref ]; then
+            echo "Refusing to run lifecycle tests in a linked Supabase project."
+            exit 1
+          fi
+
+          app_pid=""
+          cleanup() {
+            if [ -n "$app_pid" ]; then
+              kill "$app_pid" 2>/dev/null || true
+              wait "$app_pid" 2>/dev/null || true
+            fi
+            supabase stop --no-backup >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          supabase start
+          supabase status -o env > "$RUNNER_TEMP/pkm-supabase.env"
+          set -a
+          # This file is produced by the disposable local CLI stack, never from secrets.
+          source "$RUNNER_TEMP/pkm-supabase.env"
+          set +a
+
+          export DATABASE_PROVIDER=supabase
+          export APP_BASE_URL=http://localhost:3000
+          export ACCOUNT_CLAIM_SECRET=ci-disposable-account-setup-secret-at-least-32-characters
+          export EMAIL_DELIVERY_ENABLED=false
+          export NEXT_PUBLIC_SUPABASE_URL="${API_URL:?Supabase local API URL missing}"
+          export NEXT_PUBLIC_SUPABASE_ANON_KEY="${ANON_KEY:?Supabase local anon key missing}"
+          export SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:?Supabase local service-role key missing}"
+          export PKM_SUPABASE_INTEGRATION_ENV=disposable-local
+          export PKM_SUPABASE_INTEGRATION_PROJECT_ID=PKM-DES
+          export PKM_SUPABASE_TEST_DB_URL="${DB_URL:?Supabase local database URL missing}"
+          export PKM_SUPABASE_TEST_URL="$NEXT_PUBLIC_SUPABASE_URL"
+          export PKM_SUPABASE_TEST_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          export PKM_SUPABASE_TEST_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+
+          npm run dev -- --hostname localhost --port 3000 > "$RUNNER_TEMP/pkm-next.log" 2>&1 &
+          app_pid=$!
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://localhost:3000/login >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          if ! curl --silent --fail http://localhost:3000/login >/dev/null; then
+            tail -n 80 "$RUNNER_TEMP/pkm-next.log"
+            exit 1
+          fi
+
+          npm run test:student-account-setup-integration
