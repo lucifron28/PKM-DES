@@ -5,7 +5,7 @@ import { createIrregularEnrollmentAction } from "@/app/admin/enrollments/load-ac
 import { Button } from "@/components/ui/button";
 import type { CourseOffering, Profile, Student } from "@/types/database";
 
-type IrregularStudentOption = Pick<Student, "id" | "student_id_number" | "program_id" | "year_level"> & {
+type RegistrarLoadStudentOption = Pick<Student, "id" | "student_id_number" | "program_id" | "year_level" | "student_type"> & {
   profiles?: Pick<Profile, "first_name" | "last_name"> | null;
   programs?: { name: string; code: string | null } | null;
 };
@@ -17,7 +17,7 @@ export function RegistrarIrregularLoadForm({
   semester,
   errorMessage
 }: {
-  students: IrregularStudentOption[];
+  students: RegistrarLoadStudentOption[];
   offerings: CourseOffering[];
   academicYear: string;
   semester: string;
@@ -35,10 +35,10 @@ export function RegistrarIrregularLoadForm({
   return (
     <form action={createIrregularEnrollmentAction} className="space-y-5 rounded-lg border border-slateui-border bg-white p-5">
       {errorMessage ? <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">{errorMessage}</p> : null}
-      <p className="text-sm text-slateui-secondary">Create a pending Registrar-managed enrollment for the active term. The student and every prior enrollment record remain in the system.</p>
+      <p className="text-sm text-slateui-secondary">Create a pending enrollment using existing course offerings for the active term. The student’s saved year level, classification, and enrollment history remain unchanged.</p>
       <p className="text-sm font-semibold text-slateui-text">AY {academicYear} · {semester}</p>
       <label className="block text-sm font-semibold text-slateui-text">
-        Irregular student
+        Student requiring Registrar assignment
         <select
           required
           name="student_id"
@@ -52,13 +52,13 @@ export function RegistrarIrregularLoadForm({
           <option value="">Choose a student</option>
           {students.map((item) => (
             <option key={item.id} value={item.id}>
-              {[item.student_id_number, item.profiles?.first_name, item.profiles?.last_name].filter(Boolean).join(" · ")} — {item.programs?.code ?? item.programs?.name ?? "Program unavailable"} · {item.year_level}
+              {[item.student_id_number, item.profiles?.first_name, item.profiles?.last_name].filter(Boolean).join(" · ")} — {item.programs?.code ?? item.programs?.name ?? "Program unavailable"} · {item.year_level} · {item.student_type}
             </option>
           ))}
         </select>
       </label>
       <fieldset disabled={!student} className="space-y-2">
-        <legend className="mb-2 text-sm font-semibold text-slateui-text">Initial subject load</legend>
+        <legend className="mb-2 text-sm font-semibold text-slateui-text">Existing courses for this program and term</legend>
         {visibleOfferings.length ? visibleOfferings.map((offering) => (
           <label key={offering.id} className="flex items-start gap-3 rounded-md border border-slateui-border p-3 text-sm">
             <input
@@ -69,7 +69,7 @@ export function RegistrarIrregularLoadForm({
               onChange={(event) => toggleOffering(offering.id, event.target.checked)}
               className="mt-1"
             />
-            <span><strong>{offering.course_code}</strong> — {offering.course_description} <span className="text-slateui-muted">({offering.units} units)</span></span>
+            <span><strong>{offering.course_code}</strong> — {offering.course_description} <span className="text-slateui-muted">({offering.year_level}, {offering.units} units)</span></span>
           </label>
         )) : <p className="text-sm text-slateui-muted">{student ? "No course offerings are configured for this program and term." : "Choose a student to see this term’s course offerings."}</p>}
       </fieldset>

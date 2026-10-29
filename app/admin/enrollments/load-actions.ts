@@ -32,7 +32,7 @@ export async function createIrregularEnrollmentAction(formData: FormData) {
 
   const result = Array.isArray(data) ? data[0] : null;
   if (result?.outcome !== "created" || !UUID.test(String(result.enrollment_id ?? ""))) {
-    const errorCode = result?.outcome === "duplicate" ? "duplicate" : result?.outcome === "term_unavailable" ? "term_unavailable" : result?.outcome === "unauthorized" ? "unauthorized" : "load_failed";
+    const errorCode = result?.outcome === "duplicate" ? "duplicate" : result?.outcome === "term_unavailable" ? "term_unavailable" : result?.outcome === "unauthorized" ? "unauthorized" : result?.outcome === "standard_load_available" ? "standard_load_available" : "load_failed";
     redirect(`/admin/enrollments/load?error=${errorCode}`);
   }
 
