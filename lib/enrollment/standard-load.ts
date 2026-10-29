@@ -30,7 +30,11 @@ export type StandardLoadQueryResult =
       offerings: [];
     };
 
-function isCompleteLoad(loadSet: StandardLoadSet, offerings: CourseOffering[]) {
+export function isCompleteStandardLoad(
+  loadSet: Pick<StandardLoadSet, "status" | "expected_course_count" | "expected_total_units"> | null,
+  offerings: Pick<CourseOffering, "units">[]
+) {
+  if (!loadSet) return false;
   const totalUnits = offerings.reduce((total, offering) => total + offering.units, 0);
   return (
     loadSet.status === "ACTIVE" &&
@@ -86,7 +90,7 @@ export async function getStandardLoadForStudent(
   }
 
   const offerings = (offeringsData as unknown as CourseOffering[] | null) ?? [];
-  return isCompleteLoad(loadSet, offerings)
+  return isCompleteStandardLoad(loadSet, offerings)
     ? { status: "configured_complete", loadSet, offerings }
     : { status: "incomplete", loadSet, offerings };
 }
