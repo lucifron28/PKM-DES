@@ -1,10 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAccountSetupEmail, getAppBaseUrl, getEmailAdapter } from "@/lib/email";
 
-export async function sendAccountSetupEmailService(
+export async function generateStudentAccountSetupLink(
   admin: SupabaseClient,
   email: string
-): Promise<void> {
+): Promise<string> {
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
@@ -17,7 +17,14 @@ export async function sendAccountSetupEmailService(
     throw new Error("generate_link_failed");
   }
 
-  const setupLink = `${getAppBaseUrl()}/auth/callback?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}&type=magiclink`;
+  return `${getAppBaseUrl()}/auth/callback?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}&type=magiclink`;
+}
+
+export async function sendAccountSetupEmailService(
+  admin: SupabaseClient,
+  email: string
+): Promise<void> {
+  const setupLink = await generateStudentAccountSetupLink(admin, email);
   const emailContent = createAccountSetupEmail(setupLink);
   const adapter = getEmailAdapter();
 

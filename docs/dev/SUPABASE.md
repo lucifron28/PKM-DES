@@ -58,12 +58,21 @@ Student account setup uses a two-stage verification process to prevent automated
 
 ### Trusted origin configuration
 
-POST confirmation validates `Origin` (or fallback `Referer`) against authorized origins:
+POST confirmation validates `Origin` (or fallback `Referer`) against an exact server-side origin allowlist. The client origin must also equal the destination origin of the request:
 
-- **Production:** Set `APP_BASE_URL` to the canonical production URL (e.g. `https://pkm-des.edu.ph` or `https://pkm-des.vercel.app`). When deployed on Vercel, `VERCEL_PROJECT_PRODUCTION_URL` is automatically recognized.
-- **Preview Deployments:** Vercel preview deployments (`VERCEL_URL`, `VERCEL_BRANCH_URL`, and project-scoped subdomains matching `https://pkm-des-*.vercel.app`) are trusted when running in preview environments.
-- **Localhost Development:** In non-production environments (`NODE_ENV !== "production"` or when `APP_BASE_URL` is configured to localhost), `http://localhost:*` and `http://127.0.0.1:*` are automatically permitted.
-- **Security Enforcement:** Client-supplied forwarded headers (`x-forwarded-host`, `x-forwarded-proto`) are untrusted and are **never** used to authorize origins. Requests with missing, malformed, or untrusted origins fail closed and redirect to `/setup-account?error=invalid_origin` with the temporary claim cookie cleared.
+- **Production:** Set `APP_BASE_URL` to the canonical production URL (e.g. `https://pkm-des.edu.ph` or `https://pkm-des.vercel.app`). Vercel's server-side `VERCEL_PROJECT_PRODUCTION_URL` is also recognized as an exact hostname.
+- **Preview Deployments:** The server-side Vercel values `VERCEL_URL` and `VERCEL_BRANCH_URL` are normalized to HTTPS origins and accepted only by exact match. Other `*.vercel.app` names, including project-name lookalikes, are not implicitly trusted. Do not use a `NEXT_PUBLIC_*` alias as server-side authorization evidence.
+- **Origin handling:** A present `Origin` header is authoritative; malformed or empty values fail closed rather than falling back. `Referer` is used only when `Origin` is absent and must be an HTTP(S) URL. The request destination must be that same origin.
+- **Localhost Development:** Loopback origins are permitted only outside production when `APP_BASE_URL` itself is configured to a loopback origin. Port variation is limited to this explicitly configured local development/test case. Hosted production always rejects loopback origins.
+- **Security Enforcement:** `Host`, `x-forwarded-host`, and `x-forwarded-proto` are not evidence of authorization. Requests with missing, malformed, cross-origin, or unlisted origins fail closed and redirect to `/setup-account?error=invalid_origin` with the temporary claim cookie cleared.
+
+### Disposable Supabase Auth lifecycle test
+
+`npm run test:student-account-setup-integration` drives the real application flow through local Supabase Auth, PostgREST, PostgreSQL, and Playwright. It requires an explicitly configured disposable local stack, verifies loopback URLs, the local PostgreSQL database/user/version, Supabase Auth tables, and migration history before creating fixtures, then cleans up only run-specific record IDs in `finally`. It never links to or targets a hosted Supabase project.
+
+GitHub Actions runs this suite in a dedicated job with a fresh, unlinked Supabase CLI stack and no repository secrets. Starting the stack applies the checked-in migrations and local seed. To run it manually, start the local stack with `supabase start`, export its environment using `supabase status -o env`, start the app at `http://localhost:3000`, set `APP_BASE_URL=http://localhost:3000`, `PKM_SUPABASE_INTEGRATION_ENV=disposable-local`, and `PKM_SUPABASE_INTEGRATION_PROJECT_ID=PKM-DES`, then run the script. Do not point the test at hosted databases or add production credentials to CI.
+
+The automated test covers the two-stage link flow, session cookies, password setup, activation, student access, repeated/replayed links, anonymous access, and admin rejection. Mobile Safari remains a manual verification because the automated browser uses Chromium. The third-year enrollment report is separate from account setup: check the configured active-term standard load for the student's program and year; do not invent or modify academic subjects to hide a missing/incomplete load.
 
 ## Hosted deployment checks
 

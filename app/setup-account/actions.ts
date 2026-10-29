@@ -2,16 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { isEligibleStudentSetupProfile } from "@/lib/account-setup/rules";
+import { completeStudentAccountSetup } from "@/lib/account-setup/complete-setup";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { AccountStatus, UserRole } from "@/types/database";
 
 export type SetupAccountState = {
   message?: string;
-};
-
-type SetupCompletionResult = {
-  outcome: "completed" | "invalid_setup" | "unauthorized";
 };
 
 export async function setupAccountAction(_previousState: SetupAccountState, formData: FormData): Promise<SetupAccountState> {
@@ -34,34 +29,18 @@ export async function setupAccountAction(_previousState: SetupAccountState, form
   } catch {
     return { message: "Account setup could not be completed. Please request a new setup email." };
   }
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const result = await completeStudentAccountSetup(supabase, password);
 
-  if (userError || !user) {
+  if (result.outcome === "already_active") {
+    redirect(result.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
+  }
+  if (result.outcome === "unauthorized" || result.outcome === "invalid_setup") {
     return { message: "Your setup session has expired or is invalid. Please request a new setup email." };
   }
-
-  const { data: profileData, error: profileLookupError } = await supabase
-    .from("profiles")
-    .select("role, account_status")
-    .eq("id", user.id)
-    .maybeSingle();
-  const profile = profileData as { role: UserRole; account_status: AccountStatus } | null;
-  if (profile?.account_status === "ACTIVE") {
-    redirect(profile.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
-  }
-  if (profileLookupError || !isEligibleStudentSetupProfile(profile)) {
-    return { message: "Your setup session has expired or is invalid. Please request a new setup email." };
-  }
-
-  const { error: updateError } = await supabase.auth.updateUser({ password });
-  if (updateError) {
+  if (result.outcome === "password_update_failed") {
     return { message: "Could not update your password. Please try again." };
   }
-
-  const { data: completionData, error: completionError } = await supabase.rpc("complete_student_account_setup");
-  const completion = (completionData as SetupCompletionResult[] | null)?.[0];
-
-  if (completionError || completion?.outcome !== "completed") {
+  if (result.outcome === "activation_failed") {
     return {
       message: "Your password was saved, but account activation is not complete. Please submit this form again while this setup session is open."
     };

@@ -6,8 +6,7 @@ import {
   parseSetupClaim
 } from "@/lib/auth/setup-token";
 import {
-  extractClientOrigin,
-  isTrustedOrigin
+  isTrustedRequestOrigin
 } from "@/lib/auth/trusted-origins";
 
 function buildErrorResponse(errorUrl: URL): NextResponse {
@@ -21,9 +20,7 @@ function buildErrorResponse(errorUrl: URL): NextResponse {
 export async function POST(request: NextRequest) {
   // CSRF protection: validate request origin against explicitly trusted application origins.
   // Never trust arbitrary client-supplied forwarded headers as proof of authorization.
-  const clientOrigin = extractClientOrigin(request);
-
-  if (!clientOrigin || !isTrustedOrigin(clientOrigin)) {
+  if (!isTrustedRequestOrigin(request)) {
     const errorUrl = new URL("/setup-account", request.url);
     errorUrl.searchParams.set("error", "invalid_origin");
     return buildErrorResponse(errorUrl);
